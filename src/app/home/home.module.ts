@@ -5,6 +5,10 @@ import { IonicModule } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
 
 import { HomePage } from './home.page';
+import { GoogleMapsComponent } from '../google-maps/google-maps.component';
+import { MarkerGroupComponent } from '../marker-group/marker-group.component';
+import { MarkerItemComponent } from '../marker-item/marker-item.component';
+import { MarkerGroupFocusDirective } from '../marker-group/marker-group-focus.directive';
 
 @NgModule({
   imports: [
@@ -18,6 +22,10 @@ import { HomePage } from './home.page';
       }
     ])
   ],
-  declarations: [HomePage]
+  declarations: [HomePage,
+    GoogleMapsComponent,
+    MarkerGroupComponent, MarkerItemComponent, 
+    MarkerGroupFocusDirective,
+  ]
 })
 export class HomePageModule {}

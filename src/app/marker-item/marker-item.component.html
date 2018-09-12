@@ -1,0 +1,42 @@
+<ng-container [ngSwitch]="miLayout">
+
+  <ng-container *ngSwitchCase="'gallery'">
+    <ion-thumbnail class="gallery">
+      <ion-img [src]="photo.thumbnail" [title]="asLocalTime(photo).toLocaleString()"></ion-img>
+    </ion-thumbnail>
+  </ng-container>
+
+  <!-- mode='edit': support ion-reorder and ion-item-sliding -->
+  <ion-item-sliding *ngSwitchCase="'edit'">
+    <ion-item>
+      <ion-thumbnail slot="start">
+        <ion-img [src]="photo.thumbnail"></ion-img>
+      </ion-thumbnail>
+      <ion-label>
+        <h3>dateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>
+        <p>{{ obj2String(asPosition(photo))}}</p>
+      </ion-label>
+      <ion-reorder slot="end"></ion-reorder>
+    </ion-item>
+
+    <ion-item-options>
+      <ion-item-option color="danger" slot="top"  (click)="removeMarkerItem(photo)">
+        <ion-icon name="trash" slot="top" ></ion-icon>
+        <ion-label>Delete</ion-label>
+      </ion-item-option>
+    </ion-item-options>
+  </ion-item-sliding>
+
+
+  <!-- mode='list': show markerItem details -->
+  <ion-item *ngSwitchCase="'list'">
+    <ion-thumbnail slot="start">
+      <ion-img [src]="photo.thumbnail"></ion-img>
+    </ion-thumbnail>
+    <ion-label>
+      <h3>dateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>
+      <p>{{ obj2String(asPosition(photo))}}</p>
+    </ion-label>
+  </ion-item>
+
+</ng-container>

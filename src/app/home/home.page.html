@@ -10,7 +10,56 @@
 </ion-header>
 
 <ion-content padding>
-  The world is your oyster.
-  <p>If you get lost, the
-    <a target="_blank" rel="noopener" href="https://ionicframework.com/docs">docs</a> will be your guide.</p>
+
+  <!-- googleMaps -->
+  <app-google-maps apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94"></app-google-maps>  
+
+  <!-- groupItem -->
+  <ng-container [ngSwitch]="layout">
+    <ion-grid fixed  *ngSwitchCase="'edit'">
+      <ion-row>
+        <ion-col size="12">
+              <ion-reorder-group 
+                disabled="false" 
+                (ionItemReorder)="reorderMarkerGroup($event)">
+  <!-- NOTE: ion-reorder does NOT drag-drop app-markger-group unless wrapped by ion-list -->
+                  <ion-list   *ngFor="let mg of markers" >
+                    <app-marker-group
+                      [marker]="mg" [mListLayout]="layout" 
+                      (mgRemove)="removeMarkerGroup($event)"
+                      [(mgFocus)]="mgFocus"
+                      ></app-marker-group>
+                  </ion-list>
+                  <ion-list>
+                      <ion-item class="add-marker-group" (click)="createMarkerGroup($event)">
+                          <ion-button slot="start" expand="full" size="large" color="dark">
+                            <ion-icon slot="icon-only" name="add"></ion-icon>
+                          </ion-button>
+                          <ion-thumbnail slot="start">
+                            <ion-img src="https://picsum.photos/80?random=0"></ion-img>
+                          </ion-thumbnail>
+                        <ion-label color="primary"> add photo/marker </ion-label>
+                      </ion-item>
+                  </ion-list>                  
+              </ion-reorder-group>
+
+        </ion-col>
+      </ion-row>
+    </ion-grid>    
+
+    <ion-grid fixed *ngSwitchDefault>
+      <ion-row>
+        <ion-col size="12" size-md="6"
+          class="marker-group-focus"
+          *ngFor="let mg of markers">
+          <app-marker-group [marker]="mg" [mListLayout]="layout"
+            [(mgFocus)]="mgFocus"
+            ></app-marker-group>
+        </ion-col>
+
+      </ion-row>
+    </ion-grid>
+
+  </ng-container>
+
 </ion-content>

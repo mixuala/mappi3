@@ -1,0 +1,23 @@
+.gallery { 
+  -webkit-flex-wrap: wrap; 
+  flex-wrap: wrap;
+}
+
+
+
+.gallery ion-thumbnail {
+  margin-right: 1px;
+  min-width: 80px;
+}
+
+ion-item.add-marker-item {
+  position: relative;
+}
+ion-item.add-marker-item ion-button {
+  position: absolute;
+  opacity: 0.7;
+  width: 80px !important;
+  height: 80px !important;
+  --height: 80px !important;
+  margin: 0;
+}

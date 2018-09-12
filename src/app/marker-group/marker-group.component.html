@@ -1,0 +1,107 @@
+<div [ngSwitch]="mgLayout" (xxx-mgFocus)="setMgFocus($event)">
+
+  <!-- 'focus-marker-group' view -->
+  <ion-card *ngSwitchCase="'focus-marker-group'">
+    <ion-card-header color="secondary">
+      <ion-item color="primary">
+        <ion-icon name="pin" slot="start"></ion-icon>
+        <ion-label>{{ marker.label || obj2String(marker.position) }}</ion-label>
+        <ion-buttons slot="end">
+          <ion-button  color="light" fill="outline" (click)="toggleEditMode()">
+            <ion-icon name="create" slot="icon-only" *ngIf="!edit"></ion-icon>
+            <ion-icon name="save" slot="icon-only" *ngIf="edit"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-item>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-reorder-group disabled="false" 
+        (ionItemReorder)="reorderMarkerItem($event, marker)">
+        <ion-list *ngFor="let photo of marker.markerItems">
+          <app-marker-item [photo]="photo" [mgLayout]="mgLayout" 
+            (miRemove)="removeMarkerItem($event, marker)"></app-marker-item>
+        </ion-list>
+        <ion-list>            
+          <ion-item class="add-marker-item" (click)="createMarkerItem($event, marker)">
+              <ion-button slot="start" expand="full" size="large" color="dark">
+                <ion-icon slot="icon-only" name="add"></ion-icon>
+              </ion-button>
+              <ion-thumbnail slot="start">
+                <ion-img src="https://picsum.photos/80?random=0"></ion-img>
+              </ion-thumbnail>
+            <ion-label color="primary"> add photo/marker </ion-label>
+          </ion-item>            
+        </ion-list>
+      </ion-reorder-group>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- 'gallery' view -->
+  <ion-card *ngSwitchCase="'gallery'">
+    <ion-card-header color="secondary">
+      <ion-item>
+        <ion-icon name="pin" slot="start" color="primary"></ion-icon>
+        <ion-label color="primary">{{ marker.label || obj2String(marker.position) }}</ion-label>
+        <ion-buttons slot="end">
+          <ion-button color="primary" fill="outline" (click)="toggleEditMode()">
+            <ion-icon name="create" slot="icon-only" *ngIf="!edit"></ion-icon>
+            <ion-icon name="save" slot="icon-only" *ngIf="edit"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-item>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-item class="gallery">
+        <app-marker-item 
+          *ngFor="let photo of marker.markerItems.slice(0,3)"
+          [photo]="photo" [mgLayout]="mgLayout" ></app-marker-item>
+          <ion-badge color="primary" float-right *ngIf="marker.markerItemIds.length>2">{{marker.markerItemIds.length}}</ion-badge>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
+  <!-- mode='edit': support ion-reorder and ion-item-sliding -->
+  <ion-item-sliding *ngSwitchCase="'edit'">
+    <ion-item *ngIf="marker.markerItems[0] as photo">
+      <ion-thumbnail slot="start">
+        <ion-img [src]="photo.thumbnail"></ion-img>
+      </ion-thumbnail>
+      <ion-label>{{ marker.label || obj2String(marker.position) }}</ion-label>
+      <ion-reorder slot="end"></ion-reorder>
+    </ion-item>
+
+    <ion-item-options>
+      <ion-item-option color="danger" slot="top" (click)="removeMarkerGroup(marker)">
+        <ion-icon name="trash" slot="top"></ion-icon>
+        <ion-label>Delete</ion-label>
+      </ion-item-option>
+    </ion-item-options>
+
+  </ion-item-sliding>
+
+  <!-- mode='list': show markerItem details -->
+  <ion-card *ngSwitchCase="'list'">
+    <ion-card-header color="secondary">
+      <ion-item>
+        <ion-icon name="pin" slot="start"></ion-icon>
+        <ion-label color="primary">{{ marker.label || obj2String(marker.position) }}</ion-label>
+      </ion-item>
+    </ion-card-header>
+    <ion-card-content>
+      <ion-list>
+        <app-marker-item 
+          *ngFor="let photo of marker.markerItems"
+          [photo]="photo" [mgLayout]="mgLayout" ></app-marker-item>
+
+        <!-- <ion-item *ngFor="let photo of marker.markerItems">
+          <ion-thumbnail slot="start">
+            <ion-img [src]="photo.thumbnail"></ion-img>
+          </ion-thumbnail>
+          <ion-label>lorem ipsum</ion-label>
+        </ion-item> -->
+      </ion-list>
+    </ion-card-content>
+  </ion-card>
+
+
+</div>
