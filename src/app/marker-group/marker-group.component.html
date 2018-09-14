@@ -1,4 +1,4 @@
-<div [ngSwitch]="mgLayout" (xxx-mgFocus)="setMgFocus($event)">
+<div [ngSwitch]="mgLayout">
 
   <!-- 'focus-marker-group' view -->
   <ion-card *ngSwitchCase="'focus-marker-group'">
@@ -8,8 +8,8 @@
         <ion-label>{{ marker.label || obj2String(marker.position) }}</ion-label>
         <ion-buttons slot="end">
           <ion-button  color="light" fill="outline" (click)="toggleEditMode()">
-            <ion-icon name="create" slot="icon-only" *ngIf="!edit"></ion-icon>
-            <ion-icon name="save" slot="icon-only" *ngIf="edit"></ion-icon>
+            <ion-icon name="create" slot="icon-only" *ngIf="mgLayout!='focus-marker-group'"></ion-icon>
+            <ion-icon name="save" slot="icon-only" *ngIf="mgLayout=='focus-marker-group'"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-item>
@@ -23,7 +23,7 @@
         </ion-list>
         <ion-list>            
           <ion-item class="add-marker-item" (click)="createMarkerItem($event, marker)">
-              <ion-button slot="start" expand="full" size="large" color="dark">
+              <ion-button class="thumbnail-overlay" slot="start" expand="full" size="large" color="dark">
                 <ion-icon slot="icon-only" name="add"></ion-icon>
               </ion-button>
               <ion-thumbnail slot="start">
@@ -41,7 +41,12 @@
     <ion-card-header color="secondary">
       <ion-item>
         <ion-icon name="pin" slot="start" color="primary"></ion-icon>
-        <ion-label color="primary">{{ marker.label || obj2String(marker.position) }}</ion-label>
+        <ion-label>
+          <h3>
+            <ion-text color="primary">{{ marker.label || obj2String(marker.position) }}</ion-text>
+          </h3>
+          <p>offset: [{{ marker.locOffset }}]</p>
+        </ion-label>
         <ion-buttons slot="end">
           <ion-button color="primary" fill="outline" (click)="toggleEditMode()">
             <ion-icon name="create" slot="icon-only" *ngIf="!edit"></ion-icon>
@@ -52,23 +57,38 @@
     </ion-card-header>
     <ion-card-content>
       <ion-item class="gallery">
-        <app-marker-item 
-          *ngFor="let photo of marker.markerItems.slice(0,3)"
-          [photo]="photo" [mgLayout]="mgLayout" ></app-marker-item>
-          <ion-badge color="primary" float-right *ngIf="marker.markerItemIds.length>2">{{marker.markerItemIds.length}}</ion-badge>
+        <ion-button class="thumbnail-overlay" slot="start" expand="full" size="large" color="dark"
+          *ngIf="marker.markerItems.length==0">
+          <ion-icon slot="icon-only" name="pin"></ion-icon>
+        </ion-button>
+        <ng-container *ngFor="let photo of marker.markerItems">
+            <app-marker-item [photo]="photo" [mgLayout]="mgLayout" ></app-marker-item>
+        </ng-container>            
+        <ion-badge color="primary" float-right *ngIf="marker.markerItems.length>2">{{marker.markerItems.length}}</ion-badge>
       </ion-item>
     </ion-card-content>
   </ion-card>
 
   <!-- mode='edit': support ion-reorder and ion-item-sliding -->
   <ion-item-sliding *ngSwitchCase="'edit'">
-    <ion-item *ngIf="marker.markerItems[0] as photo">
-      <ion-thumbnail slot="start">
-        <ion-img [src]="photo.thumbnail"></ion-img>
-      </ion-thumbnail>
-      <ion-label>{{ marker.label || obj2String(marker.position) }}</ion-label>
+    <ion-item>
+      <ng-container *ngIf="marker.markerItems[0] as photo">
+          <ion-thumbnail slot="start">
+            <ion-img [src]="photo.thumbnail"></ion-img>
+          </ion-thumbnail>
+      </ng-container>
+      <ng-container *ngIf="marker.markerItems.length==0">
+          <ion-button class="thumbnail-overlay" slot="start" expand="full" size="large" color="dark">
+            <ion-icon slot="icon-only" name="pin"></ion-icon>
+          </ion-button>
+      </ng-container>
+
+      <ion-label>
+        <h3>{{ marker.label || obj2String(marker.position) }}</h3>
+        <p *ngIf="marker.label">{{ obj2String(marker.position) }}</p>
+      </ion-label>
       <ion-reorder slot="end"></ion-reorder>
-    </ion-item>
+    </ion-item>  
 
     <ion-item-options>
       <ion-item-option color="danger" slot="top" (click)="removeMarkerGroup(marker)">

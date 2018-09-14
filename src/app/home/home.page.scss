@@ -1,1 +1,21 @@
 
+
+.marker-group-focus.blur {
+  display: none;
+}
+
+ion-reorder-group > ion-list {
+  margin: 0;
+}
+
+ion-item.add-marker-group {
+  position: relative;
+}
+ion-item.add-marker-group ion-button {
+  position: absolute;
+  opacity: 0.7;
+  width: 80px !important;
+  height: 80px !important;
+  --height: 80px !important;
+  margin: 0;
+}

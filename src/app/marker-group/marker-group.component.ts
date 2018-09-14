@@ -1,10 +1,11 @@
-import { Component, EventEmitter, OnInit, Input, Output, 
-  Host, HostBinding, Optional,
+import { Component, EventEmitter, OnInit, OnChanges, Input, Output, 
+  Host, HostBinding, Optional, SimpleChange,
 } from '@angular/core';
 
 
 import { MockDataService, IMarkerGroup, IPhoto } from '../providers/mock-data.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
+import { quickUuid } from '../providers/mappi/mappi.service';
 
 
 @Component({
@@ -12,9 +13,9 @@ import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
   templateUrl: './marker-group.component.html',
   styleUrls: ['./marker-group.component.scss'],
 })
-export class MarkerGroupComponent implements OnInit {
+export class MarkerGroupComponent implements OnInit , OnChanges {
 
-  edit: boolean = false;
+  // edit: boolean = false;
   // layout of wiwMarkerGroup= [gallery, list, edit, focus-marker-group]  
   public mgLayout: string;
 
@@ -25,9 +26,10 @@ export class MarkerGroupComponent implements OnInit {
 
   @Output() mgRemove: EventEmitter<IMarkerGroup> = new EventEmitter<IMarkerGroup>();
   @Output() mgFocusChange: EventEmitter<IMarkerGroup> = new EventEmitter<IMarkerGroup>();
+  @Output() mgChange: EventEmitter<{mg:IMarkerGroup, change:string}> = new EventEmitter<{mg:IMarkerGroup, change:string}>();
 
   constructor(
-    @Host() @Optional() private mgFocusNode: MarkerGroupFocusDirective,
+    @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
     public markerService: MockDataService,
   ) { }
 
@@ -39,23 +41,23 @@ export class MarkerGroupComponent implements OnInit {
   }
 
   ngOnChanges(o){
-    const self = this;
-    Object.entries(o).forEach( en=>{
-      let [k,change] = en;
+    Object.entries(o).forEach( (en:[string,SimpleChange])=>{
+      let [k, change] = en;
       switch(k){
         case 'marker':
-          // console.log("marker, id=",change["currentValue"]["label"])
+          if (change.firstChange===true) break;
+          console.log("marker, id=",change.currentValue["label"])
           break;
         case 'mListLayout':
           // console.log("MarkerGroupComponent.ngOnChanges(): layout=", change["currentValue"])
           this.mListLayoutChanged()
           break;
         case 'mgFocus':
-          if (!this.mgFocusNode) break;
-          const focus = change["currentValue"];
+          if (!this.mgFocusBlur) break;
+          const focus = change.currentValue;
           const hide = focus && this.marker.id != focus.id || false
           // console.log(`** mgFocusChange: ${this.marker.label} hideen=${hide}`)
-          this.mgFocusNode.blur(hide)
+          this.mgFocusBlur.blur(hide)
           break;
       }
     });
@@ -76,12 +78,16 @@ export class MarkerGroupComponent implements OnInit {
     return this.markerService.getPhotos()
     .then( res=>{
       const random = Math.floor(Math.random() * Math.floor(res.length))
-      const p = Object.assign( {}, res[random], {id: res.length} );
+      const p = Object.assign( {}, res[random], {
+        id: Date.now(),
+        uuid: quickUuid(),
+      });
       this.markerService.inflatePhoto(p, mg.markerItemIds.length)
       p.loc = [ p.loc[0]+offset[0], p.loc[1]+offset[1] ];
-      mg.markerItemIds.push( random );
+      mg.markerItemIds.push( p.id );
       mg.markerItems.push( p );
       // this.markerService.saveMarkerItem(p);
+      this.mgChange.emit({mg,change:"markerItem"} );
       return mg;
     })
   }
@@ -127,12 +133,12 @@ export class MarkerGroupComponent implements OnInit {
   }
 
   toggleEditMode() {
-    this.edit = !this.edit;
-    if (this.edit) {
+    // this.edit = !this.edit;
+    if (this.mgLayout != "focus-marker-group") {
       this["_stash_mgLayout"] = this.mgLayout;
       this.mgLayout = "focus-marker-group";
 
-      // hide all MarkerGroupComponents that are not in "dev" mode
+      // hide all MarkerGroupComponents that are not in layout="focus-marker-group" mode
       this.mgFocusChange.emit( this.marker )      
     }
     else {

@@ -1,24 +1,28 @@
 import { Injectable } from '@angular/core';
 
-export interface INumOrReturn {
+import { quickUuid } from '../providers/mappi/mappi.service';
 
-}
 
 export interface IMarkerGroup {
-  id: number,
+  id?: number,   // deprecate
+  uuid?: string,
   loc: [number,number],
   locOffset: [number,number],
   seq?: number,
   label?: string,  
+  // derived value: loc + locOffset
+  position?: {    //new google.maps.LatLng(position);
+    lat: any,
+    lng: any,
+  },
+
   placeId?: string,
+
+  // use for MarkerGroup/Item
   // MarkerGroup hasMany MarkerItems, use Photos for now.
   markerItemIds?: number[],
   markerItems?: IPhoto[],
-  // derived value: loc + locOffset
-  position?: {    //new google.maps.LatLng(position);
-    lat: number,
-    lng: number,
-  },
+  [propName: string]: any;
 }
 
 // export interface IMarkerItem {
@@ -29,6 +33,7 @@ export interface IMarkerGroup {
 export interface IPhoto {
   id: number,
   loc: [number,number],
+  locOffset?: [number,number],
   dateTaken: string,
   orientation: number,
   src: string,
@@ -36,6 +41,7 @@ export interface IPhoto {
   thumbnail?: string,
   width?: number,
   height?: number,
+  [propName: string]: any,
 }
 
 
@@ -62,6 +68,7 @@ export class MockDataService {
     MARKER_GROUPS.forEach( (o,i,l)=> {
       o.id = i;
       o.seq = i;
+      o.uuid = quickUuid();
       o.position = {
         lat: o.loc[0] + o.locOffset[0],
         lng: o.loc[1] + o.locOffset[1],

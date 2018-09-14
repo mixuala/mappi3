@@ -1,5 +1,6 @@
 .gallery { 
-  -webkit-flex-wrap: wrap; 
+  display: flex;
+  -webkit-flex-wrap: wrap;
   flex-wrap: wrap;
 }
 
@@ -15,9 +16,11 @@ ion-item.add-marker-item {
 }
 ion-item.add-marker-item ion-button {
   position: absolute;
-  opacity: 0.7;
-  width: 80px !important;
-  height: 80px !important;
-  --height: 80px !important;
   margin: 0;
+}
+
+ion-button.thumbnail-overlay {
+  opacity: 0.7;  
+  width: 80px !important;
+  --height: 80px !important;
 }

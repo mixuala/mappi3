@@ -3,6 +3,12 @@
     <ion-buttons slot="start">
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-button (click)="toggleEditMode()">
+        <ion-icon name="create" slot="icon-only" *ngIf="layout!='edit'"></ion-icon>
+        <ion-icon name="save" slot="icon-only" *ngIf="layout=='edit'"></ion-icon>
+      </ion-button>
+    </ion-buttons>    
     <ion-title>
       Home
     </ion-title>
@@ -12,7 +18,11 @@
 <ion-content padding>
 
   <!-- googleMaps -->
-  <app-google-maps apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94"></app-google-maps>  
+  <app-google-maps apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94" 
+    [items]="mappiMarkers"
+    [mode]="layout"
+    (itemChange)="mgChangeDetect($event)"
+  ></app-google-maps>  
 
   <!-- groupItem -->
   <ng-container [ngSwitch]="layout">
@@ -32,7 +42,7 @@
                   </ion-list>
                   <ion-list>
                       <ion-item class="add-marker-group" (click)="createMarkerGroup($event)">
-                          <ion-button slot="start" expand="full" size="large" color="dark">
+                          <ion-button  class="thumbnail-overlay" slot="start" expand="full" size="large" color="dark">
                             <ion-icon slot="icon-only" name="add"></ion-icon>
                           </ion-button>
                           <ion-thumbnail slot="start">
@@ -53,7 +63,7 @@
           class="marker-group-focus"
           *ngFor="let mg of markers">
           <app-marker-group [marker]="mg" [mListLayout]="layout"
-            [(mgFocus)]="mgFocus"
+            [(mgFocus)]="mgFocus" (mgChange)="mgChanged($event)"
             ></app-marker-group>
         </ion-col>
 

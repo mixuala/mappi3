@@ -7,15 +7,19 @@ export interface IUuidMarker extends google.maps.Marker {
 
 // DB record which maps to a marker
 export interface IMappiMarker {
-  uuid: string;
+  uuid?: string;
   loc:[number, number];
   locOffset:[number, number];
   label?: string;
-  position?:{
-    lat: ()=>number | number,
-    lng: ()=>number | number,
+  position?: {
+    lat: any,
+    lng: any,
   }
+
+  // use for GoogleMapsComponent
   marker?: IUuidMarker;
+  listeners?: any;
+  [propName: string]: any;
 }
 
 

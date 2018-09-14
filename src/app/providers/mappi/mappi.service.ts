@@ -15,9 +15,14 @@ export class MappiMarker {
     let m = (o instanceof google.maps.Marker) ? o : new google.maps.Marker(o);
     // for DEV only
     if (typeof uuid == 'number') uuid = `${uuid}`;
-    
+    if (MappiMarker.markers.some( m=>uuid === m.uuid)){
+      console.warn("warning: marker.uuid exists.... UPDATE??");
+      return MappiMarker.find([uuid]).shift();
+    }
     // 'augment' google.maps.Marker => mappi.IUuidMarker
-    Object.assign(m, {'uuid': uuid});
+    Object.assign(m, {
+      'uuid': uuid,
+    });
     const marker = m as mappi.IUuidMarker
 
     MappiMarker.markers.push(marker);
@@ -40,6 +45,11 @@ export class MappiMarker {
 
   static find( uuids: string[]) : mappi.IUuidMarker[] {
     return MappiMarker.markers.filter( m=>uuids.includes(m.uuid));
+  }
+
+  static except( uuids: any[]) : any[] {
+    const markerUuids = MappiMarker.markers.map( o=>o.uuid);
+    return uuids.filter( o=>!markerUuids.includes( typeof o == "string" ? o : o.uuid ));
   }
 
   static findWithin (bounds: google.maps.LatLngBounds, items: mappi.IMappiMarker[]): mappi.IUuidMarker[] {
@@ -75,9 +85,10 @@ export class MappiMarker {
    */
 
   static position(item: mappi.IMappiMarker): {lat, lng} {
+    const offset = item.locOffset || [0,0];
     return {
-      lat: item.loc[0] + item.locOffset[0],
-      lng: item.loc[1] + item.locOffset[1],
+      lat: item.loc[0] + offset[0],
+      lng: item.loc[1] + offset[1],
     }
   }
 
@@ -89,7 +100,7 @@ export class MappiMarker {
       const [lat0, lng0] = item.loc;
       item.loc = [ lat0+offset[0], lng0+offset[1] ];
       item.locOffset = [0,0]
-    }
+    } else item.locOffset = offset;
     console.warn("MappiMarker.moveItem(): emit item.moved event");
   }   
 

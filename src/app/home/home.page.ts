@@ -1,29 +1,70 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild,
+  OnChanges,  SimpleChange,
+} from '@angular/core';
 import { GoogleMapsComponent } from '../google-maps/google-maps.component';
 import  { MockDataService, 
   IMarkerGroup,  IPhoto,
 } from '../providers/mock-data.service';
+import { promise } from 'protractor';
+import { quickUuid, MappiMarker } from '../providers/mappi/mappi.service';
+import * as mappi from '../providers/mappi/mappi.types';
 
 @Component({
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
 })
-export class HomePage {
+export class HomePage implements OnInit, OnChanges {
 
-  edit: boolean = false;
-  mgFocus: IMarkerGroup;
   // layout of markerList > markerGroups > markerItems: [edit, default]
   layout: string;
   markers: IMarkerGroup[] = [];
+  
+  // mgFocus Getter/Setter
+  _mgFocus: IMarkerGroup;
+  get mgFocus() {
+    return this._mgFocus;
+  }
+  set mgFocus(value: IMarkerGroup) {
+    this._mgFocus = value;
+    if (value) {
+      console.log("HomePage.mgFocus: Value Changed", value);
+      // TODO: call this.ngOnChanges( o );
+      this.getMappiMarkerFromMarkerItems(value).then( res=>this.mappiMarkers=res );
+    } else
+      this.mappiMarkers=this.markers.slice();
+  }
+
+  // mappiMarkers Getter/Setter
+  _mappiMarkers: mappi.IMappiMarker[];
+  get mappiMarkers() {
+    return this._mappiMarkers;
+  }
+  set mappiMarkers(value: mappi.IMappiMarker[]) {
+    this.mapComponent.clearMarkers();
+    this._mappiMarkers = value;
+    // BUG: if we call changeDetect from here, the markers will never be mapped
+    // this.mgChangeDetect("MappiMarker");  
+  }
+
+
 
 
   @ViewChild(GoogleMapsComponent) mapComponent: GoogleMapsComponent;  
 
-  constructor( public markerService: MockDataService ){
-    this.getMarkerGroups();
+  constructor( public markerService: MockDataService){
     Promise.resolve( ).then( res=>{
       this.layout = "default";
+    })
+  }
+
+  ngOnInit() {
+    const ready:Promise<any>[] = [];
+    ready.push(this.getMarkerGroups());
+    ready.push(this.mapComponent.mapReady);
+    Promise.all(ready)
+    .then( res=>{
+      console.log("> HomePage ngOnInit");
     })
   }
 
@@ -38,8 +79,8 @@ export class HomePage {
       })
   }
 
-  getMarkerGroups() : void {
-    this.markerService.getMarkers()
+  getMarkerGroups() : Promise<any> {
+    return this.markerService.getMarkers()
       .then( res => {
         let promises = [];
         res.forEach( mg=>{
@@ -52,15 +93,40 @@ export class HomePage {
         return Promise.all(promises).then( o => res);
       })
       .then( res => {
+        res.sort( (a,b)=>a.seq-b.seq );
         this.markers=res;
-        this.markers.sort( (a,b)=>a.seq-b.seq )
         // this.markers.reverse()
+        this.mappiMarkers=res.slice();
       });
   }
 
+  /**
+   * get array of IMarkerGroup.markerItems, IPhoto, to mark as markers on google map
+   * @param mg IMarkerGroup, usually HomePage.mgFocus
+   */
+  getMappiMarkerFromMarkerItems(mg:IMarkerGroup){
+    return Promise.resolve(mg.markerItems)
+    .then ( (mi:IPhoto[])=>{
+      const mappiMarkers:mappi.IMappiMarker[] = mi.map( mi=>{
+        const mmLike:mappi.IMappiMarker = {
+          uuid: `${mi.id}`,
+          loc: mi.loc,
+          locOffset: [0, 0],
+          label: mg.label,
+          position: null,          
+        }
+        Object.assign(mmLike, mi );
+        return mmLike;
+      })
+      return mappiMarkers;
+    }).then( res => {
+      res.sort( (a,b)=>a.seq-b.seq );
+      return res;
+    });
+  }
+
   toggleEditMode() {
-    this.edit = !this.edit;
-    if (this.edit) {
+    if (this.layout != "edit") {
       this["_stash_layout"] = this.layout;
       this.layout = "edit";
     }
@@ -73,6 +139,7 @@ export class HomePage {
     const offset = [Math.random(), Math.random()].map(v=>(v-0.5)/60)
     const mg:IMarkerGroup = {
       id: this.markers.length,
+      uuid: quickUuid(),
       seq: this.markers.length, 
       label: null, 
       loc:  [0,0], 
@@ -102,15 +169,55 @@ export class HomePage {
     .then( mg=>{
       // mg.label = this.obj2String(mg.position);
       this.markers.push(mg);
+      this.mappiMarkers = this.markers.slice();
+      this.mgChangeDetect("MarkerGroup", mg);
       // this.markerService.saveMarkerItem(p);
       // this.markerService.saveMarkerGroup(mg);
     })
   }
 
-  removeMarkerGroup(mg:IMarkerGroup){
+  removeMarkerGroup(item:IMarkerGroup){
     // TODO: call REST api: this.marker.remove(o.id)
-    this.markers = this.markers.filter( o=> o.id!=mg.id )
+    this.markers = this.markers.filter( o=> o.id!=item.id )
+    // remove from mappi
+    const m:mappi.IMappiMarker = item;
+    MappiMarker.remove([m.marker]);
 
+  }
+
+  mgChanged(ev:{mg:IMarkerGroup, change:string}){
+    const {mg, change} = ev;
+    switch (change) {
+      case "markerItem":
+        // run changeDetect for mg.markerItems
+        this.mgFocus = mg;
+        break;
+    }
+  }
+
+  /**
+   * HACK: force change detection with setTimeout()
+   * @param changed string [MarkerGroup | MappiMarker]
+   */
+  mgChangeDetect(changed:string, o?:any){
+    // TODO: force changeDetection with Observable??
+    switch (changed){
+      case "MarkerGroup":
+        const value0 = this.markers.slice();
+        setTimeout( ()=>{
+          this.markers = value0;
+          if (o)
+            console.log(`HomePage.mgChange(): mg count=${this.markers.length}`, o);          
+        });  
+              
+        break;
+      case "MappiMarker":
+        const value1 = this.mappiMarkers.slice();
+        setTimeout( ()=>{
+          this.mappiMarkers = value1;
+        });
+        break;
+    }
   }
 
   // BUG: after reorder, <ion-item-options> is missing from dropped item
@@ -127,15 +234,10 @@ export class HomePage {
       if (i == from ){
         o.seq = Math.min(to, l.length-1);
       } 
-      else i < from ? i+1 : i-1 ;
+      else i < from ? o.seq++ : o.seq--;
       changed.push({id:o.id, seq:o.seq});
     })
     this.markers.sort( (a,b)=>a.seq-b.seq )
-    // const changed = this.markers.reduce( (res,o)=>{
-    //   if (Math.min(from, to) <= o.seq && o.seq <= Math.max(from, to)) 
-    //     res.push({id:o.label, seq:o.seq});
-    //   return res;
-    // }, []) 
     this.debug( "update markerGroup DB", changed )
   }
 
@@ -149,15 +251,15 @@ export class HomePage {
 
 
 
-	testMarker(){
+	xxxtestMarker(){
 
     let center = this.mapComponent.map.getCenter();
-    this.mapComponent.addMarker(center.lat(), center.lng());
+    // this.mapComponent.addOneMarker(center.lat(), center.lng());
     console.log( `lat: ${center.lat()}, lng: ${center.lng()}` )
 
   }
   
-  clearMarkers(){
+  xxxclearMarkers(){
     this.mapComponent.clearMarkers();
   }
 
