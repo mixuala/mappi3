@@ -1,28 +1,27 @@
 import { Injectable } from '@angular/core';
+import { quickUuid as _quickUuid, RestyService } from './resty.service';
 
-import { quickUuid } from '../providers/mappi/mappi.service';
-
+export function quickUuid() {
+  // re-export
+  return _quickUuid();
+};
 
 export interface IMarkerGroup {
-  id?: number,   // deprecate
-  uuid?: string,
+  id?: number,  // deprecate
+  uuid: string,
   loc: [number,number],
   locOffset: [number,number],
   seq?: number,
   label?: string,  
+  placeId?: string,
+  // MarkerGroup hasMany MarkerItems, use Photos for now.
+  markerItemIds?: string[],  // uuid[]
+  markerItems?: IPhoto[],
   // derived value: loc + locOffset
   position?: {    //new google.maps.LatLng(position);
-    lat: any,
-    lng: any,
+    lat: number,
+    lng: number,
   },
-
-  placeId?: string,
-
-  // use for MarkerGroup/Item
-  // MarkerGroup hasMany MarkerItems, use Photos for now.
-  markerItemIds?: number[],
-  markerItems?: IPhoto[],
-  [propName: string]: any;
 }
 
 // export interface IMarkerItem {
@@ -31,9 +30,9 @@ export interface IMarkerGroup {
 // }
 
 export interface IPhoto {
-  id: number,
+  id?: number,  // deprecate
+  uuid: string,
   loc: [number,number],
-  locOffset?: [number,number],
   dateTaken: string,
   orientation: number,
   src: string,
@@ -41,7 +40,6 @@ export interface IPhoto {
   thumbnail?: string,
   width?: number,
   height?: number,
-  [propName: string]: any,
 }
 
 
@@ -54,59 +52,51 @@ export class MockDataService {
 
   public sizes:any[] = [[640,480],[480,640], [960,640], [640,960]];
 
+  public MarkerGroups:RestyService<IMarkerGroup>;
+  public Photos:RestyService<IPhoto>;
 
   constructor() { 
     // clean photos data
-    
     PHOTOS.forEach( (o,i,l)=>{ 
-      o.id = i;
-      o = this.inflatePhoto(o);
+      this.inflatePhoto(o, i);
     });
+    this.Photos = new RestyService(PHOTOS);
+
 
     // clean marker data
-    const shuffledMarkerItems = this.shuffle(PHOTOS);
-    MARKER_GROUPS.forEach( (o,i,l)=> {
-      o.id = i;
-      o.seq = i;
-      o.uuid = quickUuid();
-      o.position = {
-        lat: o.loc[0] + o.locOffset[0],
-        lng: o.loc[1] + o.locOffset[1],
-      }
-      // add FKs
-      o.markerItemIds = [i];
-
-      // add multiple FKs, shuffled, random count
-      const count = Math.min( Math.floor(Math.random() *  3)+1,  shuffledMarkerItems.length);
-      o.markerItemIds = shuffledMarkerItems.splice(0,count).map( o=>o.id )
-    });
+    this.Photos.get()
+    .then( photos=>{
+      const shuffledMarkerItems = this.shuffle(photos);
+      MARKER_GROUPS.forEach( (o,i,l)=> {
+        this.inflateMarkerGroup(shuffledMarkerItems, o, i);
+      });
+  
+      this.MarkerGroups = new RestyService(MARKER_GROUPS);
+    })
     
   }
 
+  inflateMarkerGroup(copyOfPhotos:IPhoto[], o:IMarkerGroup, seq?:number){
+    o.seq = seq;
+    o.position = {
+      lat: o.loc[0] + o.locOffset[0],
+      lng: o.loc[1] + o.locOffset[1],
+    }
+    // add multiple FKs, shuffled, random count
+    const count = Math.min( Math.floor(Math.random() *  4)+1,  copyOfPhotos.length);
+    o.markerItemIds = copyOfPhotos.splice(0,count).map( o=>o['uuid'] )
+    return o;
+  }
+
   inflatePhoto(o:IPhoto, seq?:number){
-    o.seq = seq || o.id;
-    o.src = o.src.replace("{id}", `${o.id}`)
+    o.seq = seq;
+    o.src = o.src.replace("{id}", `${o.seq}`)
     o.thumbnail = o.src.trim()
     let size = this.sizes[Math.floor(Math.random() * this.sizes.length)]
     o.src = o.src.replace("80", size.join('/'))
     o.width = size[0];
     o.height = size[1];
     return o;
-  }
-
-  getMarkers(ids?:number[]) : Promise<IMarkerGroup[]> {
-    let promise : Promise<IMarkerGroup[]> = new Promise((resolve, reject) => {
-      resolve(MARKER_GROUPS);
-    });
-    return promise;
-  }
-
-  getPhotos(ids?:number[]) : Promise<IPhoto[]> {
-    let promise : Promise<IPhoto[]>   = new Promise((resolve, reject) => {
-      const result = ids ? PHOTOS.filter( p=>ids.includes(p.id) ) : PHOTOS;
-      resolve(result);
-    });
-    return promise;
   }
 
 
@@ -124,27 +114,26 @@ export class MockDataService {
 }
 
 export const MARKER_GROUPS: IMarkerGroup[] = [
-  {id: 0, label: 'Seri Hening Residence', loc: [3.1589503, 101.73743390000004], locOffset:[0,0], placeId: null, markerItemIds: [] },
-  {id: 0, label: 'Hock Choon', loc: [3.160250353353649, 101.72868381210333], locOffset:[0,0], placeId: null, markerItemIds: [] },
-  {id: 0, label: 'ISKL', loc: [3.1569080416737467, 101.74091468521124], locOffset:[0,0], placeId: null, markerItemIds: [] },
-  {id: 0, label: 'Great Eastern Mall', loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], placeId: null, markerItemIds: [] },
+  {uuid: null, label: 'Seri Hening Residence', loc: [3.1589503, 101.73743390000004], locOffset:[0,0], placeId: null, markerItemIds: [] },
+  {uuid: null, label: 'Hock Choon', loc: [3.160250353353649, 101.72868381210333], locOffset:[0,0], placeId: null, markerItemIds: [] },
+  {uuid: null, label: 'ISKL', loc: [3.1569080416737467, 101.74091468521124], locOffset:[0,0], placeId: null, markerItemIds: [] },
+  {uuid: null, label: 'Great Eastern Mall', loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], placeId: null, markerItemIds: [] },
 ]
+
 
 
 export const PHOTOS: IPhoto[] = [
-  {id: 0, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-23T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-03T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-23T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-23T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-24T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-04T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-24T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-24T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-25T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-05T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-25T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {id: 0, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },    
+  {uuid: null, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-23T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-03T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-23T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-23T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-24T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-04T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-24T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-24T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-25T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-05T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-25T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },    
 ]
 
-
- 

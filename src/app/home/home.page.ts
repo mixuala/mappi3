@@ -2,11 +2,11 @@ import { Component, OnInit, ViewChild,
   OnChanges,  SimpleChange,
 } from '@angular/core';
 import { GoogleMapsComponent } from '../google-maps/google-maps.component';
-import  { MockDataService, 
+import  { MockDataService, quickUuid,
   IMarkerGroup,  IPhoto,
 } from '../providers/mock-data.service';
 import { promise } from 'protractor';
-import { quickUuid, MappiMarker } from '../providers/mappi/mappi.service';
+import { MappiMarker } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
 
 @Component({
@@ -14,7 +14,7 @@ import * as mappi from '../providers/mappi/mappi.types';
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
 })
-export class HomePage implements OnInit, OnChanges {
+export class HomePage implements OnInit {
 
   // layout of markerList > markerGroups > markerItems: [edit, default]
   layout: string;
@@ -30,7 +30,9 @@ export class HomePage implements OnInit, OnChanges {
     if (value) {
       console.log("HomePage.mgFocus: Value Changed", value);
       // TODO: call this.ngOnChanges( o );
-      this.getMappiMarkerFromMarkerItems(value).then( res=>this.mappiMarkers=res );
+      this.getMappiMarkerFromMarkerItems(value).then( res=>{
+        this.mappiMarkers=res 
+      });
     } else
       this.mappiMarkers=this.markers.slice();
   }
@@ -69,7 +71,7 @@ export class HomePage implements OnInit, OnChanges {
   }
 
   getMarkerItems(mg: IMarkerGroup) : Promise<IPhoto[]>  {
-    return this.markerService.getPhotos(mg.markerItemIds)
+    return this.markerService.Photos.get(mg.markerItemIds)
       .then( res=>{
         res.sort( (a,b)=>{
           return a.dateTaken > b.dateTaken ? 1 : -1;
@@ -80,7 +82,7 @@ export class HomePage implements OnInit, OnChanges {
   }
 
   getMarkerGroups() : Promise<any> {
-    return this.markerService.getMarkers()
+    return this.markerService.MarkerGroups.get()
       .then( res => {
         let promises = [];
         res.forEach( mg=>{
@@ -90,12 +92,11 @@ export class HomePage implements OnInit, OnChanges {
           })
           promises.push(pr)
         })
-        return Promise.all(promises).then( o => res);
+        return Promise.all(promises).then( ()=>res);
       })
       .then( res => {
         res.sort( (a,b)=>a.seq-b.seq );
         this.markers=res;
-        // this.markers.reverse()
         this.mappiMarkers=res.slice();
       });
   }
@@ -109,8 +110,8 @@ export class HomePage implements OnInit, OnChanges {
     .then ( (mi:IPhoto[])=>{
       const mappiMarkers:mappi.IMappiMarker[] = mi.map( mi=>{
         const mmLike:mappi.IMappiMarker = {
-          uuid: `${mi.id}`,
-          loc: mi.loc,
+          uuid: null,
+          loc: null,
           locOffset: [0, 0],
           label: mg.label,
           position: null,          
@@ -138,7 +139,7 @@ export class HomePage implements OnInit, OnChanges {
     // create placeholder mg data
     const offset = [Math.random(), Math.random()].map(v=>(v-0.5)/60)
     const mg:IMarkerGroup = {
-      id: this.markers.length,
+      // id: this.markers.length,
       uuid: quickUuid(),
       seq: this.markers.length, 
       label: null, 
@@ -152,24 +153,26 @@ export class HomePage implements OnInit, OnChanges {
       markerItemIds: [],
       markerItems: []
     }
-    return this.markerService.getPhotos()
+    return this.markerService.Photos.get()
     .then( res=>{
-      const random = Math.floor(Math.random() * Math.floor(res.length))
+      const random = Math.floor(Math.random() * Math.floor(res.length));
       let p = res[random];
-      p = this.markerService.inflatePhoto(p, mg.markerItemIds.length)
+      p = this.markerService.inflatePhoto(p, mg.markerItemIds.length);
       mg.loc = [ p.loc[0]+offset[0], p.loc[1]+offset[1] ];
       mg.position = {
         lat: mg.loc[0] + mg.locOffset[0],
         lng: mg.loc[1] + mg.locOffset[1],
       }
-      mg.markerItemIds.push( random );
+      mg.markerItemIds.push( p.uuid );
       mg.markerItems.push( p );
       return mg;
     })
     .then( mg=>{
+      return this.markerService.MarkerGroups.post(mg)
+    })
+    .then( mg=>{
       // mg.label = this.obj2String(mg.position);
       this.markers.push(mg);
-      this.mappiMarkers = this.markers.slice();
       this.mgChangeDetect("MarkerGroup", mg);
       // this.markerService.saveMarkerItem(p);
       // this.markerService.saveMarkerGroup(mg);
@@ -182,7 +185,8 @@ export class HomePage implements OnInit, OnChanges {
     // remove from mappi
     const m:mappi.IMappiMarker = item;
     MappiMarker.remove([m.marker]);
-
+    // TODO: call REST api: this.marker.remove(o.uuid)
+    this.markers = this.markers.filter( o=> o.uuid!=item.uuid )
   }
 
   mgChanged(ev:{mg:IMarkerGroup, change:string}){
@@ -201,6 +205,7 @@ export class HomePage implements OnInit, OnChanges {
    */
   mgChangeDetect(changed:string, o?:any){
     // TODO: force changeDetection with Observable??
+    console.warn("[manual change detection:", changed, o);
     switch (changed){
       case "MarkerGroup":
         const value0 = this.markers.slice();
@@ -235,7 +240,7 @@ export class HomePage implements OnInit, OnChanges {
         o.seq = Math.min(to, l.length-1);
       } 
       else i < from ? o.seq++ : o.seq--;
-      changed.push({id:o.id, seq:o.seq});
+      changed.push({uuid:o.uuid, seq:o.seq});
     })
     this.markers.sort( (a,b)=>a.seq-b.seq )
     this.debug( "update markerGroup DB", changed )
@@ -247,20 +252,6 @@ export class HomePage implements OnInit, OnChanges {
   }
   private debug(...msg) {
     console.log(msg)
-  }
-
-
-
-	xxxtestMarker(){
-
-    let center = this.mapComponent.map.getCenter();
-    // this.mapComponent.addOneMarker(center.lat(), center.lng());
-    console.log( `lat: ${center.lat()}, lng: ${center.lng()}` )
-
-  }
-  
-  xxxclearMarkers(){
-    this.mapComponent.clearMarkers();
   }
 
 

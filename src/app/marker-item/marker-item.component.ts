@@ -40,7 +40,7 @@ export class MarkerItemComponent implements OnInit {
           break;
         case 'miFocus':
           const focus = change["currentValue"];
-          const hide = focus && this.photo.id != focus.id || false
+          const hide = focus && this.photo.uuid != focus.uuid || false
           // console.log(`** miFocusChange: ${this.photo.dateTaken} hideen=${hide}`)
           // this.miFocusNode.blur(hide)
           break;
@@ -58,9 +58,9 @@ export class MarkerItemComponent implements OnInit {
   }
 
   removeMarkerItem(o:IPhoto){
-    this.debug("removeMarkerItem(): id=", o.dateTaken);
+    this.debug("removeMarkerItem(): id=", o.dateTaken, o.uuid);
 
-    // remove item from marker.markerItemss 
+    // remove item from marker.markerItems
     this.miRemove.emit( o );
   }
 

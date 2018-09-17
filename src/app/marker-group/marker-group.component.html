@@ -61,10 +61,10 @@
           *ngIf="marker.markerItems.length==0">
           <ion-icon slot="icon-only" name="pin"></ion-icon>
         </ion-button>
-        <ng-container *ngFor="let photo of marker.markerItems">
-            <app-marker-item [photo]="photo" [mgLayout]="mgLayout" ></app-marker-item>
+        <ng-container *ngFor="let pid of marker.markerItemIds.slice(0,miLimit)">
+            <app-marker-item [photo]="markerItems[pid]" [mgLayout]="mgLayout"></app-marker-item>
         </ng-container>            
-        <ion-badge color="primary" float-right *ngIf="marker.markerItems.length>2">{{marker.markerItems.length}}</ion-badge>
+        <ion-badge color="primary" float-right *ngIf="marker.markerItemIds.length-miLimit>0">+{{marker.markerItemIds.length-miLimit}}</ion-badge>
       </ion-item>
     </ion-card-content>
   </ion-card>
