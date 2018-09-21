@@ -189,7 +189,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     switch(change.action){
       case 'add':  
         const newMi = change.data;      
-        this.dataService.Photos.post(newMi);
         newMi['_rest_action'] = 'post';
         
         let items = this._getCachedMarkerItems(mg);

@@ -30,9 +30,16 @@
 
   <!-- mode='list': show markerItem details -->
   <ion-item *ngSwitchCase="'list'">
-    <ion-thumbnail slot="start">
-      <ion-img [src]="photo.thumbnail"></ion-img>
-    </ion-thumbnail>
+    <ng-container *ngIf="photo.thumbnail as src; else pinIcon">
+      <ion-thumbnail slot="start">
+        <ion-img [src]="src"></ion-img>
+      </ion-thumbnail>
+    </ng-container>
+    <ng-template #pinIcon>
+      <ion-button class="thumbnail-overlay" slot="start" expand="full" size="large" color="dark">
+        <ion-icon slot="icon-only" name="pin"></ion-icon>
+      </ion-button>
+    </ng-template>    
     <ion-label>
       <h3>dateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>
       <p>{{ obj2String(asPosition(photo))}}</p>
