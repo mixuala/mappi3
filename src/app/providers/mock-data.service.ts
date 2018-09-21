@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
+import { SubjectiveService } from './subjective.service';
 
 export function quickUuid() {
   // re-export
@@ -15,13 +16,14 @@ export interface IMarkerGroup {
   label?: string,  
   placeId?: string,
   // MarkerGroup hasMany MarkerItems, use Photos for now.
-  markerItemIds?: string[],  // uuid[]
+  markerItemIds: string[],  // uuid[]
   markerItems?: IPhoto[],
   // derived value: loc + locOffset
   position?: {    //new google.maps.LatLng(position);
     lat: number,
     lng: number,
   },
+  [propName: string]: any;
 }
 
 // export interface IMarkerItem {
@@ -40,6 +42,7 @@ export interface IPhoto {
   thumbnail?: string,
   width?: number,
   height?: number,
+  [propName: string]: any;
 }
 
 
@@ -55,25 +58,42 @@ export class MockDataService {
   public MarkerGroups:RestyService<IMarkerGroup>;
   public Photos:RestyService<IPhoto>;
 
+  public sjMarkerGroups:SubjectiveService<IMarkerGroup>;
+  public sjPhotos:SubjectiveService<IPhoto>;
+
+  private _ready:Promise<void>;
+
   constructor() { 
-    // clean photos data
-    PHOTOS.forEach( (o,i,l)=>{ 
-      this.inflatePhoto(o, i);
-    });
-    this.Photos = new RestyService(PHOTOS);
+    this._ready = Promise.resolve()
+    .then (()=>{
+      this.Photos = new RestyService(PHOTOS, "Photo");
+      this.MarkerGroups = new RestyService(MARKER_GROUPS, "MarkerGroup");
+  
+      // clean photos data
+      PHOTOS.forEach( (o,i,l)=>{ 
+        this.inflatePhoto(o, i);
+      });
+      this.Photos = new RestyService(PHOTOS, "Photo");
 
-
-    // clean marker data
-    this.Photos.get()
+      // clean marker data
+      return this.Photos.get()
+    })
     .then( photos=>{
       const shuffledMarkerItems = this.shuffle(photos);
       MARKER_GROUPS.forEach( (o,i,l)=> {
         this.inflateMarkerGroup(shuffledMarkerItems, o, i);
       });
-  
-      this.MarkerGroups = new RestyService(MARKER_GROUPS);
+      const check = MARKER_GROUPS;
+      this.MarkerGroups = new RestyService(MARKER_GROUPS, "MarkerGroup");
     })
-    
+    .then (()=>{
+      this.sjPhotos = new SubjectiveService(this.Photos);
+      this.sjMarkerGroups = new SubjectiveService(this.MarkerGroups);
+    });    
+  }
+
+  ready():Promise<void> {
+    return this._ready;
   }
 
   inflateMarkerGroup(copyOfPhotos:IPhoto[], o:IMarkerGroup, seq?:number){
@@ -90,7 +110,11 @@ export class MockDataService {
 
   inflatePhoto(o:IPhoto, seq?:number){
     o.seq = seq;
-    o.src = o.src.replace("{id}", `${o.seq}`)
+    try {
+      o.src = o.src.replace("{id}", `${o.seq}`)
+    } catch {
+      o.src = `https://picsum.photos/80?random=${o.seq}`;
+    }
     o.thumbnail = o.src.trim()
     let size = this.sizes[Math.floor(Math.random() * this.sizes.length)]
     o.src = o.src.replace("80", size.join('/'))

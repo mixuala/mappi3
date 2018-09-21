@@ -1,6 +1,6 @@
-<ng-container [ngSwitch]="miLayout">
+<ng-container [ngSwitch]="miLayout" *ngIf="(photo$ | async) as photo">
 
-  <ng-container *ngSwitchCase="'gallery'"> 
+  <ng-container *ngSwitchCase="'gallery'">
     <ion-thumbnail class="gallery">
       <ion-img [src]="photo.thumbnail" [title]="asLocalTime(photo).toLocaleString()"></ion-img>
     </ion-thumbnail>

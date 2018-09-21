@@ -1,11 +1,11 @@
 import { Component, EventEmitter, OnInit, OnChanges, Input, Output, 
   Host, HostBinding, Optional, SimpleChange,
 } from '@angular/core';
+import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 
-
-import { MockDataService, IMarkerGroup, IPhoto } from '../providers/mock-data.service';
+import { MockDataService, quickUuid, IMarkerGroup, IPhoto } from '../providers/mock-data.service';
+import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
-import { quickUuid } from '../providers/mappi/mappi.service';
 
 
 @Component({
@@ -15,38 +15,64 @@ import { quickUuid } from '../providers/mappi/mappi.service';
 })
 export class MarkerGroupComponent implements OnInit , OnChanges {
 
-  // edit: boolean = false;
-  // layout of wiwMarkerGroup= [gallery, list, edit, focus-marker-group]  
+  // layout of wiwMarkerGroup = [gallery, list, edit, focus-marker-group]  
   public mgLayout: string;
+  // set thumbnail overflow break. 
+  // TODO: set according to element width, inject ElementRef
+  public miLimit:number = 3;  
+  
+  // PARENT Subject/Observable
+  public mgSubject: BehaviorSubject<IMarkerGroup> = new BehaviorSubject<IMarkerGroup>(null);
+  public markerGroup$: Observable<IMarkerGroup> = this.mgSubject.asObservable();
 
-  @Input() marker: IMarkerGroup;
+  // CHILDREN
+  private _miSub: {[uuid:string]: SubjectiveService<IPhoto>} = {};
+  public miCollection$: {[uuid:string]:  Observable<IPhoto[]>} = {};
+
+  @Input() mg: IMarkerGroup;
   @Input() mListLayout: string;  // enum=['edit', 'default']
-
   @Input() mgFocus: IMarkerGroup;
 
-  @Output() mgRemove: EventEmitter<IMarkerGroup> = new EventEmitter<IMarkerGroup>();
   @Output() mgFocusChange: EventEmitter<IMarkerGroup> = new EventEmitter<IMarkerGroup>();
-  @Output() mgChange: EventEmitter<{mg:IMarkerGroup, change:string}> = new EventEmitter<{mg:IMarkerGroup, change:string}>();
+  @Output() mgChange: EventEmitter<{data:IMarkerGroup, action:string}> = new EventEmitter<{data:IMarkerGroup, action:string}>();
 
   constructor(
     @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
-    public markerService: MockDataService,
-  ) { }
+    public dataService: MockDataService,
+  ) {
+    this.dataService.ready()
+    .then( ()=>{
+    })
+    // this.dataService.Photos.debug = true;
+   }
 
   ngOnInit() {
     this.mgLayout = this.mgLayout || 'gallery';
-    // this.mgLayout = 'focus-marker-group';
-    // this.mgLayout = 'list'
     console.log("MarkerGroupComponent.ngOnInit(): mglayout=", this.mgLayout)
+  }
+
+  ngOnDestroy() {
+    // Only need to unsubscribe if its a multi event Observable
+    console.warn("don't forget to destroy the miCollection$ subscriptions", this.miCollection$)
   }
 
   ngOnChanges(o){
     Object.entries(o).forEach( (en:[string,SimpleChange])=>{
-      let [k, change] = en;
+      let [k, change] = en;    
       switch(k){
-        case 'marker':
-          if (change.firstChange===true) break;
-          console.log("marker, id=",change.currentValue["label"])
+        case 'mg':
+          if (!change.currentValue) return;
+          const mg = change.currentValue;
+          this.dataService.ready()
+          .then( ()=>{
+            this._miSub[mg.uuid] = new SubjectiveService(this.dataService.Photos);
+            this.miCollection$[mg.uuid] = this._miSub[mg.uuid].get$(mg.markerItemIds);
+            // this.miCollection$[mg.uuid].subscribe( items=>{
+            //   if (items.length>2)
+            //     console.warn(`>>> photo$ for mg: ${mg.label || mg.seq}: count=${items.length}`)
+            // });
+            this.mgSubject.next(mg);
+          });
           break;
         case 'mListLayout':
           // console.log("MarkerGroupComponent.ngOnChanges(): layout=", change["currentValue"])
@@ -55,7 +81,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         case 'mgFocus':
           if (!this.mgFocusBlur) break;
           const focus = change.currentValue;
-          const hide = focus && this.marker.id != focus.id || false
+          const hide = focus && this.mgSubject.value.uuid != focus.uuid || false
           // console.log(`** mgFocusChange: ${this.marker.label} hideen=${hide}`)
           this.mgFocusBlur.blur(hide)
           break;
@@ -72,81 +98,179 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     else this.mgLayout = this["_stash_mgLayout"];
   }
 
-  createMarkerItem(ev:any, mg:IMarkerGroup){
-    // create placeholder mi data
-    const offset = [Math.random(), Math.random()].map(v=>(v-0.5)/60)
-    return this.markerService.getPhotos()
-    .then( res=>{
-      const random = Math.floor(Math.random() * Math.floor(res.length))
-      const p = Object.assign( {}, res[random], {
-        id: Date.now(),
-        uuid: quickUuid(),
-      });
-      this.markerService.inflatePhoto(p, mg.markerItemIds.length)
-      p.loc = [ p.loc[0]+offset[0], p.loc[1]+offset[1] ];
-      mg.markerItemIds.push( p.id );
-      mg.markerItems.push( p );
-      // this.markerService.saveMarkerItem(p);
-      this.mgChange.emit({mg,change:"markerItem"} );
-      return mg;
-    })
-  }
-
-  removeMarkerItem(mi:IPhoto, mg:IMarkerGroup) {
-    // TODO: call REST api: this.marker.markerItems.remove(o.id)
-    mg.markerItems = mg.markerItems.filter( o=> o.id!=mi.id)
-
-  }
-
-
-  removeMarkerGroup(o:IMarkerGroup){
-    this.debug("removeMarkerGroup(): id=", o.label);
-
-    // remove item from HomePage.markers 
-    // without losing current mg/mi view state
-    this.mgRemove.emit( o );
-
-  }
-
-  // BUG: after reorder, <ion-item-options> is missing from dropped item
-  reorderMarkerItem(ev, marker:IMarkerGroup){
-    // TODO: call REST api: to update mi.seq
-    const {from, to} = ev.detail;
-    const changed = [];
-    marker.markerItems.sort( (a,b)=>a.seq-b.seq )
-    marker.markerItems.forEach( (o,i,l)=>{
-      if (i < Math.min(from, to) || i > Math.max(from, to)) {
-        if (o.seq != i) {
-          console.warn("sequence error", `index:${i} , seq:${o.seq}`);
-          o.seq = i;
-          return;
-        }
-      }
-      if (i == from ){
-        o.seq = Math.min(to, l.length-1);
-      } 
-      else i < from ? o.seq++ : o.seq--;
-      changed.push({id:o.dateTaken, seq:o.seq});
-    })
-    marker.markerItems.sort( (a,b)=>a.seq-b.seq )
-    this.debug( "update marker.markerItems DB", changed )
-  }
-
-  toggleEditMode() {
-    // this.edit = !this.edit;
+  toggleEditMode(action:string) {
     if (this.mgLayout != "focus-marker-group") {
       this["_stash_mgLayout"] = this.mgLayout;
       this.mgLayout = "focus-marker-group";
 
       // hide all MarkerGroupComponents that are not in layout="focus-marker-group" mode
-      this.mgFocusChange.emit( this.marker )      
+      this.mgFocusChange.emit( this.mgSubject.value )      
     }
     else {
-      this.mgLayout = this["_stash_mgLayout"];
-      this.mgFocusChange.emit( null )
+      this.applyChanges(action)
+      .then( 
+        res=>{
+          this.mgLayout = this["_stash_mgLayout"];
+          this.mgFocusChange.emit( null );
+        },
+        err=>console.log('ERROR saving changes')
+      )
     }
-    console.log(`MarkerGroupComponent: ${this.marker.label},  mgLayout=${this.mgLayout} `)
+    console.log(`MarkerGroupComponent: ${this.mgSubject.value.label},  mgLayout=${this.mgLayout} `)
   }
+
+  createMarkerItem(ev:any){
+    const mg = this.mgSubject.value;
+    // create placeholder mi data
+    const random = (Date.now() % 99) +1;
+    const o = {
+      uuid: quickUuid(),
+      dateTaken: new Date().toISOString(),
+      src: `https://picsum.photos/80?random=${random}`,
+      locOffset: [0,0],
+    };    
+    return this.dataService.Photos.get()
+    .then( res=>{
+      // create a new photo by modifying attrs of a random clone
+      const p:IPhoto = Object.assign( res[random % res.length], o );
+      this.dataService.inflatePhoto(p, mg.markerItemIds.length);
+      // randomize location
+      const offset = [Math.random(), Math.random()].map(v=>(v-0.5)/60);
+      p.loc = [ p.loc[0]+offset[0], p.loc[1]+offset[1] ];
+      return p;
+    })
+    .then( p=>{
+      this.childComponentsChange({data:p, action:'add'})
+      return mg;
+    })    
+  }
+
+  removeMarkerGroup(o:IMarkerGroup){
+    this.debug("removeMarkerGroup(): id=", o.label);
+    this.mgChange.emit( {data:o, action:'remove'} );
+  }
+
+  // BUG: after reorder, <ion-item-options> is missing from dropped item
+  reorderMarkerItem(ev){
+    const mg = this.mgSubject.value;
+    const {from, to} = ev.detail;
+    const copy = this._getCachedMarkerItems(mg, 'visible')
+    let move = copy.splice(from,1);
+    copy.splice( to, 0, move[0]);
+
+    // re-index after move
+    for (let i=Math.min(from,to);i<=Math.max(from,to);i++){
+      const o = copy[i];
+      o.seq=i;
+      this.childComponentsChange({data:o, action:'move'})
+    }
+    this._miSub[mg.uuid].next(this._getCachedMarkerItems(mg));
+  }
+
+
+  /*
+   * additional event handlers
+   */ 
+  childComponentsChange( change: {data:IPhoto, action:string}){
+    if (!change.data) return;
+    // let mi = this._markerItems[change.data.uuid];
+    const mi = change.data;
+    const mg = this.mgSubject.value;
+    switch(change.action){
+      case 'add':  
+        const newMi = change.data;      
+        this.dataService.Photos.post(newMi);
+        newMi['_rest_action'] = 'post';
+        
+        let items = this._getCachedMarkerItems(mg);
+        items.push(newMi);
+        mg.markerItemIds = items.map(o=>o.uuid);
+        this._miSub[mg.uuid].next(items);
+        break;
+      case 'update':
+        mi['_rest_action'] = mi['_rest_action'] || 'put';
+        break;
+      case 'move':
+        mi['_rest_action'] = mi['_rest_action'] || 'put';
+        break;
+      case 'remove':
+        mi['_rest_action'] = 'delete';
+        items = this._getCachedMarkerItems(mg); 
+        this._miSub[mg.uuid].next(items);
+        break;
+    }
+  }
+
+  childComponents_CommitChanges(items:IPhoto[]):Promise<any>{
+    const children:Promise<any>[] = items.map( o=>{
+      const restAction = o._rest_action;
+      delete o._rest_action;
+      switch(restAction) {
+        case "post":
+          return this.dataService.Photos.post(o);
+        case "put":
+          return this.dataService.Photos.put(o.uuid, o);
+        case "delete":
+          return this.dataService.Photos.delete(o.uuid);
+      }
+    });
+    return Promise.all(children);    
+  }
+
+  applyChanges(action:string):Promise<any>{
+    const mg = this.mgSubject.value;
+    return Promise.resolve(mg)
+    .then( mg=>{
+      switch(action){
+        case "commit":
+          const allItems = this._getCachedMarkerItems(mg, 'commit')
+          const remainingItems = this._getCachedMarkerItems(mg, 'visible')
+          return this.childComponents_CommitChanges(allItems)
+          .catch( err=>{
+            console.error("ERROR: problem saving child nodes ");
+            Promise.reject(err);
+          })
+          .then( res=>{
+            const markerItemIds = remainingItems.map(o=>o.uuid);
+            mg.markerItemIds = markerItemIds;
+            // update Parent directly, mg.markerItemIds
+            return this.dataService.MarkerGroups.put(mg.uuid, mg)
+            .then(
+              res=>{
+                this.mgSubject.next(mg);
+                this._miSub[mg.uuid].reload(mg.markerItemIds);
+                return mg
+              },
+              err=>{
+                console.error("ERROR: problem updating Parent node");
+                Promise.reject(err);
+            })
+          });
+        case "rollback":
+          const uuids = this._getCachedMarkerItems(mg, 'rollback')
+          .map( o=>o.uuid );
+          this._miSub[mg.uuid].reload( uuids );
+          return mg;
+      }
+    })
+    .then( res=>{
+      this.mgSubject.next(mg);
+      // Propagate changes to ParentView
+      this.mgChange.emit( {data:mg, action:'update_marker'} );
+    })
+  }
+
+  private _getCachedMarkerItems(mg: IMarkerGroup, option?:string):IPhoto[] {
+    let items = this._miSub[mg.uuid].value();
+    
+    if (option=='rollback') 
+      items = items.filter( o=>o._rest_action!= 'post') // skip added items
+    else if (option=='visible')
+      items = items.filter( o=>o._rest_action!= 'delete') // skip removed items
+
+    items.sort( (a,b)=>a.seq-b.seq );
+    return items;
+  }  
 
   // DEV Helpers
 

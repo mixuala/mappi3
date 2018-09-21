@@ -15,9 +15,10 @@ export class MappiMarker {
     let m = (o instanceof google.maps.Marker) ? o : new google.maps.Marker(o);
     // for DEV only
     if (typeof uuid == 'number') uuid = `${uuid}`;
-    if (MappiMarker.markers.some( m=>uuid === m.uuid)){
+    if (MappiMarker.markers.some( m=>m.uuid == uuid)){
       console.warn("warning: marker.uuid exists.... UPDATE??");
-      return MappiMarker.find([uuid]).shift();
+      const found = MappiMarker.markers.filter( m=>m.uuid == uuid);
+      return found[0];
     }
     // 'augment' google.maps.Marker => mappi.IUuidMarker
     Object.assign(m, {
@@ -35,25 +36,28 @@ export class MappiMarker {
     for (const target of list) {
       const found = MappiMarker.markers.findIndex( (m)=>m.uuid == target.uuid );
       if (~found)  {
-        MappiMarker.markers.splice(found,1);
-        target.setMap(null);
+        // const remove:google.maps.Marker = MappiMarker.markers.splice(found,1);
+        const remove:mappi.IUuidMarker[] = MappiMarker.markers.splice(found,1);
+        remove[0].setMap(null);
         removed++;
       }
     }
     return removed;
   }
 
-  static find( uuids: string[]) : mappi.IUuidMarker[] {
-    return MappiMarker.markers.filter( m=>uuids.includes(m.uuid));
+  static findByUuid( uuids:string[] ) : mappi.IUuidMarker[] {
+    return MappiMarker.markers.filter( m=>uuids.includes(m.uuid));  
+  }
+  static find( markers:mappi.IUuidMarker[] ) : mappi.IUuidMarker[] {
+    return MappiMarker.markers.filter( m=>markers.includes(m));
   }
 
-  static except( uuids: any[]) : any[] {
-    const markerUuids = MappiMarker.markers.map( o=>o.uuid);
-    return uuids.filter( o=>!markerUuids.includes( typeof o == "string" ? o : o.uuid ));
+  static except( markers: mappi.IUuidMarker[]) : mappi.IUuidMarker[] {
+    return markers.filter( m=>!MappiMarker.markers.includes( m ));
   }
 
   static findWithin (bounds: google.maps.LatLngBounds, items: mappi.IMappiMarker[]): mappi.IUuidMarker[] {
-    const found = items.reduce( (res:string[], o:mappi.IMappiMarker) => {
+    const find = items.reduce( (res:string[], o:mappi.IMappiMarker) => {
       const position = {
         lat: o.loc[0] + o.locOffset[0],
         lng: o.loc[1] + o.locOffset[1],
@@ -61,7 +65,8 @@ export class MappiMarker {
       if (bounds.contains(position)) res.push(o.uuid);
       return res;
     }, []);
-    return MappiMarker.find(found);
+    const found = MappiMarker.markers.filter( m=>find.includes(m.uuid));
+    return found;
   }
 
   static getBounds ( items: mappi.IMappiMarker[] ): google.maps.LatLngBounds {

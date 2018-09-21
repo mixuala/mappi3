@@ -3,11 +3,12 @@
  **********************************************************************************************/
 export interface IUuidMarker extends google.maps.Marker {
   uuid: string;
+  [propName: string]: any;
 }
 
 // DB record which maps to a marker
 export interface IMappiMarker {
-  uuid?: string;
+  uuid: string;
   loc:[number, number];
   locOffset:[number, number];
   label?: string;

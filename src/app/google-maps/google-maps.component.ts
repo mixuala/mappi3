@@ -1,21 +1,20 @@
 import { Component, OnInit, Input, Renderer2, ElementRef, Inject, ViewEncapsulation,
   SimpleChange, EventEmitter, Output,
 } from '@angular/core';
+import { Observable, BehaviorSubject } from 'rxjs';
 import { DOCUMENT } from '@angular/platform-browser';
 import { Plugins } from '@capacitor/core';
-import { readElementValue } from '@angular/core/src/render3/util';
 import { GoogleMapsReady } from '../providers/mappi/google-maps-ready';
 import { MappiService, ListenerWrapper,
   quickUuid, MappiMarker,
 } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
 
-import  { 
-  IMarkerGroup,  IPhoto,
-} from '../providers/mock-data.service';
+import  { MockDataService, IMarkerGroup,  IPhoto, } from '../providers/mock-data.service';
+import { SubjectiveService } from '../providers/subjective.service';
 
 
-const { Geolocation, Network } = Plugins;
+const { Geolocation } = Plugins;
 
 @Component({
   selector: 'app-google-maps',
@@ -30,23 +29,41 @@ export class GoogleMapsComponent implements OnInit {
   @Input() items: mappi.IMappiMarker[];
   @Input() mode: string;
 
-  @Output() itemChange: EventEmitter<mappi.IMappiMarker> = new EventEmitter<mappi.IMappiMarker>();
+  @Output() itemChange: EventEmitter<{data:mappi.IMappiMarker,action:string}> = new EventEmitter<{data:mappi.IMappiMarker,action:string}>();
 
   public map: any;
   public markers: any[] = [];
   public mapReady: Promise<void>;
   private mapReadyResolvers: [(value?:any)=>void, (value?:any)=>void];
-  private mapsLoaded: boolean = false;
+
+  /**
+   * Subjects/Observables/Subscribers
+   */
+  private _mgSub: SubjectiveService<IMarkerGroup>;
+  public mgCollection$ : Observable<IMarkerGroup[]>;
 
   constructor(
     public mappi:MappiService,
     private renderer: Renderer2, 
     private element: ElementRef, 
     @Inject(DOCUMENT) private _document,
+    public dataService: MockDataService,
   ) {
-    this.mapReady = new Promise( (resolve, reject)=> {
-       this.mapReadyResolvers = [resolve, reject];
-    })
+    const loading:Promise<any>[] = [];
+    loading.push(
+      this.dataService.ready()
+      .then( ()=>{
+        this._mgSub = this.dataService.sjMarkerGroups;
+      })
+    )
+    loading.push(
+      this.mapReady = new Promise( (resolve, reject)=> {
+        this.mapReadyResolvers = [resolve, reject];
+      })
+    )
+    Promise.all(loading)
+    .then( ()=>this.onMapReady() );
+     
   }
 
   ngOnInit() {
@@ -58,7 +75,6 @@ export class GoogleMapsComponent implements OnInit {
       this.mapReadyResolvers[1]("Could not initialize Google Maps");
     })
     .then( ()=> {
-      this.onMapReady();
       console.log("> GoogleMapsComponent ngOnInit");
       this.mapReadyResolvers[0](true);
     });
@@ -83,8 +99,9 @@ export class GoogleMapsComponent implements OnInit {
   }
 
   public onMapReady():void {
-    // listen for (click)="add Marker"
-    // this.click_AddMarker(true);
+    this.mgCollection$ = this._mgSub.get$();
+    // this.mgCollection$.subscribe( items=>{
+    // })
   }
 
   ngOnChanges(o){
@@ -98,14 +115,33 @@ export class GoogleMapsComponent implements OnInit {
           this.click_AddMarker(listen);
           break;
         case 'items':
-          const items = change.currentValue;
-          if (!change.firstChange){
-            this.mapReady
-            .then( ()=>{
-              // console.log(`>>> GoogleMapsComponent.ngOnChanges() called, items.length=${items.length}`);
-              this.addMarkers(items);
-            })
-          }
+          let items:mappi.IMappiMarker[] = change.currentValue;
+          this.mapReady
+          .then( ()=>{
+            // ignore markers that are marked for delete pending commit
+            const visible = items.filter(o=>o['_rest_action']!='delete');
+            const visibleUuids = visible.map(o=>o.uuid);
+            const markerUuids = MappiMarker.markers.map(o=>o.uuid);
+            const actions = {
+              'keep': MappiMarker.findByUuid( visibleUuids ),
+              'add': visible.filter( v=>!markerUuids.includes( v.uuid )),
+              'remove': MappiMarker.markers.filter(o=>!visibleUuids.includes(o.uuid)),
+            }
+            // console.log(`>>> GoogleMapsComponent.ngOnChanges() called, items.length=${items.length}`, actions);
+            MappiMarker.remove(actions.remove);
+            this.addMarkers(actions.add);
+
+            if (actions.add.length){
+              // adjust google.maps.LatLngBounds
+              const bounds = new google.maps.LatLngBounds();
+              visible.forEach(o=>{
+                bounds.extend(MappiMarker.position(o));
+              })
+              setTimeout(  ()=> {
+                this.map.fitBounds(bounds);
+              }, 100);
+            }
+          })
           break;
       }
     });
@@ -125,10 +161,10 @@ export class GoogleMapsComponent implements OnInit {
   }
 
   public addMarkers(items:mappi.IMappiMarker[]){
-    const self = this;
-    const newItems = MappiMarker.except(items);
-    newItems.forEach( (m:mappi.IMappiMarker)=>{
-      this.addOneMarker(m);
+    // const newItems = MappiMarker.except(items.map(o=>o.marker));
+    items.forEach( (v)=>{
+      if (v.marker) return;
+      this.addOneMarker(v);
     })
   }
 
@@ -138,7 +174,7 @@ export class GoogleMapsComponent implements OnInit {
         console.log("marker dragged to", m.marker.getPosition().toJSON());
   
         MappiMarker.moveItem(m, m.marker);
-        this.itemChange.emit(m);
+        this.itemChange.emit({data:m, action:'update'});
   
       })
     })(true);  
@@ -151,7 +187,7 @@ export class GoogleMapsComponent implements OnInit {
   }
 
 
-  public click_AddMarker : mappi.IListenerController   = (listen:boolean)=>{
+  public click_AddMarker : mappi.IListenerController = (listen:boolean)=>{
     // closure
     const self = this;
     const addMarkerOnClick:(e:any)=>void = (ev:any) => {
@@ -166,13 +202,12 @@ export class GoogleMapsComponent implements OnInit {
         position: null,
         placeId: null,
         markerItemIds: [],
-        markerItems: []
       }
       m.position = MappiMarker.position(m);
-      this.addOneMarker(m);
-      this.items.push(m);
-      this.itemChange.emit(m);
 
+      // add marker from HomeComponent using mgCollection$ Observable
+      this.itemChange.emit({data:m, action:'add'});
+      console.log(Date.now(), 'addMarkerOnClick at', position.toJSON())
 
 
       // const dblclick_RemoveMarker = ListenerWrapper.make( ()=>{

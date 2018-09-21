@@ -1,7 +1,8 @@
-import { Component, EventEmitter, OnInit, Input, Output } from '@angular/core';
+import { Component, EventEmitter, OnInit, OnChanges, Input, Output, SimpleChange } from '@angular/core';
+import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 
+import { MockDataService, IPhoto } from '../providers/mock-data.service';
 
-import { IMarkerGroup, IPhoto } from '../providers/mock-data.service';
 
 
 @Component({
@@ -9,40 +10,39 @@ import { IMarkerGroup, IPhoto } from '../providers/mock-data.service';
   templateUrl: './marker-item.component.html',
   styleUrls: ['./marker-item.component.scss']
 })
-export class MarkerItemComponent implements OnInit {
+export class MarkerItemComponent implements OnInit , OnChanges {
 
   public miLayout: string;  // enum=['gallery', 'edit']
 
-  @Input() photo: IPhoto;
+  // PARENT Subject/Observable
+  public miSubject: BehaviorSubject<IPhoto> = new BehaviorSubject<IPhoto>(null);
+  public photo$: Observable<IPhoto> = this.miSubject.asObservable();
+
+  @Input() mi: IPhoto;
   @Input() mgLayout: string;  // enum=[gallery, list, edit, focus-marker-group]  
 
-  @Output() miRemove: EventEmitter<IPhoto> = new EventEmitter<IPhoto>();
+  @Output() miChange: EventEmitter<{data:IPhoto, action:string}> = new EventEmitter<{data:IPhoto, action:string}>();
 
-  constructor() { }
+  constructor(
+    public dataService: MockDataService,
+  ) { }
 
   ngOnInit() {
     this.miLayout = this.miLayout || 'gallery';
-    // this.miLayout = "list";
   }
 
-
   ngOnChanges(o){
-    const self = this;
-    Object.entries(o).forEach( en=>{
+    Object.entries(o).forEach( (en:[string,SimpleChange])=>{
       let [k,change] = en;
       switch(k){
-        case 'photo':
-          // console.log("marker, id=",change["currentValue"]["label"])
+        case 'mi':
+          if (!change.currentValue) return;
+          const mi = change.currentValue;
+          this.miSubject.next(mi);
           break;
         case 'mgLayout':
           // console.log("MarkerGroupComponent.ngOnChanges(): layout=", change["currentValue"])
           this.mgLayoutChanged()
-          break;
-        case 'miFocus':
-          const focus = change["currentValue"];
-          const hide = focus && this.photo.uuid != focus.uuid || false
-          // console.log(`** miFocusChange: ${this.photo.dateTaken} hideen=${hide}`)
-          // this.miFocusNode.blur(hide)
           break;
       }
     });
@@ -59,12 +59,8 @@ export class MarkerItemComponent implements OnInit {
 
   removeMarkerItem(o:IPhoto){
     this.debug("removeMarkerItem(): id=", o.dateTaken, o.uuid);
-
-    // remove item from marker.markerItems
-    this.miRemove.emit( o );
+    this.miChange.emit( {data:o, action:'remove'} );
   }
-
-
 
   // DEV Helpers
 

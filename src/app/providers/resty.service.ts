@@ -1,34 +1,53 @@
 import { Injectable } from '@angular/core';
+import { Observable, from } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class RestyService<T> {
 
+  public debug:boolean = false;
+  protected classname: string = "RESTY";
   protected _data:{[uuid:string]: T};
 
-  constructor(jsonArray:Array<T>=[]) {
+  constructor(jsonArray:Array<T>=[], classname?:string) {
     this._data = jsonArray.reduce( (res, o:T)=>{
       const uuid = o['uuid'] || quickUuid();
-      o = Object.assign({uuid}, o, {uuid});
-      res[uuid] = o;
+      res[uuid] = Object.assign({uuid}, o, {uuid});
       return res;
-    },{})
+    },{});
+    this.classname = classname || this.classname;
    }
 
   get(uuid?:string | string[]):Promise<T[]>{
-    if (!uuid || uuid == 'all'){
-      return Promise.resolve(Object.values(this._data));
-    }
-    if (Array.isArray(uuid)){
-      const result:T[] = Object.values(this._data).reduce( (res, o:T)=>{
-        if ( uuid.includes( o['uuid'] ) ) 
-          res.push( o );
-        return res;
-      }, []);
-      return Promise.resolve(result); 
-    }
-    return Promise.resolve([ this._data[uuid] ]);
+    return Promise.resolve()
+    .then( res=>{ 
+      if (!uuid || uuid == 'all'){
+        return Promise.resolve(Object.values(this._data))
+      }
+      if (Array.isArray(uuid)){
+        const result:T[] = Object.values(this._data).reduce( (res, o:T)=>{
+          if ( uuid.includes( o['uuid'] ) ){
+            res.push( o );
+          }
+          return res;
+        }, []);
+        return Promise.resolve(result); 
+      }
+      return Promise.resolve([ this._data[uuid] ]);
+    })
+    .then( res=>{
+      // make sure we return a COPY of the data
+      return res.map( o=>Object.assign({},o) );
+    })
+  }
+
+  getById$(uuid:string):Observable<T>{
+    return from(
+      this.get([uuid]).then( a=>{
+        this.debug && console.log( `${this.classname}: getById$`, a[0]);
+        return a[0] })
+    );
   }
 
   query( filter:(o:any)=>boolean ):Promise<T[]>{ 
@@ -50,7 +69,12 @@ export class RestyService<T> {
       return Promise.reject("ERROR: duplicate uuid");
       o['uuid'] = uuid;
     this._data[uuid] = o;
+    this.debug && console.log( `${this.classname}: POST`, o);
+
     return Promise.resolve( o );
+  }
+  post$(o:T):Observable<T>{
+    return from( this.post(o) );
   }
 
   put(uuid:string, o:T):Promise<T>{
@@ -59,6 +83,12 @@ export class RestyService<T> {
     if (this._data[uuid]) {
       o['uuid'] = uuid;
       this._data[uuid] = o;
+      this.debug && console.log( `${this.classname}: PUT`, o);
+
+
+      // ???: how do I cause send .next(o) to getById$(uuid) subscriber
+
+
       return Promise.resolve( o );
     }
     return Promise.reject("ERROR: object not found");
@@ -67,6 +97,7 @@ export class RestyService<T> {
   delete(uuid:string):Promise<boolean>{
     if (!uuid || !this._data[uuid]) 
       return Promise.reject(false);
+    this.debug && console.log( `${this.classname}: DELETE`, this._data[uuid]);  
     delete this._data[uuid];
     return Promise.resolve(true);
 

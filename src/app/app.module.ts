@@ -11,22 +11,24 @@ import { AppRoutingModule } from './app-routing.module';
 import {
   MappiService
 } from './providers/mappi/mappi.service';
+// import { MarkerGroupComponent } from './marker-group/marker-group.component';
+// import { MarkerItemComponent } from './marker-item/marker-item.component';
 import { MockDataService } from './providers/mock-data.service';
+import { RestyService } from './providers/resty.service';
+import { SubjectiveService } from './providers/subjective.service';
 
 @NgModule({
-  declarations: [AppComponent],
-  entryComponents: [],
-  imports: [
-    BrowserModule,
-    IonicModule.forRoot(),
-    AppRoutingModule
+  declarations: [AppComponent, 
+    // MarkerGroupComponent, MarkerItemComponent
   ],
+  entryComponents: [],
+  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule],
   providers: [
     StatusBar,
     SplashScreen,
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     MappiService,
-    MockDataService,
+    MockDataService, RestyService, SubjectiveService
   ],
   bootstrap: [AppComponent]
 })
