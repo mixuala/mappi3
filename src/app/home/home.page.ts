@@ -1,5 +1,6 @@
 import { Component, OnInit, ViewChild,
   OnChanges,  SimpleChange,
+  ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { catchError, flatMap } from 'rxjs/operators';
@@ -15,6 +16,7 @@ import { SubjectiveService } from '../providers/subjective.service';
   selector: 'app-home',
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class HomePage implements OnInit {
 
@@ -32,7 +34,10 @@ export class HomePage implements OnInit {
   }
   private _mgSub: SubjectiveService<IMarkerGroup>;
 
-  constructor( public dataService: MockDataService){
+  constructor( 
+    public dataService: MockDataService,
+    private cd: ChangeDetectorRef,
+  ){
     this.dataService.ready()
     .then( ()=>this._mgSub = this.dataService.sjMarkerGroups )
   }
@@ -158,9 +163,14 @@ export class HomePage implements OnInit {
     case 'add':
       const data = {
         loc: mm.loc,
+        // manually trigger ChangeDetection when click from google.maps
+        _detectChanges: 1, 
       };
       
       return this.createMarkerGroup(data)
+      .then((mg)=>{
+        if (data._detectChanges) setTimeout(()=>this.cd.detectChanges())
+      });
     case 'update':
       const found = items.findIndex(o=>o.uuid==mm.uuid);
       if (~found){
@@ -168,6 +178,8 @@ export class HomePage implements OnInit {
         const mg = Object.assign({}, items[found], {loc, locOffset});
         const o = {data:mg, action:change.action};
         this.childComponentsChange(o);
+        // run changeDetection, by changing object reference
+        items.splice(found,1,mg);
         this._mgSub.next(items);
       }
       break;

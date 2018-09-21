@@ -1,5 +1,6 @@
 import { Component, EventEmitter, OnInit, OnChanges, Input, Output, 
-  Host, HostBinding, Optional, SimpleChange,
+  Host, HostBinding, Optional, SimpleChange, 
+  ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 
@@ -12,6 +13,7 @@ import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
   selector: 'app-marker-group',
   templateUrl: './marker-group.component.html',
   styleUrls: ['./marker-group.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MarkerGroupComponent implements OnInit , OnChanges {
 
@@ -39,6 +41,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   constructor(
     @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
     public dataService: MockDataService,
+    private cd: ChangeDetectorRef,
   ) {
     this.dataService.ready()
     .then( ()=>{
@@ -48,7 +51,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   ngOnInit() {
     this.mgLayout = this.mgLayout || 'gallery';
-    console.log("MarkerGroupComponent.ngOnInit(): mglayout=", this.mgLayout)
+    // console.log("MarkerGroupComponent.ngOnInit(): mglayout=", this.mgLayout)
+    // this.markerGroup$.subscribe( o=>{
+    //   console.info("next() markerGroup$", o);
+    // })
   }
 
   ngOnDestroy() {
@@ -63,6 +69,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         case 'mg':
           if (!change.currentValue) return;
           const mg = change.currentValue;
+          const doChangeDetection = mg._detectChanges;
+          delete mg._detectChanges;
+          // console.info("MG.ngOnChanges():",mg.uuid);
           this.dataService.ready()
           .then( ()=>{
             this._miSub[mg.uuid] = new SubjectiveService(this.dataService.Photos);
@@ -72,6 +81,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             //     console.warn(`>>> photo$ for mg: ${mg.label || mg.seq}: count=${items.length}`)
             // });
             this.mgSubject.next(mg);
+            if (doChangeDetection) setTimeout(()=>this.cd.detectChanges())
           });
           break;
         case 'mListLayout':
@@ -126,7 +136,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     const o = {
       uuid: quickUuid(),
       dateTaken: new Date().toISOString(),
-      src: `https://picsum.photos/80?random=${random}`,
+      src: null, // `https://picsum.photos/80?random=${random}`,
       locOffset: [0,0],
     };    
     return this.dataService.Photos.get()
