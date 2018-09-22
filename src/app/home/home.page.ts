@@ -5,6 +5,8 @@ import { Component, OnInit, ViewChild,
 import { Observable, BehaviorSubject } from 'rxjs';
 import { catchError, flatMap } from 'rxjs/operators';
 import { AlertController, ActionSheetController } from '@ionic/angular';
+import { Plugins } from '@capacitor/core';
+import { QRCodeModule } from 'angularx-qrcode';
 
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
@@ -12,6 +14,8 @@ import  { MockDataService, quickUuid,
   IMarkerGroup,  IPhoto,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
+
+const { Browser } = Plugins;
 
 @Component({
   selector: 'app-home',
@@ -24,6 +28,8 @@ export class HomePage implements OnInit {
   // layout of markerList > markerGroups > markerItems: [edit, default]
   public layout: string;
   public mgCollection$ : Observable<IMarkerGroup[]>;
+  public qrcodeData: string = null;
+  public toggle:any = {};
   
   // mgFocus Getter/Setter
   private _mgFocus: IMarkerGroup;
@@ -105,11 +111,12 @@ export class HomePage implements OnInit {
     // console.log(markerSpec);
     const url = baseurl + Object.entries(params).map( el=>el.join('=') ).join('&');
     console.log(url); 
-    this.presentActionSheet_ShowMap(url)
+    // this.presentActionSheet_ShowMap(url);
+    this.qrcodeData = url;
     
   }
 
-  // window.open("http://google.com",'_system', 'location=yes');
+
 
   async presentActionSheet_ShowMap(url) {
     const actionSheet = await this.actionSheetController.create({
@@ -120,20 +127,15 @@ export class HomePage implements OnInit {
         icon: 'map',
         handler: () => {
           console.log(url);
-          setTimeout( ()=>{window.open(url,'_system', 'location=yes');},500)
+          setTimeout( ()=>{this.browserOpen(url)},500)
           
         }        
       }, {
-      //   text: 'Share',
-      //   icon: 'share',
-      //   handler: () => {
-      //     console.log('Share clicked');
-      //   }
-      // }, {
         text: 'Cancel',
         icon: 'close',
         role: 'cancel',
         handler: () => {
+          this.qrcodeData = null;
           console.log('Cancel clicked');
         }
       }]
@@ -142,7 +144,9 @@ export class HomePage implements OnInit {
   }
 
 
-
+  async browserOpen(url):Promise<void> {
+    return await Browser.open({url:url})
+  }
 
   ngOnInit() {
     this.layout = "default";

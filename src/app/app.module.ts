@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule, RouteReuseStrategy, Routes } from '@angular/router';
+import { QRCodeModule } from 'angularx-qrcode';
 
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 import { SplashScreen } from '@ionic-native/splash-screen/ngx';
@@ -11,18 +12,18 @@ import { AppRoutingModule } from './app-routing.module';
 import {
   MappiService
 } from './providers/mappi/mappi.service';
-// import { MarkerGroupComponent } from './marker-group/marker-group.component';
-// import { MarkerItemComponent } from './marker-item/marker-item.component';
 import { MockDataService } from './providers/mock-data.service';
 import { RestyService } from './providers/resty.service';
 import { SubjectiveService } from './providers/subjective.service';
 
+
 @NgModule({
-  declarations: [AppComponent, 
-    // MarkerGroupComponent, MarkerItemComponent
+  declarations: [
+    AppComponent, 
   ],
   entryComponents: [],
-  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule],
+  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,
+    QRCodeModule],
   providers: [
     StatusBar,
     SplashScreen,

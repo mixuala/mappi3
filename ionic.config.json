@@ -1,5 +1,8 @@
 {
   "name": "mappi3",
-  "integrations": {},
+  "integrations": {
+    "capacitor": {},
+    "cordova": {}
+  },
   "type": "angular"
 }

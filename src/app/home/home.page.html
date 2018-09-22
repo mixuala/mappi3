@@ -5,9 +5,9 @@
     </ion-buttons>
     <ion-buttons slot="end">
         <ion-button fill="outline" (click)="getStaticMap()" *ngIf="gmap && layout!='edit'">
-            <ion-icon name="cloud-download" slot="icon-only"></ion-icon>
-          </ion-button>
-      <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
+          <ion-icon name="cloud-download" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
           <ion-icon name="create" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='edit'">
@@ -23,7 +23,6 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content padding>
 
   <!-- googleMaps -->
   <app-google-maps *ngIf="mgCollection$ | async as mappiMarkers"
@@ -34,6 +33,8 @@
     (mapReady)="setMap($event)"
   ></app-google-maps>
 
+
+<ion-content padding>
 
   <ion-toolbar class="sibling-component">
     <ion-buttons>
@@ -48,9 +49,52 @@
     </ion-buttons>
   </ion-toolbar>
 
+  <!-- QRcode/Share Map ion-card -->
+  <ng-container *ngIf="qrcodeData">
+    <ion-card margin-vertical>
+      <ion-card-header>
+          <ion-toolbar color="primary">
+              <ion-card-title color="light" >Share Map</ion-card-title>
+              <ion-buttons slot="end">
+                <ion-button color="light" fill="outline" title="Share QR Code"
+                  (click)="toggle.mapLink=!toggle.mapLink">
+                  <ion-icon slot="icon-only" name="share"></ion-icon>
+                </ion-button>    
+                <ion-button color="light" fill="outline" title="Show Printable Map"
+                  (click)="browserOpen(qrcodeData)">
+                    <ion-icon slot="icon-only" name="open"></ion-icon>
+                </ion-button>         
+                <ion-button color="light" fill="outline" 
+                  (click)="qrcodeData=null">
+                  <ion-icon slot="icon-only" name="close"></ion-icon>
+                </ion-button>
+              </ion-buttons>
+            </ion-toolbar>        
+      </ion-card-header>
+      <ion-card-content padding-vertical>
+        <ion-item text-center no-padding>
+          <ion-label>
+            <p>Scan this QR code to link to this page.</p>
+          </ion-label>          
+        </ion-item>
+        <ion-item no-padding>
+          <div [ngStyle]="{'margin':'auto'}">
+              <qrcode [qrdata]="qrcodeData" [size]="256" [level]="'M'"></qrcode>
+          </div>
+        </ion-item>
+        <ion-item no-padding>
+          <ion-label *ngIf="toggle.mapLink">
+            <h2>Copy Map Link</h2>
+            <p><ion-text text-wrap color="primary">{{qrcodeData}}</ion-text></p>
+          </ion-label>
+        </ion-item>  
+      </ion-card-content>
+    </ion-card>
+  </ng-container>
+
   <!-- groupItem -->
   <ng-container [ngSwitch]="layout">
-    <ion-grid fixed  *ngSwitchCase="'edit'">
+    <ion-grid fixed no-padding  *ngSwitchCase="'edit'">
       <ion-row>
         <ion-col size="12">
               <ion-reorder-group 
