@@ -84,11 +84,6 @@ export class RestyService<T> {
       o['uuid'] = uuid;
       this._data[uuid] = o;
       this.debug && console.log( `${this.classname}: PUT`, o);
-
-
-      // ???: how do I cause send .next(o) to getById$(uuid) subscriber
-
-
       return Promise.resolve( o );
     }
     return Promise.reject("ERROR: object not found");

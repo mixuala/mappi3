@@ -4,8 +4,9 @@ import { Component, OnInit, ViewChild,
 } from '@angular/core';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { catchError, flatMap } from 'rxjs/operators';
+import { AlertController, ActionSheetController } from '@ionic/angular';
 
-import { MappiMarker, } from '../providers/mappi/mappi.service';
+import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
 import  { MockDataService, quickUuid,
   IMarkerGroup,  IPhoto,
@@ -36,6 +37,7 @@ export class HomePage implements OnInit {
 
   constructor( 
     public dataService: MockDataService,
+    public actionSheetController: ActionSheetController,
     private cd: ChangeDetectorRef,
   ){
     this.dataService.ready()
@@ -47,12 +49,97 @@ export class HomePage implements OnInit {
 
   // sibling subscribes to the SAME BehaviorSubject
   siblingClicked(o:any){
+    if (this.layout!='edit') return;
     const mg = o;
     this.childComponentsChange({data:o, action:'remove'});
     this.applyChanges('commit');
   }
 
+  public gmap:any;
+  setMap(o:{map:google.maps.Map,key:string}){
+    this.gmap=o;
+    console.log("google.maps.Map", this.gmap.map)
+  }
+  // TODO: move to GoogleMapsComponent??
+  // see: https://developers.google.com/maps/documentation/maps-static/dev-guide
+  getStaticMap(){
+    // helper functions
+    const round6 = (n:number):number=>Math.round(n*1e6)/1e6
+    const mapDim = (fit640?:boolean)=>{
+      const MAX_DIM = 640;
+      const {width, height} = map.getDiv().getBoundingClientRect();
+      const max_dim = Math.min( Math.max( width, height), MAX_DIM);
+      let scale = max_dim/Math.max(width,height);
+      if (!fit640) scale = Math.min(1, scale);
+      return [width,height].map(n=>Math.floor(n*scale));
+    }  
+    
+    const baseurl = "https://maps.googleapis.com/maps/api/staticmap?";
+    const map = this.gmap.map;
+    const markerSyles={
+      size: 'mid',
+      color: 'green',
+    }
+    const markerGroups = this._getCachedMarkerGroups('visible');
+    const markerSpec = []
+    markerGroups.forEach( (m,i)=>{
+      const {lat, lng} = m.position;
+      markerSyles['label'] = i+1;
+      const marker = [
+        Object.entries(markerSyles).map( el=>el.join(':') ).join('%7C'),
+        [lat,lng].map( n=>round6(n) ).join(','),
+      ]
+      markerSpec.push(marker.join('%7C'));
+    })
 
+    const params = {
+      center: map.getCenter().toUrlValue(),
+      zoom: map.getZoom(),
+      size: mapDim().join('x'), // '512x512',
+      scale:2,
+      mapType: map.getMapTypeId(),
+      markers: markerSpec.join('&markers='),
+      key: this.gmap.key
+    }
+    // console.log(params);
+    // console.log(markerSpec);
+    const url = baseurl + Object.entries(params).map( el=>el.join('=') ).join('&');
+    console.log(url); 
+    this.presentActionSheet_ShowMap(url)
+    
+  }
+
+  // window.open("http://google.com",'_system', 'location=yes');
+
+  async presentActionSheet_ShowMap(url) {
+    const actionSheet = await this.actionSheetController.create({
+      header: 'Map Image',
+      subHeader: url,
+      buttons: [{
+        text: 'Show Map',
+        icon: 'map',
+        handler: () => {
+          console.log(url);
+          setTimeout( ()=>{window.open(url,'_system', 'location=yes');},500)
+          
+        }        
+      }, {
+      //   text: 'Share',
+      //   icon: 'share',
+      //   handler: () => {
+      //     console.log('Share clicked');
+      //   }
+      // }, {
+        text: 'Cancel',
+        icon: 'close',
+        role: 'cancel',
+        handler: () => {
+          console.log('Cancel clicked');
+        }
+      }]
+    });
+    await actionSheet.present();
+  }
 
 
 

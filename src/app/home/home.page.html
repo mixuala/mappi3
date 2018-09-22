@@ -4,6 +4,9 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-buttons slot="end">
+        <ion-button fill="outline" (click)="getStaticMap()" *ngIf="gmap && layout!='edit'">
+            <ion-icon name="cloud-download" slot="icon-only"></ion-icon>
+          </ion-button>
       <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
           <ion-icon name="create" slot="icon-only"></ion-icon>
         </ion-button>
@@ -28,7 +31,8 @@
     [items]="mappiMarkers"
     [mode]="layout"
     (itemChange)="mappiMarkerChange($event)"
-  ></app-google-maps>  
+    (mapReady)="setMap($event)"
+  ></app-google-maps>
 
 
   <ion-toolbar class="sibling-component">

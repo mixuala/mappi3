@@ -29,11 +29,12 @@ export class GoogleMapsComponent implements OnInit {
   @Input() items: mappi.IMappiMarker[];
   @Input() mode: string;
 
+  @Output() mapReady: EventEmitter<{map:google.maps.Map,key:string}> = new EventEmitter<{map:google.maps.Map,key:string}>();
   @Output() itemChange: EventEmitter<{data:mappi.IMappiMarker,action:string}> = new EventEmitter<{data:mappi.IMappiMarker,action:string}>();
 
   public map: any;
   public markers: any[] = [];
-  public mapReady: Promise<void>;
+  private _mapReady: Promise<void>;
   private mapReadyResolvers: [(value?:any)=>void, (value?:any)=>void];
 
   /**
@@ -57,7 +58,7 @@ export class GoogleMapsComponent implements OnInit {
       })
     )
     loading.push(
-      this.mapReady = new Promise( (resolve, reject)=> {
+      this._mapReady = new Promise( (resolve, reject)=> {
         this.mapReadyResolvers = [resolve, reject];
       })
     )
@@ -99,6 +100,7 @@ export class GoogleMapsComponent implements OnInit {
   }
 
   public onMapReady():void {
+    this.mapReady.emit({map:this.map, key:this.apiKey});
     this.mgCollection$ = this._mgSub.get$();
     // this.mgCollection$.subscribe( items=>{
     // })
@@ -116,7 +118,7 @@ export class GoogleMapsComponent implements OnInit {
           break;
         case 'items':
           let items:mappi.IMappiMarker[] = change.currentValue;
-          this.mapReady
+          this._mapReady
           .then( ()=>{
             // ignore markers that are marked for delete pending commit
             const visible = items.filter(o=>o['_rest_action']!='delete');

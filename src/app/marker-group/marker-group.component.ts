@@ -220,7 +220,13 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         case "put":
           return this.dataService.Photos.put(o.uuid, o);
         case "delete":
-          return this.dataService.Photos.delete(o.uuid);
+          return this.dataService.Photos.delete(o.uuid)
+          .catch(err=>{
+            // will return `false` if we try to delete an item 
+            // that was not yet committed to dB
+            if (err===false) return Promise.resolve(true)
+            return Promise.reject(err);
+          });
       }
     });
     return Promise.all(children);    
