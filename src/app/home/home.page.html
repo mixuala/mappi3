@@ -34,7 +34,7 @@
   ></app-google-maps>
 
 
-<ion-content padding>
+<ion-content no-padding class="content-right-if-mq-landscape">
 
   <ion-toolbar class="sibling-component">
     <ion-buttons>
@@ -94,9 +94,9 @@
 
   <!-- groupItem -->
   <ng-container [ngSwitch]="layout">
-    <ion-grid fixed no-padding  *ngSwitchCase="'edit'">
+    <ion-grid no-padding  *ngSwitchCase="'edit'">
       <ion-row>
-        <ion-col size="12">
+        <ion-col size="12" size-sm="8" offset-sm="2" size-xl="6" offset-xl="3">
               <ion-reorder-group 
                 disabled="false" 
                 (ionItemReorder)="reorderMarkerGroup($event)">
@@ -107,14 +107,14 @@
                       (mgChange)="childComponentsChange($event)" [(mgFocus)]="mgFocus" ></app-marker-group>
                   </ion-list>
                   <ion-list>
-                      <ion-item class="add-marker-group" (click)="createMarkerGroup()">
-                          <ion-button  class="thumbnail-overlay" slot="start" expand="full" size="large" color="dark">
+                      <ion-item class="add-marker-group wrap-btn-as-thumbnail" (click)="createMarkerGroup()">
+                          <ion-button  class="as-thumbnail" slot="start" expand="full" size="large">
                             <ion-icon slot="icon-only" name="add"></ion-icon>
                           </ion-button>
-                          <ion-thumbnail slot="start">
+                          <!-- <ion-thumbnail slot="start">
                             <ion-img src="https://picsum.photos/80?random=0"></ion-img>
-                          </ion-thumbnail>
-                        <ion-label color="primary"> add photo/marker </ion-label>
+                          </ion-thumbnail> -->
+                        <ion-label color="primary"> Add photo/marker </ion-label>
                       </ion-item>
                   </ion-list>                  
               </ion-reorder-group>
@@ -122,16 +122,16 @@
       </ion-row>
     </ion-grid>    
 
-    <ion-grid fixed *ngSwitchDefault>
-      <ion-row>
-        <ion-col size="12" size-lg="6"
+
+    <ion-grid no-padding *ngSwitchCase="'default'">
+      <ion-row class="xxx-hscroll-if-mq-portrait">
+        <ion-col size="12" size-sm="6" size-xl="4"
           class="marker-group-focus"
           *ngFor="let mg of mgCollection$ | async">
           <app-marker-group  *ngIf="mg?._rest_action!='delete'"
             [mg]="mg" [mListLayout]="layout" 
             (mgChange)="childComponentsChange($event)" [(mgFocus)]="mgFocus" ></app-marker-group>
         </ion-col>
-
       </ion-row>
     </ion-grid>
 

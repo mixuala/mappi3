@@ -74,4 +74,33 @@
   --ion-color-dark-contrast-rgb: 255,255,255;
   --ion-color-dark-shade: #1e1e1e;
   --ion-color-dark-tint: #383838;
+
+
+
+
+  ion-split-pane.split-pane-md.split-pane-visible>.split-pane-side {
+    max-width: 280px;
+  }
+
+  --thumbnail-size: 80px;
+
+  // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
+  @media only screen and (max-device-width: 767px) {
+
+    --thumbnail-size:56px;
+    ion-thumbnail {
+      --thumbnail-size: 56px;
+    }
+
+  }
+
+
+  --toolbar-min-height: 44px;
+  ion-toolbar {
+    --min-height: var(--toolbar-min-height);
+  }
+
+
 }
+
+

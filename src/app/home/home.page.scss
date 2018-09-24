@@ -4,20 +4,77 @@
 
 ion-grid {
   padding: 5px 0;
+
+  ion-col {
+    margin: 0 auto;
+  }
 }
+
+// ip6/7/8 landscape
+@media only screen 
+	and (max-device-height: 414px) 
+	and (orientation: landscape)
+{
+  ion-content.content-right-if-mq-landscape {
+    position: absolute;
+    left: 50%;
+    top: var(--toolbar-min-height);
+    height: 100%;
+    width: 50%;
+  }
+
+  ion-col {
+    --ion-grid-columns: 6;
+  }
+} 
+
+// ip6/7/8 PORTRAIT
+@media only screen 
+	and (max-device-height: 812px) 
+	and (orientation: portrait)
+{
+  ion-row.hscroll-if-mq-portrait {
+    flex-wrap: nowrap;
+    overflow-x: scroll!important;
+    overflow-y: hidden;
+    word-wrap: break-word;
+    height:100%;
+
+  }
+}
+
+
+
 
 ion-reorder-group > ion-list {
   margin: 0;
 }
 
-ion-item.add-marker-group {
-  position: relative;
+ion-card-content {
+  padding-top: 0;
 }
-ion-item.add-marker-group ion-button {
-  position: absolute;
-  opacity: 0.7;
-  width: 80px !important;
-  height: 80px !important;
-  --height: 80px !important;
-  margin: 0;
+
+
+ion-thumbnail {
+  width: var(--thumbnail-size);
+  height: var(--thumbnail-size);
+  margin: 1px 1px 1px 0;
 }
+
+ion-button.as-thumbnail {
+  width: var(--thumbnail-size);
+  --height: var(--thumbnail-size);
+  margin: 1px 1px 1px 0;
+
+  &.button-ios ion-icon {
+    font-size:48px;
+  }  
+}
+
+// layout=edit, fix left whitespace for ion-item:last-child > ion-button.as-thumbnail 
+ion-item.wrap-btn-as-thumbnail{
+  border:none;
+  margin-left: 16px;
+  --padding-start: 0;
+}
+

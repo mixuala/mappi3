@@ -160,19 +160,21 @@ export class HomePage implements OnInit {
 
   toggleEditMode(action:string) {
     if (this.layout != "edit") {
-      this["_stash_layout"] = this.layout;
+      this.toggle.layout = this.layout;
       this.layout = "edit";
+      console.log("home.page.ts: layout=", this.layout)
     }
     else {
       return this.applyChanges(action)
       .then( 
         res=>{
-          this.layout = this["_stash_mgLayout"];
+          this.layout = this.toggle.layout;
+          console.log("home.page.ts: layout=", this.layout)
         },
         err=>console.log('ERROR saving changes')
       )
     }    
-    console.log("home.page.ts: layout=", this.layout)
+    
   }
 
   createMarkerGroup(data:any={}, ev?:any):Promise<IMarkerGroup>{

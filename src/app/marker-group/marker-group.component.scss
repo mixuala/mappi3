@@ -1,32 +1,53 @@
-.gallery { 
-  display: flex;
-  -webkit-flex-wrap: wrap;
-  flex-wrap: wrap;
-  -webkit-flex-direction: row;
-  flex-direction: row;   
-}
-
-
-
-.gallery ion-thumbnail {
-  margin-right: 1px;
-  min-width: 80px;
-}
-
 ion-card {
   margin:0;
 }
 
-ion-item.add-marker-item {
-  position: relative;
-}
-ion-item.add-marker-item ion-button {
-  position: absolute;
-  margin: 0;
+
+// ip6/7/8 PORTRAIT
+@media only screen 
+	and (max-device-height: 812px) 
+	and (orientation: portrait)
+{
+  ion-card.hscroll-if-mq-portrait {
+    height: 47vh;
+  }
 }
 
-ion-button.thumbnail-overlay {
-  opacity: 0.7;  
-  width: 80px !important;
-  --height: 80px !important;
+
+ion-card-content {
+  padding-top: 0;
+}
+
+
+ion-item.gallery { 
+  display: flex;
+  -webkit-flex-wrap: wrap;
+  flex-wrap: wrap;
+  -webkit-flex-direction: row;
+  flex-direction: row;
+  --inner-border-width: 0;
+}
+
+
+ion-thumbnail {
+  width: var(--thumbnail-size);
+  height: var(--thumbnail-size);
+  margin: 1px 1px 1px 0;
+}
+
+ion-button.as-thumbnail {
+  width: var(--thumbnail-size);
+  --height: var(--thumbnail-size);
+  margin: 1px 1px 1px 0;
+
+  &.button-ios ion-icon {
+    font-size:48px;
+  }
+}
+
+// layout=edit, fix left whitespace for ion-item:last-child > ion-button.as-thumbnail 
+ion-item.wrap-btn-as-thumbnail{
+  border:none;
+  margin-left: 16px;
+  --padding-start: 0;
 }
