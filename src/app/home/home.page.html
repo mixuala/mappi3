@@ -29,6 +29,7 @@
     apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94" 
     [items]="mappiMarkers"
     [mode]="layout"
+    [(selected)]="selectedMarkerGroup"
     (itemChange)="mappiMarkerChange($event)"
     (mapReady)="setMap($event)"
   ></app-google-maps>
@@ -131,7 +132,8 @@
           *ngFor="let mg of mgCollection$ | async">
           <app-marker-group  *ngIf="mg?._rest_action!='delete'"
             [mg]="mg" [mListLayout]="layout" 
-            (mgChange)="childComponentsChange($event)" [(mgFocus)]="mgFocus" ></app-marker-group>
+            (mgChange)="childComponentsChange($event)"
+            [(mgFocus)]="mgFocus" ></app-marker-group>
         </ion-col>
       </ion-row>
     </ion-grid>

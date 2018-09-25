@@ -1,5 +1,5 @@
 import { Component, OnInit, Input, Renderer2, ElementRef, Inject, ViewEncapsulation,
-  SimpleChange, EventEmitter, Output,
+  SimpleChange, EventEmitter, Output, ChangeDetectionStrategy,
 } from '@angular/core';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { DOCUMENT } from '@angular/platform-browser';
@@ -22,6 +22,7 @@ const { Geolocation } = Plugins;
   styleUrls: ['./google-maps.component.scss'],
   // BUG: component does not import styleUrls unless `ViewEncapsulation.None`
   encapsulation: ViewEncapsulation.None,
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GoogleMapsComponent implements OnInit {
 
@@ -29,8 +30,13 @@ export class GoogleMapsComponent implements OnInit {
   @Input() items: mappi.IMappiMarker[];
   @Input() mode: string;
 
+
+  @Input() selected:string;
+  
+
   @Output() mapReady: EventEmitter<{map:google.maps.Map,key:string}> = new EventEmitter<{map:google.maps.Map,key:string}>();
   @Output() itemChange: EventEmitter<{data:mappi.IMappiMarker,action:string}> = new EventEmitter<{data:mappi.IMappiMarker,action:string}>();
+  @Output() selectedChange: EventEmitter<string> = new EventEmitter<string>();
 
   public map: any;
   public markers: any[] = [];
@@ -83,19 +89,25 @@ export class GoogleMapsComponent implements OnInit {
 
   private loadMap(): Promise<any> {
     return new Promise((resolve, reject) => {
-      Geolocation.getCurrentPosition().then((position) => {
-        console.log(position);
-        let latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-        let mapOptions = {
-          center: latLng,
-          zoom: 15
-        };
-        this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
-        resolve(true);
-      }, (err) => {
-        console.error(err);
-        reject('Could not initialise map. No access to location???');
-      });
+      const centerMap = ()=> {
+        Geolocation.getCurrentPosition().then((position) => {
+          console.log(position);
+          let latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+          let mapOptions = {
+            center: latLng,
+            zoom: 15
+          };
+          this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
+          resolve(true);
+        }, (err) => {
+          console.error(err);
+          reject('Could not initialise map. No access to location???');
+        });
+      }
+      setTimeout( ()=>{
+        console.log("requesting browser location information");
+        centerMap();
+      }, 100)
     });
   }
 
@@ -116,6 +128,25 @@ export class GoogleMapsComponent implements OnInit {
           const listen = change.currentValue=='edit';
           this.click_AddMarker(listen);
           break;
+        case 'selected':
+          // see: https://stackoverflow.com/questions/19296323/google-maps-marker-set-background-color?noredirect=1&lq=1
+          // see: maps.google.com/mapfiles/marker" + letter + ".png 
+          //      e.g. http://maps.google.com/mapfiles/markerB.png
+          const visible = MappiMarker.markers.filter(o=>o['_rest_action']!='delete');
+          visible.forEach( (m)=>{
+            m.setLabel({
+              text: m.getLabel().text,
+              color: m.uuid == this.selected ? 'black' : 'darkred',
+              fontWeight: m.uuid == this.selected ? '900' : '400',
+            });
+            // if (m.uuid == this.selected) {
+            //   // BUG: animation does NOT include labels
+            //   // see: https://stackoverflow.com/questions/32725387/google-maps-api-why-dont-labels-animate-along-with-markers
+            //   m.setAnimation(google.maps.Animation.BOUNCE);
+            //   setTimeout( ()=>m.setAnimation(null), 3000);
+            // }
+          });
+          break;
         case 'items':
           let items:mappi.IMappiMarker[] = change.currentValue;
           this._mapReady
@@ -132,6 +163,18 @@ export class GoogleMapsComponent implements OnInit {
             // console.log(`>>> GoogleMapsComponent.ngOnChanges() called, items.length=${items.length}`, actions);
             MappiMarker.remove(actions.remove);
             this.addMarkers(actions.add);
+
+            actions.keep.forEach( (m)=>{
+              // update visible marker labels
+              const mm = visible.find(o=>{
+                return o.uuid == m.uuid;
+              })
+              m.setLabel({
+                text:`${mm.seq+1}`,
+                color: m.uuid == this.selected ? 'black' : 'darkred',
+                fontWeight: m.uuid == this.selected ? '900' : '400',
+              });
+            })
 
             if (actions.add.length){
               // adjust google.maps.LatLngBounds
@@ -157,9 +200,11 @@ export class GoogleMapsComponent implements OnInit {
       // animation: google.maps.Animation.BOUNCE,
       draggable: true,
       position: position,
+      label: `${m.seq+1}`
     });
     m.listeners = m.listeners || {};
     m.listeners.dragend = this.listen_DragEnd(m);
+    m.listeners.click = this.listen_Click(m);
   }
 
   public addMarkers(items:mappi.IMappiMarker[]){
@@ -169,6 +214,20 @@ export class GoogleMapsComponent implements OnInit {
       this.addOneMarker(v);
     })
   }
+ 
+
+  public listen_Click(m:mappi.IMappiMarker):mappi.IListenerController{
+    const click_Marker = ListenerWrapper.make( ()=>{
+      return m.marker.addListener('click',(ev)=>{
+  
+        this.selectedChange.emit(m.uuid);
+        
+        console.log("marker clicked: label=", m.marker.getLabel().text, m.uuid);
+  
+      })
+    })(true);  
+    return click_Marker;
+  }  
 
   public listen_DragEnd(m:mappi.IMappiMarker):mappi.IListenerController{
     const dragend_Marker = ListenerWrapper.make( ()=>{

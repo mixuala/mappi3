@@ -30,6 +30,16 @@ export class HomePage implements OnInit {
   public mgCollection$ : Observable<IMarkerGroup[]>;
   public qrcodeData: string = null;
   public toggle:any = {};
+
+  private _selectedMarkerGroup: string;
+  public get selectedMarkerGroup() { return this._selectedMarkerGroup }
+  public set selectedMarkerGroup(value: string) {
+    this._selectedMarkerGroup = value;
+    // console.warn( "HomePage setter: fire detectChanges() for selected", value);
+    setTimeout(()=>this.cd.detectChanges())
+  }
+
+
   
   // mgFocus Getter/Setter
   private _mgFocus: IMarkerGroup;
@@ -38,6 +48,7 @@ export class HomePage implements OnInit {
   }
   set mgFocus(value: IMarkerGroup) {
     this._mgFocus = value;
+    this.selectedMarkerGroup = value ? value.uuid : null;
   }
   private _mgSub: SubjectiveService<IMarkerGroup>;
 
@@ -58,7 +69,7 @@ export class HomePage implements OnInit {
     if (this.layout!='edit') return;
     const mg = o;
     this.childComponentsChange({data:o, action:'remove'});
-    this.applyChanges('commit');
+    // this.applyChanges('commit');
   }
 
   public gmap:any;
@@ -286,6 +297,9 @@ export class HomePage implements OnInit {
     if (!change.data) return;
     const mg = change.data;
     switch(change.action){
+      case 'selected':
+        this._selectedMarkerGroup = mg.uuid;
+        break;
       case 'add':
         const newMg = change.data;
         newMg['_rest_action'] = 'post';
@@ -315,7 +329,7 @@ export class HomePage implements OnInit {
   }
 
   childComponents_CommitChanges(items:IMarkerGroup[]):Promise<any>{
-    const children:Promise<any>[] = items.map( o=>{
+    const children:Promise<IMarkerGroup|boolean>[] = items.map( o=>{
       const restAction = o._rest_action;
       delete o._rest_action;
       switch(restAction) {
@@ -323,6 +337,9 @@ export class HomePage implements OnInit {
           return this.dataService.MarkerGroups.post(o);
         case "put":
           return this.dataService.MarkerGroups.put(o.uuid, o);
+        case "seq":
+          // return true;
+          return this.dataService.MarkerGroups.put(o.uuid, o, ['seq']);  
         case "delete":
           return this.dataService.MarkerGroups.delete(o.uuid)
       }
@@ -335,8 +352,14 @@ export class HomePage implements OnInit {
     .then( res=>{
       switch(action){
         case "commit":
-          const allItems = this._getCachedMarkerGroups('commit');
-          const remainingItems = this._getCachedMarkerGroups('visible');
+          const remainingItems = this._getCachedMarkerGroups('visible')
+          .sort( (a,b)=>a.seq-b.seq )
+          .map((o,i)=>{
+            o.seq = i;    // re-index remaining/visible items
+            if (!o._rest_action) o._rest_action = 'seq';
+            return o;
+          });
+          const allItems = remainingItems.concat(this._getCachedMarkerGroups('removed'))
           return this.childComponents_CommitChanges(allItems)
           .catch( err=>{
             console.error("ERROR: problem saving child nodes ");
@@ -360,6 +383,8 @@ export class HomePage implements OnInit {
       items = items.filter( o=>o._rest_action!= 'post') // skip added items
     else if (option=='visible')
       items = items.filter( o=>o._rest_action!= 'delete') // skip removed items
+    else if (option=='removed')
+      items = items.filter( o=>o._rest_action== 'delete') // skip removed items  
 
     items.sort( (a,b)=>a.seq-b.seq );
     return items;

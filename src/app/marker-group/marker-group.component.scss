@@ -28,6 +28,13 @@ ion-item.gallery {
   --inner-border-width: 0;
 }
 
+ion-item ion-badge.thumbnail-overlay {
+  position: absolute;
+  top: 1px;
+  margin: 2px;
+  opacity: .7;
+}
+
 
 ion-thumbnail {
   width: var(--thumbnail-size);

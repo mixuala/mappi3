@@ -27,11 +27,11 @@ export class SubjectiveService<T> {
     this.resty.get(uuid)
     .then(arr=>{
       arr.sort( (a,b)=>a['label']>b['label'] ? 1:-1 );
-      arr.map( (o,i)=>o['seq']=i);
-      arr.map( (o,i)=>{
-        // HACK: persist alpha sort/.seq to original data
-        this.resty["_data"][o['uuid']]=Object.assign({},o);
-      });
+      // arr.forEach( (o,i)=>o['seq']=i);
+      // arr.map( (o,i,l)=>{
+      //   // HACK: persist alpha sort/.seq to original data
+      //   this.resty["_data"][o['uuid']]=Object.assign({},o);
+      // });
       this.subject$.next(arr);
     })
   

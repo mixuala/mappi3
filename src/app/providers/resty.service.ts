@@ -77,12 +77,18 @@ export class RestyService<T> {
     return from( this.post(o) );
   }
 
-  put(uuid:string, o:T):Promise<T>{
+  put(uuid:string, o:T, fields?:string[]):Promise<T>{
     if (!uuid) 
       return Promise.reject(false);
     if (this._data[uuid]) {
       o['uuid'] = uuid;
-      this._data[uuid] = o;
+      if (fields) {
+        const rec = this._data[uuid];
+        fields.forEach( k=>{
+          if (rec.hasOwnProperty(k)) rec[k] = o[k];
+        })
+      } else
+        this._data[uuid] = o;
       this.debug && console.log( `${this.classname}: PUT`, o);
       return Promise.resolve( o );
     }

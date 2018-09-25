@@ -129,6 +129,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     console.log(`MarkerGroupComponent: ${this.mgSubject.value.label},  mgLayout=${this.mgLayout} `)
   }
 
+  selectMarkerGroup(o:IMarkerGroup){
+    this.mgChange.emit({data:o, action:'selected'});
+  }
+
   createMarkerItem(ev:any){
     const mg = this.mgSubject.value;
     // create placeholder mi data

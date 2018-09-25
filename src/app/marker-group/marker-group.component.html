@@ -46,7 +46,8 @@
   <ion-card *ngSwitchCase="'gallery'" class="xxx-hscroll-if-mq-portrait">
     <ion-card-header color="secondary">
       <ion-item>
-        <ion-icon name="pin" slot="start" color="primary"></ion-icon>
+        <ion-icon name="pin" slot="start" color="primary" (click)="selectMarkerGroup(marker)"
+        ></ion-icon>
         <ion-label>
           <h3>
             <ion-text color="primary">{{ marker.label || marker.seq }}</ion-text>
@@ -88,6 +89,7 @@
     <ion-item>
       <ng-container *ngIf="marker?.markerItemIds.length; else edit_pinIcon">
         <ng-container *ngIf="miCollection$[marker.uuid] | async as items">
+          <ion-badge class="thumbnail-overlay" color="primary"> {{marker.seq+1}} </ion-badge>
           <app-marker-item *ngIf="items[0] as mi"
             [mi]="mi" [mgLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
         </ng-container>
