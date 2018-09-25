@@ -5,7 +5,7 @@
 ion-grid {
   padding: 5px 0;
 
-  ion-col {
+  ion-col.center {
     margin: 0 auto;
   }
 }
@@ -23,8 +23,11 @@ ion-grid {
     width: 50%;
   }
 
+  // rollback ion-col[offset-sm="2"] in landscape mode
   ion-col {
     --ion-grid-columns: 6;
+    max-width: 100% !important;
+    margin-left: 0 !important;
   }
 } 
 

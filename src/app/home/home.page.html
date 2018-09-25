@@ -127,6 +127,7 @@
       <ion-row class="xxx-hscroll-if-mq-portrait">
         <ion-col size="12" size-sm="6" size-xl="4"
           class="marker-group-focus"
+          ngClass.centered="mgFocus"
           *ngFor="let mg of mgCollection$ | async">
           <app-marker-group  *ngIf="mg?._rest_action!='delete'"
             [mg]="mg" [mListLayout]="layout" 
