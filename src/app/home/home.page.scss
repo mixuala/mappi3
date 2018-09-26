@@ -11,9 +11,11 @@ ion-grid {
 }
 
 // ip6/7/8 landscape
-@media only screen 
-	and (max-device-height: 414px) 
-	and (orientation: landscape)
+@media only screen
+  and (max-width: 812px) 
+	and (max-height: 414px) 
+  and (orientation: landscape)
+  and (-webkit-min-device-pixel-ratio: 2)
 {
   ion-content.content-right-if-mq-landscape {
     position: absolute;
@@ -33,8 +35,10 @@ ion-grid {
 
 // ip6/7/8 PORTRAIT
 @media only screen 
-	and (max-device-height: 812px) 
-	and (orientation: portrait)
+  and (max-width: 414px) 
+	and (max-height: 812px) 
+  and (orientation: portrait)
+  and (-webkit-min-device-pixel-ratio: 2)
 {
   ion-row.hscroll-if-mq-portrait {
     flex-wrap: nowrap;

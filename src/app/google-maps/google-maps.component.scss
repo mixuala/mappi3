@@ -5,21 +5,25 @@ app-google-maps {
 }
 
 @media only screen 
-	and (max-device-height: 812px) 
+	and (max-width: 414px) 
+	and (max-height: 812px) 
 	and (orientation: portrait)
+	and (-webkit-min-device-pixel-ratio: 2)
 {
 
 	app-google-maps {
 		// aspect ratio=3:2 for ip6/7/8
-		height: 37.49vh;
+		height: 37.49%;
 		width: 100%;
 	}
 
 }
 
 @media only screen 
-	and (max-device-height: 414px) 
+	and (max-width: 812px) 
+	and (max-height: 414px) 
 	and (orientation: landscape)
+	and (-webkit-min-device-pixel-ratio: 2)
 {
 
 	app-google-maps {
