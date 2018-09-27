@@ -1,28 +1,29 @@
 import { Injectable } from '@angular/core';
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
+import { Observable, BehaviorSubject } from 'rxjs';
 
 export function quickUuid() {
   // re-export
   return _quickUuid();
 };
 
-export interface IMarkerGroup {
-  id?: number,  // deprecate
+export interface IMarker {
   uuid: string,
   loc: [number,number],
-  locOffset: [number,number],
-  seq?: number,
-  label?: string,  
-  placeId?: string,
-  // MarkerGroup hasMany MarkerItems, use Photos for now.
-  markerItemIds: string[],  // uuid[]
-  markerItems?: IPhoto[],
-  // derived value: loc + locOffset
+  locOffset: [number,number], 
   position?: {    //new google.maps.LatLng(position);
     lat: number,
     lng: number,
   },
+  seq?: number,   
+}
+
+export interface IMarkerGroup extends IMarker {
+  label?: string,  
+  placeId?: string,
+  // MarkerGroup hasMany MarkerItems, use Photos for now.
+  markerItemIds: string[],  // uuid[]
   [propName: string]: any;
 }
 
@@ -31,14 +32,10 @@ export interface IMarkerGroup {
 //   type: string,
 // }
 
-export interface IPhoto {
-  id?: number,  // deprecate
-  uuid: string,
-  loc: [number,number],
+export interface IPhoto  extends IMarker {
   dateTaken: string,
   orientation: number,
   src: string,
-  seq?:number,
   thumbnail?: string,
   width?: number,
   height?: number,
@@ -60,6 +57,9 @@ export class MockDataService {
 
   public sjMarkerGroups:SubjectiveService<IMarkerGroup>;
   public sjPhotos:SubjectiveService<IPhoto>;
+
+  // local cache of map BehaviorSubjects
+  public markerCollSubjectDict: {[uuid: string]:SubjectiveService<IMarker>} = {};
 
   private _ready:Promise<void>;
 
@@ -147,17 +147,17 @@ export const MARKER_GROUPS: IMarkerGroup[] = [
 
 
 export const PHOTOS: IPhoto[] = [
-  {uuid: null, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-23T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-03T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-23T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-23T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-24T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-04T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-24T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-24T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc: [3.1589503, 101.73743390000004], dateTaken:"2018-04-25T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc: [3.160250353353649, 101.72868381210333], dateTaken:"2018-06-05T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], dateTaken:"2018-07-25T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
-  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },    
+  {uuid: null, loc: [3.1589503, 101.73743390000004], locOffset:[0,0], dateTaken:"2018-04-23T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.160250353353649, 101.72868381210333], locOffset:[0,0], dateTaken:"2018-06-03T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], locOffset:[0,0], dateTaken:"2018-07-23T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], dateTaken:"2018-02-23T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1589503, 101.73743390000004], locOffset:[0,0], dateTaken:"2018-04-24T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.160250353353649, 101.72868381210333], locOffset:[0,0], dateTaken:"2018-06-04T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], locOffset:[0,0], dateTaken:"2018-07-24T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], dateTaken:"2018-02-24T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1589503, 101.73743390000004], locOffset:[0,0], dateTaken:"2018-04-25T10:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.160250353353649, 101.72868381210333], locOffset:[0,0], dateTaken:"2018-06-05T11:49:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc: [3.1569080416737467, 101.74091468521124], locOffset:[0,0], dateTaken:"2018-07-25T16:29:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },
+  {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?random={id}" , width:0, height:0 },    
 ]
 

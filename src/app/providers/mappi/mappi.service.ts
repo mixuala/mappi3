@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import * as mappi from './mappi.types';
+import { isFunction } from 'util';
 
 /**
  * helper class for manipulating UuidMarkers
@@ -15,10 +16,10 @@ export class MappiMarker {
     let m = (o instanceof google.maps.Marker) ? o : new google.maps.Marker(o);
     // for DEV only
     if (typeof uuid == 'number') uuid = `${uuid}`;
-    if (MappiMarker.markers.some( m=>m.uuid == uuid)){
-      console.warn("warning: marker.uuid exists.... UPDATE??");
-      const found = MappiMarker.markers.filter( m=>m.uuid == uuid);
-      return found[0];
+    const found = MappiMarker.markers.find( m=>m.uuid == uuid);
+    if (found){
+      console.warn("warning: marker.uuid exists", found, MappiMarker.markers.length);
+      return found;
     }
     // 'augment' google.maps.Marker => mappi.IUuidMarker
     Object.assign(m, {
@@ -29,20 +30,44 @@ export class MappiMarker {
     MappiMarker.markers.push(marker);
     return marker;
   }
-  static remove (list:mappi.IUuidMarker[]=[]):number {
+
+  static remove (list:mappi.IMappiMarker[]=[]):number {
     let removed = 0;
-    if (list === MappiMarker.markers) 
-      list = MappiMarker.markers.slice(); // make a copy before Array.splice()
-    for (const target of list) {
-      const found = MappiMarker.markers.findIndex( (m)=>m.uuid == target.uuid );
+    for (const mm of list) {
+      const found = MappiMarker.markers.findIndex( (m)=>m.uuid == mm.uuid );
       if (~found)  {
         // const remove:google.maps.Marker = MappiMarker.markers.splice(found,1);
-        const remove:mappi.IUuidMarker[] = MappiMarker.markers.splice(found,1);
-        remove[0].setMap(null);
+        const remove:mappi.IUuidMarker = MappiMarker.markers.splice(found,1)[0];
+        remove.setMap(null);
+        mm.marker = null;
+        delete mm['marker'];
         removed++;
       }
     }
     return removed;
+  }  
+
+  /**
+   *  hide(): remove a list of markers from the google.map.Map
+   *  WARNING: does not delete the marker, still referenced by IMappiMarker.marker
+   */ 
+  static hide (list:mappi.IUuidMarker[]=[]):number {
+    let found = 0;
+    const notFound = [];
+    list.forEach( m=>{
+      if (m instanceof google.maps.Marker){
+        m.setMap(null);
+        found ++;
+      }
+      else notFound.push(m);
+    })
+    if (notFound.length)
+      console.warn("MappiMarker.hide(): some markers were not valid", notFound);
+    return found;
+  }
+
+  static reset() {
+    MappiMarker.hide(MappiMarker.markers);
   }
 
   static findByUuid( uuids:string[] ) : mappi.IUuidMarker[] {

@@ -10,8 +10,9 @@ import { MappiService, ListenerWrapper,
 } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
 
-import  { MockDataService, IMarkerGroup,  IPhoto, } from '../providers/mock-data.service';
+import  { MockDataService, IMarkerGroup,  IPhoto, IMarker } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
+import { MarkerItemComponent } from '../marker-item/marker-item.component';
 
 
 const { Geolocation } = Plugins;
@@ -148,69 +149,121 @@ export class GoogleMapsComponent implements OnInit {
           });
           break;
         case 'items':
-          let items:mappi.IMappiMarker[] = change.currentValue;
+          if (change.firstChange) return;
           this._mapReady
           .then( ()=>{
+            let items:IMarker[] = change.currentValue;
+            items.forEach( (m,i)=>m.seq=i);  // reindex for labels
             // ignore markers that are marked for delete pending commit
             const visible = items.filter(o=>o['_rest_action']!='delete');
             const visibleUuids = visible.map(o=>o.uuid);
             const markerUuids = MappiMarker.markers.map(o=>o.uuid);
-            const actions = {
-              'keep': MappiMarker.findByUuid( visibleUuids ),
-              'add': visible.filter( v=>!markerUuids.includes( v.uuid )),
-              'remove': MappiMarker.markers.filter(o=>!visibleUuids.includes(o.uuid)),
-            }
-            // console.log(`>>> GoogleMapsComponent.ngOnChanges() called, items.length=${items.length}`, actions);
-            MappiMarker.remove(actions.remove);
-            this.addMarkers(actions.add);
-
-            actions.keep.forEach( (m)=>{
-              // update visible marker labels
-              const mm = visible.find(o=>{
-                return o.uuid == m.uuid;
-              })
-              m.setLabel({
-                text:`${mm.seq+1}`,
-                color: m.uuid == this.selected ? 'black' : 'darkred',
-                fontWeight: m.uuid == this.selected ? '900' : '400',
-              });
+            const hidden = MappiMarker.markers.filter(o=>!visibleUuids.includes(o.uuid));
+            visible.forEach( (marker,i)=>{
+              const mm:mappi.IMappiMarker = marker;
+              if (marker['marker'] && markerUuids.includes(marker.uuid)){
+                // keep/restore existing marker
+                mm.marker.setMap(this.map);
+                mm.marker.setLabel({
+                  text:`${marker.seq+1}`,        // don't reset labels until commit.
+                  color: mm.uuid == this.selected ? 'black' : 'darkred',
+                  fontWeight: mm.uuid == this.selected ? '900' : '400',
+                });
+              } else if (marker['marker']) {
+                console.error("existing marker found, but not in MappiMarker.markers", mm);
+              } else {
+                if (marker['marker']) {
+                  // recover found marker instead of adding new
+                  mm.marker.setMap(this.map);
+                  mm.marker.setLabel({
+                    text:`${marker.seq+1}`,
+                    color: mm.uuid == this.selected ? 'black' : 'darkred',
+                    fontWeight: mm.uuid == this.selected ? '900' : '400',
+                  });
+                  console.warn("found marker, but not found in MappiMarker.markers", mm);
+                }
+                else {
+                  // add completely new marker
+                  this.addOneMarker(marker);
+                }
+              }
             })
+            MappiMarker.hide(hidden);
 
-            if (actions.add.length){
-              // adjust google.maps.LatLngBounds
-              const bounds = new google.maps.LatLngBounds();
-              visible.forEach(o=>{
-                bounds.extend(MappiMarker.position(o));
-              })
-              setTimeout(  ()=> {
-                this.map.fitBounds(bounds);
-              }, 100);
-            }
+            if (visible.length) this.setMapBoundsWithMinZoom(visible);
           })
           break;
       }
     });
-  }  
+  }
 
-  public addOneMarker(m:mappi.IMappiMarker): void {
-    const self = this;
-    const position = MappiMarker.position(m);
-    m.marker = MappiMarker.make(m.uuid, {        
-      map: self.map,
-      // animation: google.maps.Animation.BOUNCE,
-      draggable: true,
-      position: position,
-      label: `${m.seq+1}`
+  public setMapBoundsWithMinZoom(markers:IMarker[], minZoom=10){
+    // adjust google.maps.LatLngBounds
+    const bounds = new google.maps.LatLngBounds();
+    markers.forEach(o=>{
+      bounds.extend(MappiMarker.position(o));
     });
-    m.listeners = m.listeners || {};
-    m.listeners.dragend = this.listen_DragEnd(m);
-    m.listeners.click = this.listen_Click(m);
+
+    // This is needed to set the zoom after fitbounds, 
+    let initialZoom = true;
+    const listen_zoom = google.maps.event.addListener(this.map, 'zoom_changed', ()=>{
+      google.maps.event.addListenerOnce(this.map, 'bounds_changed', (event)=> {
+        if (this.map.getZoom() > minZoom && this.map.initialZoom == true) {
+            // Change max/min zoom here
+            this.map.setZoom(minZoom);
+            initialZoom = false;
+        }
+      });
+    });
+    this.map.panToBounds(bounds,80);
+    setTimeout( ()=>{listen_zoom.remove()}, 2000)
+  }
+
+  public addOneMarker(mm:mappi.IMappiMarker): void {
+    const self = this;
+    const found = MappiMarker.markers.find( o=>o.uuid==mm.uuid);
+    if (found) {
+      mm.marker = found;
+      mm.marker.setMap(this.map);
+      mm.marker.setLabel({
+        text:`${mm.seq+1}`,
+        color: mm.uuid == this.selected ? 'black' : 'darkred',
+        fontWeight: mm.uuid == this.selected ? '900' : '400',
+      });
+      return;
+    } 
+    else {
+      const position = MappiMarker.position(mm);
+      mm.marker = MappiMarker.make(mm.uuid, {        
+        map: self.map,
+        // animation: google.maps.Animation.BOUNCE,
+        draggable: true,
+        position: position,
+        // label: `${mm.seq+1}`
+        label: {
+          text:`${mm.seq+1}`,
+          color: mm.uuid == this.selected ? 'black' : 'darkred',
+          fontWeight: mm.uuid == this.selected ? '900' : '400',
+        }
+      });
+      mm.marker._listeners = mm.marker._listeners || {};
+      mm.marker._listeners.dragend = this.listen_DragEnd(mm);
+      mm.marker._listeners.click = this.listen_Click(mm);
+    }
   }
 
   public addMarkers(items:mappi.IMappiMarker[]){
     // const newItems = MappiMarker.except(items.map(o=>o.marker));
-    items.forEach( (v)=>{
-      if (v.marker) return;
+    items.forEach( (v,i)=>{
+      if (v.marker) {
+        v.marker.setMap(this.map);
+        v.marker.setLabel({
+          text:`${i+1}`,
+          color: v.uuid == this.selected ? 'black' : 'darkred',
+          fontWeight: v.uuid == this.selected ? '900' : '400',
+        })
+        return;
+      }  
       this.addOneMarker(v);
     })
   }
@@ -244,7 +297,7 @@ export class GoogleMapsComponent implements OnInit {
 
 
   public clearMarkers() : void {
-    MappiMarker.remove(MappiMarker.markers);
+    MappiMarker.reset();
   }
 
 
@@ -294,7 +347,7 @@ export class GoogleMapsComponent implements OnInit {
 
   // helper methods
   private removeMarker (marker:mappi.IUuidMarker):void {
-    MappiMarker.remove([marker]);
+    MappiMarker.hide([marker]);
     marker = null;
   }
 

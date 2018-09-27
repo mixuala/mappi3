@@ -11,7 +11,7 @@ import { QRCodeModule } from 'angularx-qrcode';
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
 import  { MockDataService, quickUuid,
-  IMarkerGroup,  IPhoto,
+  IMarkerGroup, IPhoto, IMarker,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 
@@ -27,7 +27,10 @@ export class HomePage implements OnInit {
 
   // layout of markerList > markerGroups > markerItems: [edit, default]
   public layout: string;
+  // Observable for MarkerGroupComponent
   public mgCollection$ : Observable<IMarkerGroup[]>;
+  // Observable for GoogleMapsComponent
+  public markerCollection$ : Observable<IMarker[]>;
   public qrcodeData: string = null;
   public toggle:any = {};
 
@@ -48,7 +51,22 @@ export class HomePage implements OnInit {
   }
   set mgFocus(value: IMarkerGroup) {
     this._mgFocus = value;
-    this.selectedMarkerGroup = value ? value.uuid : null;
+    const markerItemsOrGroups:string = value ? "items" : "groups"; 
+    switch (markerItemsOrGroups) {
+      case "items":
+        /****
+         * render googleMaps markers for markerGroup Photos 
+         */
+        // MappiMarker.reset();
+        const subject:SubjectiveService<IMarker> = this.dataService.markerCollSubjectDict[value.uuid];
+        this.markerCollection$ = subject.observe$();
+        break;
+      case "groups":
+        // MappiMarker.reset();
+        this.selectedMarkerGroup = value ? value.uuid : null;
+        this.markerCollection$ = this.mgCollection$;
+        break;
+    }
   }
   private _mgSub: SubjectiveService<IMarkerGroup>;
 
@@ -58,7 +76,9 @@ export class HomePage implements OnInit {
     private cd: ChangeDetectorRef,
   ){
     this.dataService.ready()
-    .then( ()=>this._mgSub = this.dataService.sjMarkerGroups )
+    .then( ()=>{
+      this._mgSub = this.dataService.sjMarkerGroups;
+    })
   }
 
 
@@ -162,7 +182,7 @@ export class HomePage implements OnInit {
   ngOnInit() {
     this.layout = "default";
 
-    this.mgCollection$ = this._mgSub.get$();
+    this.markerCollection$ = this.mgCollection$ = this._mgSub.get$();
     // this.mgCollection$.subscribe( arr=>{
     //   console.warn("HomePage.mgCollection$, count=", arr.length);
     // });

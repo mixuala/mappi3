@@ -45,6 +45,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   ) {
     this.dataService.ready()
     .then( ()=>{
+      // this.miCollection$ = this.dataService.markerCollSubjectDict;
     })
     // this.dataService.Photos.debug = true;
    }
@@ -74,8 +75,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           // console.info("MG.ngOnChanges():",mg.uuid);
           this.dataService.ready()
           .then( ()=>{
-            this._miSub[mg.uuid] = new SubjectiveService(this.dataService.Photos);
-            this.miCollection$[mg.uuid] = this._miSub[mg.uuid].get$(mg.markerItemIds);
+            const subject = new SubjectiveService(this.dataService.Photos);
+            this._miSub[mg.uuid] = subject
+            this.miCollection$[mg.uuid] = subject.get$(mg.markerItemIds);
+            this.dataService.markerCollSubjectDict[mg.uuid] = subject;
             // this.miCollection$[mg.uuid].subscribe( items=>{
             //   if (items.length>2)
             //     console.warn(`>>> photo$ for mg: ${mg.label || mg.seq}: count=${items.length}`)

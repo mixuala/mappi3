@@ -11,31 +11,38 @@ export class SubjectiveService<T> {
 
   public subject$: BehaviorSubject<T[]>;
   public resty: RestyService<T>;
+  private _observable$: Observable<T[]>;
 
   constructor(resty:RestyService<T>) {
     this.resty = resty;
     this.subject$ = new BehaviorSubject<T[]>([]);
    }
 
+  static sortBySeq = map( (v:any[],j)=>{
+    v.sort( (a,b)=>a.seq-b.seq )
+    return v;
+  })
+
   // see: https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else
   get$( uuid?:string | string[]): Observable<T[]> {
-    let sortBySeq = map( (v:any[],j)=>{
-      v.sort( (a,b)=>a.seq-b.seq )
-      return v;
-    })
-
-    this.resty.get(uuid)
-    .then(arr=>{
-      arr.sort( (a,b)=>a['label']>b['label'] ? 1:-1 );
-      // arr.forEach( (o,i)=>o['seq']=i);
-      // arr.map( (o,i,l)=>{
-      //   // HACK: persist alpha sort/.seq to original data
-      //   this.resty["_data"][o['uuid']]=Object.assign({},o);
-      // });
-      this.subject$.next(arr);
-    })
+    if (uuid=="current") {
+      return this._observable$;
+    }
+    else {
+      this.resty.get(uuid)
+      .then(arr=>{
+        if (arr.length && arr[0].hasOwnProperty('label'))
+          arr.sort( (a,b)=>a['label']>b['label'] ? 1:-1 );
+        // arr.forEach( (o,i)=>o['seq']=i);
+        // arr.map( (o,i,l)=>{
+        //   // HACK: persist alpha sort/.seq to original data
+        //   this.resty["_data"][o['uuid']]=Object.assign({},o);
+        // });
+        this.subject$.next(arr);
+      })
+    }
   
-    return this.subject$.pipe( sortBySeq )
+    return this._observable$ = this.subject$.pipe( SubjectiveService.sortBySeq );
   }
   next( items:T[] ){
     items.sort( (a,b)=>a['seq']-b['seq'] );
@@ -44,8 +51,19 @@ export class SubjectiveService<T> {
   value() {
     return this.subject$.value.slice();  // return a copy
   }
+  
   reload(ids?:any[]){
-    this.resty.get(ids).then( arr=>this.next(arr));
+    if (!ids) {
+      ids = this.subject$.value.map( o=>o['uuid'] );
+    } 
+    this.resty.get(ids).then( arr=>{
+      arr.sort( (a,b)=>a['seq']-b['seq'] ).forEach((o,i)=>o['seq']=i);
+      this.next(arr)
+    });
+  }
+
+  observe$():Observable<T[]> {
+    return this._observable$;
   }
 
 

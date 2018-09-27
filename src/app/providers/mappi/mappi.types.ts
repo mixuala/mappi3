@@ -1,3 +1,7 @@
+import { IMarker } from '../mock-data.service';
+
+
+
 /**********************************************************************************************
  * map helpers
  **********************************************************************************************/
@@ -7,19 +11,11 @@ export interface IUuidMarker extends google.maps.Marker {
 }
 
 // DB record which maps to a marker
-export interface IMappiMarker {
-  uuid: string;
-  loc:[number, number];
-  locOffset:[number, number];
+export interface IMappiMarker extends IMarker {
   label?: string;
-  position?: {
-    lat: any,
-    lng: any,
-  }
-
   // use for GoogleMapsComponent
   marker?: IUuidMarker;
-  listeners?: any;
+  listeners?: any  // move to marker._listeners;
   [propName: string]: any;
 }
 
