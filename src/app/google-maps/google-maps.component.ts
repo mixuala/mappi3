@@ -288,7 +288,8 @@ export class GoogleMapsComponent implements OnInit {
         console.log("marker dragged to", m.marker.getPosition().toJSON());
   
         MappiMarker.moveItem(m, m.marker);
-        this.itemChange.emit({data:m, action:'update'});
+        this.itemChange.emit({data:m, action:'update'}); 
+        // => handled by HomePageComponent.mappMarkerChange()
   
       })
     })(true);  

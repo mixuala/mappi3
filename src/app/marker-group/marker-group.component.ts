@@ -3,10 +3,16 @@ import { Component, EventEmitter, OnInit, OnChanges, Input, Output,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
+import { Plugins } from '@capacitor/core';
+
 
 import { MockDataService, quickUuid, IMarkerGroup, IPhoto } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
+import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
+import { MappiMarker } from '../providers/mappi/mappi.service';
+
+const { Device } = Plugins;
 
 
 @Component({
@@ -41,6 +47,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   constructor(
     @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
     public dataService: MockDataService,
+    public photoService: PhotoService,
     private cd: ChangeDetectorRef,
   ) {
     this.dataService.ready()
@@ -138,28 +145,11 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   createMarkerItem(ev:any){
     const mg = this.mgSubject.value;
-    // create placeholder mi data
-    const random = (Date.now() % 99) +1;
-    const o = {
-      uuid: quickUuid(),
-      dateTaken: new Date().toISOString(),
-      src: null, // `https://picsum.photos/80?random=${random}`,
-      locOffset: [0,0],
-    };    
-    return this.dataService.Photos.get()
-    .then( res=>{
-      // create a new photo by modifying attrs of a random clone
-      const p:IPhoto = Object.assign( res[random % res.length], o );
-      this.dataService.inflatePhoto(p, mg.markerItemIds.length);
-      // randomize location
-      const offset = [Math.random(), Math.random()].map(v=>(v-0.5)/60);
-      p.loc = [ p.loc[0]+offset[0], p.loc[1]+offset[1] ];
-      return p;
-    })
+    return this.photoService.choosePhoto(mg.markerItemIds.length)
     .then( p=>{
       this.childComponentsChange({data:p, action:'add'})
       return mg;
-    })    
+    })
   }
 
   removeMarkerGroup(o:IMarkerGroup){
@@ -200,7 +190,18 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         
         let items = this._getCachedMarkerItems(mg);
         items.push(newMi);
+        if (mg.markerItemIds.length==0) {
+          if (mg["_loc_was_map_center"]){
+            mg.loc = [newMi.position.lat, newMi.position.lng];
+            mg.locOffset = [0,0];
+            mg.position = newMi.position;
+            delete mg["_loc_was_map_center"];
+            this.mgChange.emit( {data:mg, action:'update_marker'} );
+            console.info("MarkerGroupComponent: reset position of markerGroup to photo.loc=", newMi.loc, mg );
+          }
+        }
         mg.markerItemIds = items.map(o=>o.uuid);
+
         this._miSub[mg.uuid].next(items);
         break;
       case 'update':

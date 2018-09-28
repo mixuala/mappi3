@@ -108,7 +108,7 @@
                       (mgChange)="childComponentsChange($event)" [(mgFocus)]="mgFocus" ></app-marker-group>
                   </ion-list>
                   <ion-list>
-                      <ion-item class="add-marker-group wrap-btn-as-thumbnail" (click)="createMarkerGroup()">
+                      <ion-item class="add-marker-group wrap-btn-as-thumbnail" (click)="createMarkerGroup($event)">
                           <ion-button  class="as-thumbnail" slot="start" expand="full" size="large">
                             <ion-icon slot="icon-only" name="add"></ion-icon>
                           </ion-button>

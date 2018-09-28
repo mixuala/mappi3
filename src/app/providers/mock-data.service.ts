@@ -39,6 +39,10 @@ export interface IPhoto  extends IMarker {
   thumbnail?: string,
   width?: number,
   height?: number,
+  image?: {
+    width:number,
+    height:number,
+  }
   [propName: string]: any;
 }
 
@@ -49,8 +53,8 @@ export interface IPhoto  extends IMarker {
 })
 export class MockDataService {
 
-
-  public sizes:any[] = [[640,480],[480,640], [960,640], [640,960]];
+  // random sample of image sizes for placeholder photos
+  static sizes:any[] = [[640,480],[480,640], [960,640], [640,960]];
 
   public MarkerGroups:RestyService<IMarkerGroup>;
   public Photos:RestyService<IPhoto>;
@@ -71,7 +75,7 @@ export class MockDataService {
   
       // clean photos data
       PHOTOS.forEach( (o,i,l)=>{ 
-        this.inflatePhoto(o, i);
+        MockDataService.inflatePhoto(o, i);
       });
       this.Photos = new RestyService(PHOTOS, "Photo");
 
@@ -81,7 +85,7 @@ export class MockDataService {
     .then( photos=>{
       const shuffledMarkerItems = this.shuffle(photos);
       MARKER_GROUPS.forEach( (o,i,l)=> {
-        this.inflateMarkerGroup(shuffledMarkerItems, o, i);
+        MockDataService.inflateMarkerGroup(shuffledMarkerItems, o, i);
       });
       const check = MARKER_GROUPS;
       this.MarkerGroups = new RestyService(MARKER_GROUPS, "MarkerGroup");
@@ -96,7 +100,7 @@ export class MockDataService {
     return this._ready;
   }
 
-  inflateMarkerGroup(copyOfPhotos:IPhoto[], o:IMarkerGroup, seq?:number){
+  static inflateMarkerGroup(copyOfPhotos:IPhoto[], o:IMarkerGroup, seq?:number){
     o.seq = seq;
     o.position = {
       lat: o.loc[0] + o.locOffset[0],
@@ -108,15 +112,16 @@ export class MockDataService {
     return o;
   }
 
-  inflatePhoto(o:IPhoto, seq?:number){
+  static inflatePhoto(o:IPhoto, seq?:number){
+    const random = Math.min( Math.floor(Math.random() *  99))
     o.seq = seq;
     try {
       o.src = o.src.replace("{id}", `${o.seq}`)
     } catch {
-      o.src = `https://picsum.photos/80?random=${o.seq}`;
+      o.src = `https://picsum.photos/80?random=${o.seq || random}`;
     }
     o.thumbnail = o.src.trim()
-    let size = this.sizes[Math.floor(Math.random() * this.sizes.length)]
+    let size = MockDataService.sizes[Math.floor(Math.random() * MockDataService.sizes.length)]
     o.src = o.src.replace("80", size.join('/'))
     o.width = size[0];
     o.height = size[1];

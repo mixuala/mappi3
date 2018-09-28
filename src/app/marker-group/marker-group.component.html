@@ -50,8 +50,9 @@
         ></ion-icon>
         <ion-label>
           <h3>
-            <ion-text color="primary">{{ marker.label || marker.seq }}</ion-text>
+            <ion-text color="primary">{{ marker.label || marker.seq+1 }}</ion-text>
           </h3>
+          <p>loc: [{{ marker.loc }}]</p>
           <p>offset: [{{ marker.locOffset }}]</p>
         </ion-label>
         <ion-buttons slot="end">

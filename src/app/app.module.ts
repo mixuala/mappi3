@@ -15,6 +15,7 @@ import {
 import { MockDataService } from './providers/mock-data.service';
 import { RestyService } from './providers/resty.service';
 import { SubjectiveService } from './providers/subjective.service';
+import { PhotoService } from './providers/photo/photo.service';
 
 
 @NgModule({
@@ -29,7 +30,8 @@ import { SubjectiveService } from './providers/subjective.service';
     SplashScreen,
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     MappiService,
-    MockDataService, RestyService, SubjectiveService
+    MockDataService, RestyService, SubjectiveService,
+    PhotoService
   ],
   bootstrap: [AppComponent]
 })

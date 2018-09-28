@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import * as mappi from './mappi.types';
-import { isFunction } from 'util';
+import { IMarker } from '../mock-data.service';
 
 /**
  * helper class for manipulating UuidMarkers
@@ -114,7 +114,7 @@ export class MappiMarker {
    * ImappiMarker (item) methods
    */
 
-  static position(item: mappi.IMappiMarker): {lat, lng} {
+  static position(item: IMarker): {lat, lng} {
     const offset = item.locOffset || [0,0];
     return {
       lat: item.loc[0] + offset[0],
@@ -122,14 +122,15 @@ export class MappiMarker {
     }
   }
 
-  static moveItem (item: mappi.IMappiMarker, marker: google.maps.Marker) {
+  static moveItem (item: IMarker, marker: google.maps.Marker) {
     const MAX_OFFSET = [0.001296216636290648, 0.0011265277862548828];
     const offset = MappiMarker.getMarkerOffset(marker, item.loc);
     const isTooFar = Math.abs(offset[0]) > MAX_OFFSET[0]/2  ||  Math.abs(offset[1]) > MAX_OFFSET[1]/2
-    if (isTooFar) {
+    if (isTooFar && item.hasOwnProperty('markerItemIds')) {
+      // only relocate markers, IPhotos do not lose original position
       const [lat0, lng0] = item.loc;
       item.loc = [ lat0+offset[0], lng0+offset[1] ];
-      item.locOffset = [0,0]
+      item.locOffset = [0,0];
     } else item.locOffset = offset;
     console.warn("MappiMarker.moveItem(): emit item.moved event");
   }   

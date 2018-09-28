@@ -14,8 +14,11 @@ import  { MockDataService, quickUuid,
   IMarkerGroup, IPhoto, IMarker,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
+import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
+import { IpcNetConnectOpts } from 'net';
 
-const { Browser } = Plugins;
+
+const { Browser, Device } = Plugins;
 
 @Component({
   selector: 'app-home',
@@ -58,7 +61,7 @@ export class HomePage implements OnInit {
          * render googleMaps markers for markerGroup Photos 
          */
         // MappiMarker.reset();
-        const subject:SubjectiveService<IMarker> = this.dataService.markerCollSubjectDict[value.uuid];
+        const subject = this._getSubjectForMarkerItems(value);
         this.markerCollection$ = subject.observe$();
         break;
       case "groups":
@@ -73,12 +76,17 @@ export class HomePage implements OnInit {
   constructor( 
     public dataService: MockDataService,
     public actionSheetController: ActionSheetController,
+    public photoService: PhotoService,
     private cd: ChangeDetectorRef,
   ){
     this.dataService.ready()
     .then( ()=>{
       this._mgSub = this.dataService.sjMarkerGroups;
     })
+  }
+
+  private _getSubjectForMarkerItems(mg:IMarkerGroup):SubjectiveService<IMarker>{
+    return this.dataService.markerCollSubjectDict[mg.uuid];
   }
 
 
@@ -208,59 +216,86 @@ export class HomePage implements OnInit {
     
   }
 
-  createMarkerGroup(data:any={}, ev?:any):Promise<IMarkerGroup>{
-    // create placeholder mg data
-    
-    const count = this._mgSub.value().length;
-    const random = (Date.now() % count) +1;
-    
+  private _getPlaceholder(data:any, seq?:number):IMarkerGroup {
+    const mg:IMarkerGroup = Object.assign({
+      uuid: quickUuid(),
+      seq: seq, 
+      label: '', 
+      loc: [0,0], 
+      locOffset:[0,0], 
+      placeId: null,
+      position: {
+        lat:0,
+        lng:0
+      },
+      markerItemIds: [],
+    }, data);
+    mg.position = MappiMarker.position(mg);
+    return mg;
+  }
+
+
+
+  /**
+   * create a new MarkerGroup from 1) a map click/location or 2) from the create button,
+   *  specifying either a selected image or mapCenter as the marker location
+   * @param data IMarker properties, specifically [loc | seq]
+   * @param ev click event
+   * 
+   */
+  createMarkerGroup(ev:any={}, data:any={}):Promise<IMarkerGroup>{
+    const target = ev.target && ev.target.tagName;
+    const count = data.seq || this._mgSub.value().length;
+    let p: IPhoto;
     return Promise.resolve(true)
-    .then( ()=>{
-      const mg:IMarkerGroup = Object.assign({
-        uuid: quickUuid(),
-        seq: count, 
-        label: "", 
-        loc: [0,0], 
-        locOffset:[0,0], 
-        placeId: null,
-        position: {
-          lat:0,
-          lng:0
-        },
-        markerItemIds: [],
-      }, data);
-  
-      // debugging only
-      if (data.loc) mg.seq = -mg.seq;
-
-      if (!data.loc) return Promise.reject(mg)
-      return Promise.resolve(mg)
+    .then ( ()=>{
+      if (target=='ION-BUTTON') {
+        return this.photoService.choosePhoto(0)
+        .then( photo=>{
+          p = photo;
+          const {loc, locOffset, position, placeId} = p;
+          let options:any = {loc, locOffset, position, placeId};
+          options.seq = count;
+          options.markerItemIds = [p.uuid];
+          options['_commit_markerItem_0'] = p;
+          p['_rest_action'] = 'post'
+          // TODO: need to add IPhoto to the mg.subject
+          // const subject = this._getSubjectForMarkerItems(mg);
+          return options;
+        })
+      }
+      return Promise.reject('continue');
     })
-    .catch( mg=>{
-      // get a marker loc by adding a random offset to a random photo
-      const offset = [Math.random(), Math.random()].map(v=>(v-0.5)/60);
-
-      return this.dataService.Photos.get()
-      .then( photos=>{
-        
-        let p = photos[random];
-        p = this.dataService.inflatePhoto(p, mg.markerItemIds.length);
-        mg.loc = [ p.loc[0]+offset[0], p.loc[1]+offset[1] ];
-
-        return p;
-      }).then( p=>{
-        // // add random photo to the markerGroup
-        // mg.markerItemIds.push( p.uuid );
-        return mg;
-      })
-    })
-    .then( mg=>{
-      // update position
-      mg.position = MappiMarker.position(mg);
-
-      this.childComponentsChange({data:mg, action:'add'})
+    .catch( (err)=>{
+      if (err=='continue') {
+        // no IPhoto returned, get a placeholder
+        const mapCenter = this.gmap.map.getCenter();
+        const defaults = {
+          loc:[mapCenter.lat(), mapCenter.lng()],
+          seq: count,
+        }
+        const options = Object.assign({}, defaults, data);
+        if (!data.loc) options["_loc_was_map_center"] = true;
+        return options;
+      }
+    }) 
+    .then( (options:any)=>{
+      const mg = this._getPlaceholder(options, count);
+      this.childComponentsChange({data:mg, action:'add'});
       return mg;
     })
+    .then( (mg:IMarkerGroup)=>{
+      if (mg.markerItemIds.length) {
+        // NOTE: this subject is NOT created until the MarkerItem is rendered
+        setTimeout( ()=>{
+          const subject = this._getSubjectForMarkerItems(mg);
+          if (!subject) console.warn("ERROR: possible race condition when creating MarkerGroup from IPhoto")
+          subject.next([p])
+        },100)
+      }
+      return mg
+    })
+
   }
 
   // BUG: after reorder, <ion-item-options> is missing from dropped item
@@ -280,33 +315,75 @@ export class HomePage implements OnInit {
     this._mgSub.next(this._getCachedMarkerGroups());
   }
 
-  mappiMarkerChange(change:{data:mappi.IMappiMarker,action:string}){
+  mappiMarkerChange(change:{data:IMarker, action:string}){
+    const mm = change.data;
+    // mm could be either IMarkerGroup or IPhoto
+    if (!this.mgFocus) {
+      // handle IMarkerGroup
+      const items = this._getCachedMarkerGroups();
+      switch (change.action) {
+        case 'add':   // NOTE: ADD IMarkerGroup by clicking on map in layout=edit
+          const options = {
+            loc: mm.loc,
+            // manually trigger ChangeDetection when click from google.maps
+            _detectChanges: 1,
+          };
+  
+          // create MarkerGroup at IMarker location
+          return this.createMarkerGroup(undefined, options)
+            .then((mg) => {
+              if (options._detectChanges) setTimeout(() => this.cd.detectChanges())
+            });
+        case 'update':    // NOTE: can update IMarkerGroup or IPhoto
+          this.handle_MarkerGroupMoved(change);
+          break;
+      }
+    } else if (this.mgFocus) {
+      this.handle_MarkerItemMoved(change);
+    }
+  }
+
+  handle_MarkerGroupMoved(change:{data:IMarker, action:string}){
     const mm = change.data;
     const items = this._getCachedMarkerGroups();
-    switch(change.action){
-    case 'add':
-      const data = {
-        loc: mm.loc,
-        // manually trigger ChangeDetection when click from google.maps
-        _detectChanges: 1, 
-      };
-      
-      return this.createMarkerGroup(data)
-      .then((mg)=>{
-        if (data._detectChanges) setTimeout(()=>this.cd.detectChanges())
-      });
-    case 'update':
-      const found = items.findIndex(o=>o.uuid==mm.uuid);
-      if (~found){
-        const {loc, locOffset} = mm;
-        const mg = Object.assign({}, items[found], {loc, locOffset});
-        const o = {data:mg, action:change.action};
-        this.childComponentsChange(o);
+    const found = items.findIndex(o => o.uuid == mm.uuid);
+    if (~found) {
+      const { loc, locOffset } = mm;
+      const mg = Object.assign(items[found], { loc, locOffset });
+      mg.position = MappiMarker.position(mg);
+      this.childComponentsChange({ data: mg, action: 'update' });
+      // run changeDetection, by changing object reference
+      // items.splice(found, 1, mg);
+      this._mgSub.next(items);
+
+      setTimeout(()=>this.cd.detectChanges())
+      // BUG: need to call cd.detectChanges from the MarkerItemComponent
+      console.warn("BUG: need to call cd.detectChanges from the MarkerItemComponent");
+    }
+  }
+
+  handle_MarkerItemMoved(change:{data:IMarker, action:string}){
+    const marker = change.data;
+    const mg = this.mgFocus;
+    const miCollectionSubject = this._getSubjectForMarkerItems( mg );
+    const items = miCollectionSubject.value();
+    if (change.action = 'update') {
+      const found = items.findIndex(o => o.uuid == marker.uuid);
+      if (~found) {
+        const { loc, locOffset } = marker;
+        const mi = Object.assign(items[found], { loc, locOffset });
+        mi.position = MappiMarker.position(mi);
+
+        // needs to be MarkerGroupComponent, or needs to be moved to component controller
+        // this.MarkerGroupComponent.childComponentsChange({ data: mi, action: 'update' });
+        mi['_rest_action'] = mi['_rest_action'] || 'put';
+        
         // run changeDetection, by changing object reference
-        items.splice(found,1,mg);
-        this._mgSub.next(items);
-      }
-      break;
+        // items.splice(found, 1, mi);
+        miCollectionSubject.next(items);
+
+        setTimeout(()=>this.cd.detectChanges())
+      }        
     }
   }
 
@@ -329,7 +406,11 @@ export class HomePage implements OnInit {
         return;
       case 'update_marker':
         // mg.markerItemIds updates have already been committed
-        let check = mg;
+
+        // update google.map.Marker position directly
+        const m = MappiMarker.findByUuid([mg.uuid]).shift();
+        m.setPosition(mg.position);
+
         let mgs = this._getCachedMarkerGroups();
         this._mgSub.next(mgs);
         return;   
@@ -354,7 +435,18 @@ export class HomePage implements OnInit {
       delete o._rest_action;
       switch(restAction) {
         case "post":
-          return this.dataService.MarkerGroups.post(o);
+          return Promise.resolve()
+          .then( ()=>{
+            if (o.hasOwnProperty('_commit_markerItem_0'))
+              return this.dataService.Photos.post( o['_commit_markerItem_0']);
+          })
+          .then( 
+            (p:IPhoto)=>delete o['_commit_markerItem_0']
+            ,(err)=>console.error("Error saving MarkerItem of MarkerGroup")  
+          )
+          .then( ()=>{
+            return this.dataService.MarkerGroups.post(o);
+          })
         case "put":
           return this.dataService.MarkerGroups.put(o.uuid, o);
         case "seq":
