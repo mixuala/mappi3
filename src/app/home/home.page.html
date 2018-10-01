@@ -37,7 +37,7 @@
 
 <ion-content no-padding class="content-right-if-mq-landscape">
 
-  <ion-toolbar class="sibling-component">
+  <ion-toolbar class="sibling-component" *ngIf="false">
     <ion-buttons>
       <ng-container *ngFor="let item of mgCollection$ | async">
         <ion-button 

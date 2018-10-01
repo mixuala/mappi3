@@ -122,6 +122,15 @@ export class MappiMarker {
     }
   }
 
+  static asPositionLabel(p:IMarker, n:number=6){
+    if (!p.position) return
+    const digits = Math.pow(10,n);
+    return {
+      lat: Math.round(p.position.lat*digits)/digits,
+      lng: Math.round(p.position.lng*digits)/digits,
+    }
+  }
+
   static moveItem (item: IMarker, marker: google.maps.Marker) {
     const MAX_OFFSET = [0.001296216636290648, 0.0011265277862548828];
     const offset = MappiMarker.getMarkerOffset(marker, item.loc);
@@ -132,7 +141,9 @@ export class MappiMarker {
       item.loc = [ lat0+offset[0], lng0+offset[1] ];
       item.locOffset = [0,0];
     } else item.locOffset = offset;
-    console.warn("MappiMarker.moveItem(): emit item.moved event");
+    item.position = MappiMarker.position(item);
+    console.warn("BUG: IPhoto.seq sometimes changes on drag")
+    // console.warn("MappiMarker.moveItem(): emit item.moved event");
   }   
 
   static getMarkerOffset (marker:google.maps.Marker, loc:[number,number]): [number,number] {

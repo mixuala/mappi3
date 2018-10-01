@@ -5,7 +5,7 @@
     <ion-card-header color="secondary">
       <ion-item color="primary">
         <ion-icon name="pin" slot="start" color="primary"></ion-icon>
-        <ion-label>{{ marker.label || marker.seq }}</ion-label>
+        <ion-label>{{ marker.label || marker.seq+1 }}</ion-label>
         <ion-buttons slot="end">
           <ion-button  color="light" fill="outline" (click)="toggleEditMode()" *ngIf="mgLayout!='focus-marker-group'">
             <ion-icon name="create" slot="icon-only"></ion-icon>
@@ -102,8 +102,8 @@
       </ng-template>      
 
       <ion-label>
-        <h3>{{ marker.label || marker.seq }}</h3>
-        <p>{{ obj2String(marker.position) }}</p>
+        <h3>{{ marker.label || marker.seq+1 }}</h3>
+        <p>{{ asPositionLabel(marker) | json }}</p>
       </ion-label>
       <ion-reorder slot="end"></ion-reorder>
     </ion-item>  

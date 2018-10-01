@@ -303,6 +303,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     return `{ ${kv.join(', ')} }`
   }
 
+  private asPositionLabel = MappiMarker.asPositionLabel;
+
   private asLocalTime(p:IPhoto):Date {
     let getTzOffset = function(loc:[number,number]):number {
       // get timezone offset from location

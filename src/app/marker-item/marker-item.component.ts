@@ -2,6 +2,7 @@ import { Component, EventEmitter, OnInit, OnChanges, Input, Output, SimpleChange
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 
 import { MockDataService, IPhoto } from '../providers/mock-data.service';
+import { MappiMarker } from '../providers/mappi/mappi.service';
 
 
 
@@ -70,12 +71,8 @@ export class MarkerItemComponent implements OnInit , OnChanges {
     let kv = Object.entries(o).reduce( (res,v)=> {res.push(v.join(':')); return res} ,[])
     return `{ ${kv.join(', ')} }`
   }
-  private asPosition(p:IPhoto):Object{
-    return {
-      lat: Math.round(p.loc[0]*1e6)/1e6,
-      lng: Math.round(p.loc[1]*1e6)/1e6,
-    }
-  }
+  private asPositionLabel = MappiMarker.asPositionLabel;
+
   private asLocalTime(p:IPhoto):Date {
     let getTzOffset = function(loc:[number,number]):number {
       // get timezone offset from location

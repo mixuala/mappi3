@@ -198,6 +198,7 @@ export class GoogleMapsComponent implements OnInit {
   }
 
   public setMapBoundsWithMinZoom(markers:IMarker[], minZoom=10){
+    console.log(">> MapBounds, count=", markers.length)
     // adjust google.maps.LatLngBounds
     const bounds = new google.maps.LatLngBounds();
     markers.forEach(o=>{
@@ -212,10 +213,13 @@ export class GoogleMapsComponent implements OnInit {
             // Change max/min zoom here
             this.map.setZoom(minZoom);
             initialZoom = false;
+            console.warn("**** MapBounds minZoom fired, count=", markers.length)
         }
       });
     });
-    this.map.panToBounds(bounds,80);
+    const padding= {left:60, right:60, top:40, bottom:40};
+    // this.map.panToBounds(bounds,padding);
+    this.map.fitBounds(bounds,padding);
     setTimeout( ()=>{listen_zoom.remove()}, 2000)
   }
 

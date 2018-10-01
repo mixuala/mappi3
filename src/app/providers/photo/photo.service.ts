@@ -44,8 +44,8 @@ export class PhotoService {
 
   static localTimeAsDate(localTime:string): Date {
     try {
-      let dt = new Date(localTime);
-      if (isNaN(dt as any as number) == false)
+      let dt:any = new Date(localTime);
+      if (isNaN(dt) == false)
         return dt;
   
       // BUG: Safari does not parse time strings to Date correctly  
@@ -55,6 +55,7 @@ export class PhotoService {
       // console.log(`localTimeAsDate=${dt.toISOString()}`)
       return dt;
     } catch (err) {
+      console.warn("BUG: localTimeAsDate is not working properly")
       throw new Error(`Invalid localTime string, value=${localTime}`);
     }
   }

@@ -14,7 +14,7 @@
       </ion-thumbnail>
       <ion-label>
         <h3>dateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>
-        <p>{{ obj2String(asPosition(photo))}}</p>
+        <p>{{ asPositionLabel(photo) | json }}</p>
         <p>loc: [{{ photo.loc }}]</p>
         <p>offset: [{{ photo.locOffset }}]</p>
       </ion-label>
