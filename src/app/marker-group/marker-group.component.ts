@@ -43,6 +43,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   @Output() mgFocusChange: EventEmitter<IMarkerGroup> = new EventEmitter<IMarkerGroup>();
   @Output() mgChange: EventEmitter<{data:IMarkerGroup, action:string}> = new EventEmitter<{data:IMarkerGroup, action:string}>();
+  @Output() thumbClick: EventEmitter<{mg:IMarkerGroup, mi:IPhoto}> = new EventEmitter<{mg:IMarkerGroup, mi:IPhoto}>();
 
   constructor(
     @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
@@ -142,6 +143,12 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   selectMarkerGroup(o:IMarkerGroup){
     this.mgChange.emit({data:o, action:'selected'});
   }
+
+  thumbClicked(mg:IMarkerGroup, mi:IPhoto){
+    this.selectMarkerGroup(mg)
+    this.thumbClick.emit({mg, mi});
+  }
+
 
   createMarkerItem(ev:any){
     const mg = this.mgSubject.value;

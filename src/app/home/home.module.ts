@@ -10,6 +10,7 @@ import { GoogleMapsComponent } from '../google-maps/google-maps.component';
 import { MarkerGroupComponent } from '../marker-group/marker-group.component';
 import { MarkerItemComponent } from '../marker-item/marker-item.component';
 import { MarkerGroupFocusDirective } from '../marker-group/marker-group-focus.directive';
+import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 
 @NgModule({
   imports: [
@@ -27,7 +28,7 @@ import { MarkerGroupFocusDirective } from '../marker-group/marker-group-focus.di
   declarations: [HomePage,
     GoogleMapsComponent,
     MarkerGroupComponent, MarkerItemComponent, 
-    MarkerGroupFocusDirective,
+    MarkerGroupFocusDirective, PhotoswipeComponent,
   ],
 })
 export class HomePageModule {}

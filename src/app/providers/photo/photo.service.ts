@@ -227,7 +227,8 @@ export class PhotoService {
       const o = {
         uuid: quickUuid(),
         dateTaken: new Date().toISOString(),
-        src: null, // `https://picsum.photos/80?random=${random}`,
+        thumbnail: null, 
+        src: null,
         locOffset: [0, 0],
         position: null,
       };      

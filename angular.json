@@ -37,9 +37,18 @@
               },
               {
                 "input": "src/global.scss"
+              },
+              {
+                "input": "node_modules/photoswipe/dist/photoswipe.css"
+              },
+              {
+                "input": "node_modules/photoswipe/dist/default-skin/default-skin.css"
               }
             ],
-            "scripts": []
+            "scripts": [
+              "node_modules/photoswipe/dist/photoswipe.min.js",
+              "node_modules/photoswipe/dist/photoswipe-ui-default.min.js"
+            ]
           },
           "configurations": {
             "production": {
