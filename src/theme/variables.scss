@@ -76,13 +76,13 @@
   --ion-color-dark-tint: #383838;
 
 
-
-
+  --split-pane-side-max-width: 280px;
   ion-split-pane.split-pane-md.split-pane-visible>.split-pane-side {
-    max-width: 280px;
+    max-width: var(--split-pane-side-max-width);
   }
-
   --thumbnail-size: 80px;
+  // --google-map-bottom: calc(40vh + var(--ion-safe-area-top));
+  --google-map-bottom: 40vh;
 
   // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
   @media only screen 

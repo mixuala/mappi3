@@ -12,8 +12,8 @@ app-google-maps {
 {
 
 	app-google-maps {
-		// aspect ratio=3:2 for ip6/7/8
-		height: 37.49%;
+		--google-map-height: calc(var(--google-map-bottom, 40vh) - var(--toolbar-min-height));
+		height: var(--google-map-height);
 		width: 100%;
 	}
 

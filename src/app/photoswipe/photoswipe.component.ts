@@ -68,7 +68,16 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
         this.gallery = null;
     });
 
+    const googlemapsEl = document.getElementsByTagName('APP-GOOGLE-MAPS')[0];
+    const homePageGridEl = googlemapsEl.nextElementSibling;
+    gallery.viewportSize = {
+      x: homePageGridEl.clientWidth,
+      y: homePageGridEl.clientHeight,
+    };
+    // console.log( JSON.stringify(gallery.viewportSize))
+
     gallery.init();
+    gallery.ui.hideControls();
     this.gallery = gallery;
     this.active = true;
   }

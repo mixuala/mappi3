@@ -42,6 +42,7 @@ export class PhotoService {
     private platform: Platform,
   ) { }
 
+  // BUG: not working with exif time format
   static localTimeAsDate(localTime:string): Date {
     try {
       let dt:any = new Date(localTime);
@@ -192,31 +193,55 @@ export class PhotoService {
   }
 
   private _parseCameraWithExifResponse(resp:IExifPhoto, seq?:number):IPhoto{
-    // function exifDate2ISO(s) {
-    //   let parts = s.split(' ');
-    //   return `${parts[0].replace(/\:/g,"-")}T${parts[1]}`;
-    // }
+    function _exifDate2ISO(s) {
+      let parts = s.split(' ');
+      return `${parts[0].replace(/\:/g,"-")}T${parts[1]}`;
+    }
+    function _calcImgSrcDim(resp):{width:number,height:number}{
+      let {targetWidth, targetHeight} = resp;
+      const {PixelXDimension, PixelYDimension} = resp.exif;
+      if (PixelXDimension && PixelYDimension) {
+        if (!targetWidth && targetHeight) {
+          targetWidth = targetHeight*PixelXDimension/PixelYDimension;
+        } else if (targetWidth && !targetHeight) {
+          targetHeight = targetWidth*PixelYDimension/PixelXDimension;
+        }
+      }
+      return {
+        width: targetWidth,
+        height: targetHeight,
+      }
+    }
+    const exif:any = resp.exif || {};
+    const tiff:any = resp.tiff || {};
+    const gps:any = resp.gps || {};
+    const gpsLoc:[number,number] = gps.lat && gps.lng ? [gps.lat, gps.lng] : [0,0];
+    let localTime:string;
+    try {
+      // localTime = PhotoService.localTimeAsDate( _exifDate2ISO(exif.DateTimeOriginal) ).toISOString();
+      localTime = new Date( _exifDate2ISO(exif.DateTimeOriginal) ).toISOString();
+    } catch (err) {
+      localTime = null;
+    }
     const p:IPhoto = {
       uuid: quickUuid(),
-      dateTaken: PhotoService.localTimeAsDate(resp.exif.DatTimeOriginal).toISOString(),
-      orientation: resp.tiff.Orientation,
+      dateTaken: localTime,
+      orientation: tiff.Orientation || 1,
       src: resp.src,
-      loc: [resp.gps.lat, resp.gps.lng],
+      loc: gpsLoc,
       locOffset: [0, 0],
       position: {
-        lat: resp.gps.lat,
-        lng: resp.gps.lng,
+        lat: gpsLoc[0],
+        lng: gpsLoc[1],
       },
       seq: seq,
       thumbnail: resp.src,    // TODO: get a thumbnail base64data
-      width: resp.exif.PixelXDimension,
-      height: resp.exif.PixelYDimension,
+      width: exif.PixelXDimension,
+      height: exif.PixelYDimension,
     }
-    const {targetWidth, targetHeight} = resp;
-    p.image = {
-      width: targetWidth,
-      height: targetHeight,
-    }
+    // # final adjustments
+    p.image = _calcImgSrcDim(resp);
+    if (p.loc.join() === [0,0].join()) p["_loc_was_map_center"] = true;
     return p;
   }
   private _getPlaceholder(seq:number):Promise<IPhoto> {

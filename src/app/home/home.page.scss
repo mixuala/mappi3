@@ -19,10 +19,11 @@ ion-grid {
 {
   ion-content.content-right-if-mq-landscape {
     position: absolute;
-    left: 50%;
+    --google-map-right: 50vw;  // include var(--toolbar-min-height)
+    left: var(--google-map-right);
     top: var(--toolbar-min-height);
-    height: 100%;
-    width: 50%;
+    height: calc(100vh - var(--toolbar-min-height));
+    width: calc(100vw - var(--google-map-right));
   }
 
   // rollback ion-col[offset-sm="2"] in landscape mode

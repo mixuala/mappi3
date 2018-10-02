@@ -1,0 +1,50 @@
+app-photoswipe .pswp {
+  // --google-map-bottom set in variables.scss 
+  top: calc(var(--google-map-bottom) + var(--toolbar-min-height) );
+  height: calc(100vh - var(--toolbar-min-height) - var(--google-map-bottom));
+}
+
+// ip6/7/8 landscape
+@media only screen
+  and (max-width: 812px) 
+	and (max-height: 414px) 
+  and (orientation: landscape)
+  and (-webkit-min-device-pixel-ratio: 2)
+{
+  app-photoswipe.content-right-if-mq-landscape .pswp {
+    // position: fixed does not include ion-safe-area
+    --google-map-right: 50vw;  // include var(--toolbar-min-height)
+    left: var(--google-map-right);
+    width: calc(100vw - var(--google-map-right));
+    // top: var(--toolbar-min-height);
+    // height: calc(100vh - var(--toolbar-min-height));
+    top:  calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
+    height: calc(100vh - var(--ion-safe-area-top) - var(--toolbar-min-height));
+    
+  }
+} 
+
+// ip6/7/8 PORTRAIT
+@media only screen 
+  and (max-width: 414px) 
+	and (max-height: 812px) 
+  and (orientation: portrait)
+  and (-webkit-min-device-pixel-ratio: 2)
+{
+  app-photoswipe .pswp {
+    // position: fixed does not include ion-safe-area
+    top:  calc(var(--google-map-bottom) + var(--ion-safe-area-top));
+    height: calc(100vh + var(--ion-safe-area-top) - var(--google-map-bottom));
+  }
+}
+
+// breakpoint=lg
+// $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
+@media only screen 
+  and (min-width: 992px)
+{
+  app-photoswipe .pswp {
+    left: var(--split-pane-side-max-width);
+    width: calc(100vw - var(--split-pane-side-max-width));
+  }
+}
