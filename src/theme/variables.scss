@@ -75,6 +75,24 @@
   --ion-color-dark-shade: #1e1e1e;
   --ion-color-dark-tint: #383838;
 
+  /**
+  * adjust CSS to allow fullscreen photoswipe in app.
+  * BUG: position:fixed and z-index not working in mobile safari
+  */
+  html.plt-ios ion-app.fullscreen-gallery {
+    ion-menu {
+      display:none !important;
+    }
+    ::shadow ion-header {
+      display:none;
+      ion-toolbar {
+        display:none !important;
+      }
+    }
+    app-google-maps {
+      height:0;
+    }
+  }
 
   --split-pane-side-max-width: 280px;
   ion-split-pane.split-pane-md.split-pane-visible>.split-pane-side {
@@ -102,6 +120,7 @@
   ion-toolbar {
     --min-height: var(--toolbar-min-height);
   }
+
 
 
 }

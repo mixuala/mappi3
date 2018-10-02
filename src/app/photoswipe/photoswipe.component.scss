@@ -2,8 +2,29 @@ app-photoswipe .pswp {
   // --google-map-bottom set in variables.scss 
   top: calc(var(--google-map-bottom) + var(--toolbar-min-height) );
   height: calc(100vh - var(--toolbar-min-height) - var(--google-map-bottom));
+
+  &.support-app-fs .pswp__button--fs {
+    display: block !important; 
+  }
 }
 
+/**
+* adjust CSS to allow fullscreen photoswipe in app.
+* BUG: position:fixed and z-index not working in mobile safari
+*/
+ion-app.fullscreen-gallery app-photoswipe {
+  transform: translate3d(0,0,0);
+  .pswp {
+    top: 0;
+    left: 0;
+    height: calc(100vh + var(--ion-safe-area-top));
+    width: 100vw;
+    transform: translate3d(0,0,0);
+  }
+}
+
+
+  
 // ip6/7/8 landscape
 @media only screen
   and (max-width: 812px) 
@@ -16,12 +37,10 @@ app-photoswipe .pswp {
     --google-map-right: 50vw;  // include var(--toolbar-min-height)
     left: var(--google-map-right);
     width: calc(100vw - var(--google-map-right));
-    // top: var(--toolbar-min-height);
-    // height: calc(100vh - var(--toolbar-min-height));
     top:  calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
     height: calc(100vh - var(--ion-safe-area-top) - var(--toolbar-min-height));
-    
   }
+
 } 
 
 // ip6/7/8 PORTRAIT
@@ -36,6 +55,15 @@ app-photoswipe .pswp {
     top:  calc(var(--google-map-bottom) + var(--ion-safe-area-top));
     height: calc(100vh + var(--ion-safe-area-top) - var(--google-map-bottom));
   }
+
+
+  html.plt-ios ion-app.fullscreen-gallery app-photoswipe .pswp {
+    top: calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
+    // left: 0;
+    height: calc(100vh - var(--ion-safe-area-top) - var(--toolbar-min-height));
+    // width: 100vw;
+  }  
+
 }
 
 // breakpoint=lg
