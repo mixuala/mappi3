@@ -99,8 +99,15 @@
     max-width: var(--split-pane-side-max-width);
   }
   --thumbnail-size: 80px;
-  // --google-map-bottom: calc(40vh + var(--ion-safe-area-top));
+
+  // use map-bottom as the reference point for all calc
   --google-map-bottom: 40vh;
+  --google-map-top: calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
+  --google-map-height: calc(var(--google-map-bottom) - var(--google-map-top));
+  --google-map-lg-left: var(--split-pane-side-max-width);
+  --google-map-landscape-right: 50vw;
+
+
 
   // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
   @media only screen 

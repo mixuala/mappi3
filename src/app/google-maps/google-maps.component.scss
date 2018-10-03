@@ -17,7 +17,6 @@ app-google-maps {
 {
 
 	app-google-maps {
-		--google-map-height: calc(var(--google-map-bottom, 40vh) - var(--toolbar-min-height));
 		height: var(--google-map-height);
 		width: 100%;
 	}

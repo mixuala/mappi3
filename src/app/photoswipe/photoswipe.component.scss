@@ -34,11 +34,10 @@ ion-app.fullscreen-gallery app-photoswipe {
 {
   app-photoswipe.content-right-if-mq-landscape .pswp {
     // position: fixed does not include ion-safe-area
-    --google-map-right: 50vw;  // include var(--toolbar-min-height)
-    left: var(--google-map-right);
-    width: calc(100vw - var(--google-map-right));
-    top:  calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
-    height: calc(100vh - var(--ion-safe-area-top) - var(--toolbar-min-height));
+    left: var(--google-map-landscape-right);
+    width: calc(100vw - var(--google-map-landscape-right));
+    top: var(--google-map-top);
+    height: calc(100vh - var(--google-map-top));
   }
 
 } 
