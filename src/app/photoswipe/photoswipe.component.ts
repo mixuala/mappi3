@@ -165,7 +165,6 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
       this.gallery.viewportSize = this.getViewportSize(value);
       parent.classList.toggle('fullscreen-gallery',true);
       this.gallery.updateSize(true);
-      return Promise.resolve();
     } 
     parent.classList.toggle('fullscreen-gallery',false);
     setTimeout( ()=>{

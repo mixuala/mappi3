@@ -157,6 +157,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       this.childComponentsChange({data:p, action:'add'})
       return mg;
     })
+    .then( mg=>{
+      setTimeout(()=>this.cd.detectChanges())
+    })
   }
 
   removeMarkerGroup(o:IMarkerGroup){

@@ -21,7 +21,8 @@
     </ion-card-header>
 
     <ion-card-content>
-      <ion-reorder-group disabled="false" 
+      <ion-reorder-group 
+        [disabled]="mgLayout!='focus-marker-group'"
         (ionItemReorder)="reorderMarkerItem($event)">
         <ion-list *ngFor="let mi of miCollection$[marker.uuid] | async">
           <app-marker-item *ngIf="mi?._rest_action!='delete'"
