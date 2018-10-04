@@ -10,22 +10,37 @@ ion-grid {
   }
 }
 
-// ip6/7/8 landscape
+/**
+ * set layout dims on google maps container, google maps will fit inside
+ */
+ion-header.google-maps-wrap {
+  height: var(--google-map-height);
+  width: 100vw;
+}
+
+
+// ip6/7/8 LANDSCAPE
 @media only screen
   and (max-width: 812px) 
 	and (max-height: 414px) 
   and (orientation: landscape)
   and (-webkit-min-device-pixel-ratio: 2)
 {
-  ion-content.content-right-if-mq-landscape {
-    position: absolute;
-    --google-map-right: 50vw;  // include var(--toolbar-min-height)
-    left: var(--google-map-right);
-    top: var(--toolbar-min-height);
-    height: calc(100vh - var(--toolbar-min-height));
-    width: calc(100vw - var(--google-map-right));
+  ion-header.google-maps-wrap {
+    // height: calc(100% - var(--google-map-top));
+    // width: var(--google-map-landscape-right-pct);
+    height: calc(100vh - var(--google-map-top));
+    width: var(--google-map-landscape-right);
   }
-
+    
+  ion-content.content-right-if-mq-landscape {
+      position: absolute;
+      left: var(--google-map-landscape-right);
+      top: var(--toolbar-min-height);
+      height: calc(100vh - var(--toolbar-min-height));
+      width: calc(100vw - var(--google-map-landscape-right));
+  }
+    
   // rollback ion-col[offset-sm="2"] in landscape mode
   ion-col {
     --ion-grid-columns: 6;
@@ -41,6 +56,7 @@ ion-grid {
   and (orientation: portrait)
   and (-webkit-min-device-pixel-ratio: 2)
 {
+
   ion-row.hscroll-if-mq-portrait {
     flex-wrap: nowrap;
     overflow-x: scroll!important;

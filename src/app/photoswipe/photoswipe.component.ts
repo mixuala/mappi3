@@ -37,11 +37,14 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(){
-    this.galleryElement = this.elementRef.nativeElement.firstElementChild;    
+    this.galleryElement = this.elementRef.nativeElement.firstElementChild;
+    // this.dom
+    // document.getElementsByTagName('ION-APP')[0];
+    // contentEl = document.getElementsByClassName('marker-group-wrap')[0];
   }
 
   ngOnDestroy(){
-    this.set_appFullscreen(false);
+    this.toggle_appFullscreen(false);
     this.gallery.destroy();
   }
 
@@ -61,7 +64,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
 
   launch(gallery:any) {
     gallery.listen('close', ()=>{
-      this.set_appFullscreen(false);
+      this.toggle_appFullscreen(false);
     })
 
     gallery.listen('destroy', () => {
@@ -76,10 +79,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
         this.gallery = null;
     });
 
-    const googlemapsEl = document.getElementsByTagName('APP-GOOGLE-MAPS')[0];
-    const homePageGridEl = googlemapsEl.nextElementSibling;
-    gallery.viewportSize = this.getViewportSize();
-    // console.log( JSON.stringify(gallery.viewportSize))
+    gallery.viewportSize = this.getViewportSize(false);
 
     gallery.init();
     this.setup_fullscreen_override(gallery);
@@ -88,29 +88,19 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   }
 
   getViewportSize(fullscreen:boolean=false){
+    // const googlemapsEl = document.getElementsByClassName('google-maps-wrap')[0];
     let parentEl:Element;
     if (fullscreen) {
+      // use <ion-app> over <app-home> for fullsize dim
       parentEl = document.getElementsByTagName('ION-APP')[0];
-      if (this.galleryElement.classList.contains('support-app-fs')){
-        /**
-         * this is a hack because mobile safari won't render photoswipe above the UI
-         * it's probably better to find a fix to the CSS bug. position:fixed and z-index not working
-         * 
-         * this hack only works for portrait mode.
-         */
-        return {
-          x: parentEl.clientWidth,
-          y: parentEl.clientHeight -64,
-        }
-      }
     } else {
-      const googlemapsEl = document.getElementsByTagName('APP-GOOGLE-MAPS')[0];
-      parentEl = googlemapsEl.nextElementSibling;
+      parentEl = document.getElementsByClassName('marker-group-wrap')[0];
     }
-    return {
+    const dim= {
       x: parentEl.clientWidth,
       y: parentEl.clientHeight,
     };
+    console.log( `viewport, fullscreen=${fullscreen}, dim=`, JSON.stringify(dim), )
   }
 
   /**
@@ -120,33 +110,46 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
    */
   setup_fullscreen_override(gallery:any){
     const platforms = document.getElementsByTagName('HTML')[0].classList
-    if (platforms.contains('plt-ios') && platforms.contains('plt-tablet')==false) {
-      // BUG: mobile safari has a z-index, position:fixed bug
+    if (platforms.contains('plt-ios') 
+      // && platforms.contains('plt-tablet')==false
+    ) {
       // skip the 2-stage fullscreen entirely
       if (gallery.ui.supportsFullscreen()==false){
         // need to enable the button, css show
         this.galleryElement.classList.add('support-app-fs');
+        console.warn("*** limited to app fs only");
       }
-      else return;
     }
     // find fullscreen button
     const el = this._fsClosure && this._fsClosure.el || this.galleryElement.getElementsByClassName("pswp__button--fs")[0];
     const type = 'pswpTap click';
+    const self = this;
     const handler = (e:Event)=>{
       // disable original fullscreen click handler
       e.stopPropagation();
       e.preventDefault();
-      if (gallery.ui.supportsFullscreen()==false){
-        // doesn't support device fs, so just toggle app fs, don't unbind
-        this.set_appFullscreen( !this.is_appFullscreen() );
+
+      if (gallery.ui.supportsFullscreen()==false 
+        || self.galleryElement.classList.contains('support-app-fs'))
+      {
+        // does not support device fs
+        // just toggle app fs, don't unbind listener yet.
+        self.toggle_appFullscreen();
         return;
       } 
-      else this.set_appFullscreen(true);
-      gallery.framework.unbind(this._fsClosure.el, this._fsClosure.type, this._fsClosure.handler);
-      setTimeout( ()=>{
-        // activate original fullscreen handler via fsButton.onTap() handler
-        this._fsClosure.el.classList.toggle("pswp__button--fs", true);
-      },10)
+      else {
+        // goto app fs,
+        self.toggle_appFullscreen(true);
+        gallery.ui.hideControls();
+        // unbind this listener now
+        gallery.framework.unbind(self._fsClosure.el, self._fsClosure.type, self._fsClosure.handler);
+        // activate device fs handler by adding class to button.
+        // console.warn("*** next click will goto device fs")
+        setTimeout( ()=>{
+          // activate original fullscreen handler via fsButton.onTap() handler
+          self._fsClosure.el.classList.toggle("pswp__button--fs", true);
+        },10)
+      }
     }
     this._fsClosure = {el, type, handler};
     this._fsClosure.el.classList.toggle("pswp__button--fs", false);
@@ -154,45 +157,33 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     gallery.framework.bind(el, type, handler);
   }
   is_appFullscreen(){
-    return this.galleryElement.closest('ion-app').classList.contains('fullscreen-gallery');
+    console.warn("DEPRECATE: is_appFullscreen")
+    return this.galleryElement.closest('ION-APP').classList.contains('fullscreen-gallery');
   }
-  set_appFullscreen(value:boolean){
-    const parent = this.galleryElement.closest('ion-app');
-    // const isFullscreen: boolean = this.is_appFullscreen();
-
+  toggle_appFullscreen(value?:boolean){
+    const parent = this.galleryElement.closest('ION-APP');
+    if (typeof value == 'undefined') 
+      value = !parent.classList.contains('fullscreen-gallery');
     // console.info("toggle_fullscreen", value);
     if (value) {
       this.gallery.viewportSize = this.getViewportSize(value);
       parent.classList.toggle('fullscreen-gallery',true);
-      this.gallery.updateSize(true);
-      return;
+      // this.gallery.updateSize(true);
+      // console.warn("*** > set to app fs")
+      // return;
     } 
-    parent.classList.toggle('fullscreen-gallery',false);
+    else
+      parent.classList.toggle('fullscreen-gallery',false);
+
     setTimeout( ()=>{
       // add a delay before getting viewport size and hiding fullscreen
       // googlemapsEl need to regain original height
+      if (!this.gallery) return;
       this.gallery.viewportSize = this.getViewportSize(value);
       this.gallery.updateSize(true);
     },10)
     return;
   }
-
-  // UNUSED
-  override_ui_fullscreen(gallery:any){
-    // NOTE: this isn't working because the ui uses a closure
-    const fs = gallery.ui.getFullscreenAPI();
-    const {enter, exit} = fs;
-    fs.enter = ()=>{
-      // if (this.is_appFullscreen()) return enter();
-      return this.set_appFullscreen(true);
-    };
-    fs.exit = ()=>{
-      console.warn("fs.exit(), fs=", fs.isFullscreen(), "appfs=", this.is_appFullscreen())
-      // if (fs.isFullscreen()) return exit();
-      return this.set_appFullscreen(false);
-    }
-  }
-
 
   ngOnChanges(o){
     Object.entries(o).forEach( (en:[string,SimpleChange])=>{

@@ -79,20 +79,17 @@
   * adjust CSS to allow fullscreen photoswipe in app.
   * BUG: position:fixed and z-index not working in mobile safari
   */
-  html.plt-ios ion-app.fullscreen-gallery {
-    ion-menu {
-      display:none !important;
+  .fullscreen-gallery {
+    ion-menu {  // for safari
+      position:fixed;
+      z-index: -1;
     }
-    ::shadow ion-header {
-      display:none;
-      ion-toolbar {
-        display:none !important;
-      }
-    }
-    app-google-maps {
-      height:0;
+    ion-header.header-ios {
+      position:fixed;
+      z-index: -1;
     }
   }
+
 
   --split-pane-side-max-width: 280px;
   ion-split-pane.split-pane-md.split-pane-visible>.split-pane-side {
@@ -101,10 +98,12 @@
   --thumbnail-size: 80px;
 
   // use map-bottom as the reference point for all calc
+  // --google-map-bottom-pct: 40%;
   --google-map-bottom: 40vh;
   --google-map-top: calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
   --google-map-height: calc(var(--google-map-bottom) - var(--google-map-top));
   --google-map-lg-left: var(--split-pane-side-max-width);
+  // --google-map-landscape-right-pct: 50%;
   --google-map-landscape-right: 50vw;
 
 

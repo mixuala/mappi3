@@ -23,19 +23,20 @@
   </ion-toolbar>
 </ion-header>
 
-
-<!-- googleMaps -->
-<app-google-maps *ngIf="markerCollection$ | async as items"
+<ion-header class="google-maps-wrap">
+  <!-- googleMaps -->
+  <app-google-maps *ngIf="markerCollection$ | async as items"
   apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94" 
   [items]="items"
   [mode]="layout"
   [(selected)]="selectedMarkerGroup"
   (itemChange)="mappiMarkerChange($event)"
   (mapReady)="setMap($event)"
-></app-google-maps>
+  ></app-google-maps>
+</ion-header>
 
 
-<ion-content no-padding class="content-right-if-mq-landscape">
+<ion-content no-padding class="marker-group-wrap content-right-if-mq-landscape">
 
   <ion-toolbar class="sibling-component" *ngIf="false">
     <ion-buttons>

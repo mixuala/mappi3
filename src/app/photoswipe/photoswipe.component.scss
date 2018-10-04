@@ -1,8 +1,9 @@
 app-photoswipe .pswp {
   // --google-map-bottom set in variables.scss 
-  top: calc(var(--google-map-bottom) + var(--toolbar-min-height) );
-  height: calc(100vh - var(--toolbar-min-height) - var(--google-map-bottom));
+  top: var(--google-map-bottom);
+  height: calc(100vh - var(--google-map-bottom));
 
+  // force display of fs button when device fullscreen not available
   &.support-app-fs .pswp__button--fs {
     display: block !important; 
   }
@@ -12,7 +13,7 @@ app-photoswipe .pswp {
 * adjust CSS to allow fullscreen photoswipe in app.
 * BUG: position:fixed and z-index not working in mobile safari
 */
-ion-app.fullscreen-gallery app-photoswipe {
+.fullscreen-gallery app-photoswipe {
   transform: translate3d(0,0,0);
   .pswp {
     top: 0;
@@ -40,6 +41,15 @@ ion-app.fullscreen-gallery app-photoswipe {
     height: calc(100vh - var(--google-map-top));
   }
 
+  html.plt-ios .fullscreen-gallery app-photoswipe .pswp {
+    position: fixed;
+    z-index: 9999;
+    top: 0;
+    height: 100%;
+    left: 0;
+    width: 100%;
+  }  
+
 } 
 
 // ip6/7/8 PORTRAIT
@@ -56,11 +66,9 @@ ion-app.fullscreen-gallery app-photoswipe {
   }
 
 
-  html.plt-ios ion-app.fullscreen-gallery app-photoswipe .pswp {
-    top: calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
-    // left: 0;
-    height: calc(100vh - var(--ion-safe-area-top) - var(--toolbar-min-height));
-    // width: 100vw;
+  html.plt-ios .fullscreen-gallery app-photoswipe .pswp {
+    top: 0;
+    height: 100%;
   }  
 
 }
