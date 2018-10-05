@@ -79,28 +79,10 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
         this.gallery = null;
     });
 
-    gallery.viewportSize = this.getViewportSize(false);
-
     gallery.init();
     this.setup_fullscreen_override(gallery);
     // gallery.ui.hideControls();
     this.gallery = gallery;
-  }
-
-  getViewportSize(fullscreen:boolean=false){
-    // const googlemapsEl = document.getElementsByClassName('google-maps-wrap')[0];
-    let parentEl:Element;
-    if (fullscreen) {
-      // use <ion-app> over <app-home> for fullsize dim
-      parentEl = document.getElementsByTagName('ION-APP')[0];
-    } else {
-      parentEl = document.getElementsByClassName('marker-group-wrap')[0];
-    }
-    const dim= {
-      x: parentEl.clientWidth,
-      y: parentEl.clientHeight,
-    };
-    console.log( `viewport, fullscreen=${fullscreen}, dim=`, JSON.stringify(dim), )
   }
 
   /**
@@ -140,7 +122,6 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
       else {
         // goto app fs,
         self.toggle_appFullscreen(true);
-        gallery.ui.hideControls();
         // unbind this listener now
         gallery.framework.unbind(self._fsClosure.el, self._fsClosure.type, self._fsClosure.handler);
         // activate device fs handler by adding class to button.
@@ -156,21 +137,15 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     // add fullscreen within app, only
     gallery.framework.bind(el, type, handler);
   }
-  is_appFullscreen(){
-    console.warn("DEPRECATE: is_appFullscreen")
-    return this.galleryElement.closest('ION-APP').classList.contains('fullscreen-gallery');
-  }
   toggle_appFullscreen(value?:boolean){
     const parent = this.galleryElement.closest('ION-APP');
     if (typeof value == 'undefined') 
       value = !parent.classList.contains('fullscreen-gallery');
     // console.info("toggle_fullscreen", value);
     if (value) {
-      this.gallery.viewportSize = this.getViewportSize(value);
       parent.classList.toggle('fullscreen-gallery',true);
       // this.gallery.updateSize(true);
       // console.warn("*** > set to app fs")
-      // return;
     } 
     else
       parent.classList.toggle('fullscreen-gallery',false);
@@ -179,7 +154,6 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
       // add a delay before getting viewport size and hiding fullscreen
       // googlemapsEl need to regain original height
       if (!this.gallery) return;
-      this.gallery.viewportSize = this.getViewportSize(value);
       this.gallery.updateSize(true);
     },10)
     return;

@@ -40,7 +40,7 @@ ion-header.google-maps-wrap {
       height: calc(100vh - var(--toolbar-min-height));
       width: calc(100vw - var(--google-map-landscape-right));
   }
-    
+
   // rollback ion-col[offset-sm="2"] in landscape mode
   ion-col {
     --ion-grid-columns: 6;

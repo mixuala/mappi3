@@ -41,6 +41,25 @@ app-photoswipe .pswp {
     height: calc(100vh - var(--google-map-top));
   }
 
+  /**
+   * HACK: fix ios landscape full screen rendering bug by
+   * expanding photoswipe wrap before jumping to fullscreen
+   */
+  html.plt-ios .fullscreen-gallery ion-content.content-right-if-mq-landscape {
+    left: 0 !important;
+    top: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+    // transition:All 0.3s ease-out;
+    // -webkit-transition:All 0.3s ease-out;
+    // -moz-transition:All 0.3s ease-out;
+    // -o-transition:All 0.3s ease-out;
+  }
+
+  /**
+  * HACK: adjust CSS to allow fullscreen photoswipe in app.
+  * BUG: position:fixed and z-index not working in mobile safari
+  */
   html.plt-ios .fullscreen-gallery app-photoswipe .pswp {
     position: fixed;
     z-index: 9999;

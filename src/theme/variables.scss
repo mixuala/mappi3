@@ -76,7 +76,7 @@
   --ion-color-dark-tint: #383838;
 
   /**
-  * adjust CSS to allow fullscreen photoswipe in app.
+  * HACK: adjust CSS to allow fullscreen photoswipe in app.
   * BUG: position:fixed and z-index not working in mobile safari
   */
   .fullscreen-gallery {
@@ -87,9 +87,11 @@
     ion-header.header-ios {
       position:fixed;
       z-index: -1;
+      &.google-maps-wrap {
+        top: var(--google-map-top);
+      }
     }
   }
-
 
   --split-pane-side-max-width: 280px;
   ion-split-pane.split-pane-md.split-pane-visible>.split-pane-side {
@@ -97,14 +99,13 @@
   }
   --thumbnail-size: 80px;
 
-  // use map-bottom as the reference point for all calc
-  // --google-map-bottom-pct: 40%;
+  // use map-bottom, map-landscape-right as the reference point for all calc
   --google-map-bottom: 40vh;
+  --google-map-landscape-right: 50vw;
   --google-map-top: calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
   --google-map-height: calc(var(--google-map-bottom) - var(--google-map-top));
   --google-map-lg-left: var(--split-pane-side-max-width);
-  // --google-map-landscape-right-pct: 50%;
-  --google-map-landscape-right: 50vw;
+  
 
 
 
