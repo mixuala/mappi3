@@ -39,6 +39,8 @@ export class GoogleMapsComponent implements OnInit {
   @Output() itemChange: EventEmitter<{data:mappi.IMappiMarker,action:string}> = new EventEmitter<{data:mappi.IMappiMarker,action:string}>();
   @Output() selectedChange: EventEmitter<string> = new EventEmitter<string>();
 
+
+  public static map: any;
   public map: any;
   public markers: any[] = [];
   private _mapReady: Promise<void>;
@@ -77,7 +79,7 @@ export class GoogleMapsComponent implements OnInit {
   ngOnInit() {
     new GoogleMapsReady(this.apiKey, this.renderer, this._document).init()
     .then((res) => {
-      return this.loadMap()
+      return this.loadMap(false);
     }, (err) => {
       console.log(err);
       this.mapReadyResolvers[1]("Could not initialize Google Maps");
@@ -88,7 +90,53 @@ export class GoogleMapsComponent implements OnInit {
     });
   }
 
-  private loadMap(): Promise<any> {
+  ngOnDestroy() {
+    /**
+     * hide google.maps.Map DOM element offscreen, reuse later
+     */
+    this.stash_GoogleMap('hide');
+  }
+
+  /**
+   * move google.maps.Map instance/dom offscreen onDestroy, 
+   * reuse in onInit
+   * @param action string [hide | restore]
+   */
+  private stash_GoogleMap(action:string) {
+    const parent = this.element.nativeElement;
+    let stash = document.getElementById('stash-google-maps');
+    if (!stash) {
+      stash = this.renderer.createElement('DIV');
+      stash.id = 'stash-google-maps';
+      stash.style.display = "none";
+      this.renderer.appendChild(this._document.body, stash);
+    }
+
+    switch (action) {
+      case 'hide':
+        while (parent.childNodes.length > 0) {
+          stash.appendChild(parent.childNodes[0]);
+        }
+        google.maps.event.clearInstanceListeners(this.map);
+        break;
+      case 'restore':
+        this.map = GoogleMapsComponent.map;
+        while (parent.childNodes.length > 0) {
+          // remove loading spinner, etc.
+          parent.removeChild(parent.childNodes[0]);
+        }
+        while (stash.childNodes.length > 0) {
+          parent.appendChild(stash.childNodes[0]);
+        }
+      break;
+    }
+  }
+
+  private loadMap(force?:boolean): Promise<any> { 
+
+    if (!force && GoogleMapsComponent.map) {
+      this.stash_GoogleMap('restore');
+    }
     return new Promise((resolve, reject) => {
       const centerMap = ()=> {
         Geolocation.getCurrentPosition().then((position) => {
@@ -98,7 +146,9 @@ export class GoogleMapsComponent implements OnInit {
             center: latLng,
             zoom: 15
           };
-          this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
+
+          GoogleMapsComponent.map = this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
+
           resolve(true);
         }, (err) => {
           console.error(err);
@@ -149,44 +199,24 @@ export class GoogleMapsComponent implements OnInit {
           });
           break;
         case 'items':
-          if (change.firstChange) return;
+          if (change.firstChange) {
+            console.warn(">>> firstChange marker count=", change.currentValue.length);
+            // return;
+          }
           this._mapReady
           .then( ()=>{
             let items:IMarker[] = change.currentValue;
+            console.warn("*** items marker count=", change.currentValue.length);
+            var gm = this.map;
             items.forEach( (m,i)=>m.seq=i);  // reindex for labels
             // ignore markers that are marked for delete pending commit
             const visible = items.filter(o=>o['_rest_action']!='delete');
             const visibleUuids = visible.map(o=>o.uuid);
-            const markerUuids = MappiMarker.markers.map(o=>o.uuid);
+            // const markerUuids = MappiMarker.markers.map(o=>o.uuid);
             const hidden = MappiMarker.markers.filter(o=>!visibleUuids.includes(o.uuid));
             visible.forEach( (marker,i)=>{
               const mm:mappi.IMappiMarker = marker;
-              if (marker['marker'] && markerUuids.includes(marker.uuid)){
-                // keep/restore existing marker
-                mm.marker.setMap(this.map);
-                mm.marker.setLabel({
-                  text:`${marker.seq+1}`,        // don't reset labels until commit.
-                  color: mm.uuid == this.selected ? 'black' : 'darkred',
-                  fontWeight: mm.uuid == this.selected ? '900' : '400',
-                });
-              } else if (marker['marker']) {
-                console.error("existing marker found, but not in MappiMarker.markers", mm);
-              } else {
-                if (marker['marker']) {
-                  // recover found marker instead of adding new
-                  mm.marker.setMap(this.map);
-                  mm.marker.setLabel({
-                    text:`${marker.seq+1}`,
-                    color: mm.uuid == this.selected ? 'black' : 'darkred',
-                    fontWeight: mm.uuid == this.selected ? '900' : '400',
-                  });
-                  console.warn("found marker, but not found in MappiMarker.markers", mm);
-                }
-                else {
-                  // add completely new marker
-                  this.addOneMarker(marker);
-                }
-              }
+              this.addOneMarker(marker);
             })
             MappiMarker.hide(hidden);
 
@@ -228,11 +258,11 @@ export class GoogleMapsComponent implements OnInit {
     const found = MappiMarker.markers.find( o=>o.uuid==mm.uuid);
     if (found) {
       mm.marker = found;
-      mm.marker.setMap(this.map);
+      mm.marker.setMap(self.map);
       mm.marker.setLabel({
         text:`${mm.seq+1}`,
-        color: mm.uuid == this.selected ? 'black' : 'darkred',
-        fontWeight: mm.uuid == this.selected ? '900' : '400',
+        color: mm.uuid == self.selected ? 'black' : 'darkred',
+        fontWeight: mm.uuid == self.selected ? '900' : '400',
       });
       return;
     } 
@@ -246,13 +276,13 @@ export class GoogleMapsComponent implements OnInit {
         // label: `${mm.seq+1}`
         label: {
           text:`${mm.seq+1}`,
-          color: mm.uuid == this.selected ? 'black' : 'darkred',
-          fontWeight: mm.uuid == this.selected ? '900' : '400',
+          color: mm.uuid == self.selected ? 'black' : 'darkred',
+          fontWeight: mm.uuid == self.selected ? '900' : '400',
         }
       });
       mm.marker._listeners = mm.marker._listeners || {};
-      mm.marker._listeners.dragend = this.listen_DragEnd(mm);
-      mm.marker._listeners.click = this.listen_Click(mm);
+      mm.marker._listeners.dragend = self.listen_DragEnd(mm);
+      mm.marker._listeners.click = self.listen_Click(mm);
     }
   }
 

@@ -220,7 +220,16 @@ export class HomePage implements OnInit {
       //   arr.forEach( o=>console.log(o))
       // });
     } )
+
+    console.warn("ngOnInit: reuse this.map=google.maps.Map correctly")
+    // BUG: this.map is not being reused, new instance created each time view is initialized
     
+  }
+
+  ngOnDestroy() {
+    console.warn("ngOnDestroy: unsubscribe to all subscriptions.")
+    // BUG: this.map is not being reused, new instance created each time view is initialized
+
   }
 
 

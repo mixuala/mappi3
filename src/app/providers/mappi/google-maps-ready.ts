@@ -17,7 +17,7 @@ const { Network } = Plugins;
  */
 export class GoogleMapsReady {
 
-  private mapsLoaded: boolean = false;
+  private static mapsLoaded: boolean = false;
   private networkHandler = null;
 
   constructor(
@@ -34,6 +34,8 @@ export class GoogleMapsReady {
         resolve(true);
       },
       (err) => {
+        if (err=='SDK already loaded')
+          return resolve(true);
         console.error("GoogleMapsReady.init(): error loading google maps SDK")
         reject(err);
       });
@@ -43,7 +45,7 @@ export class GoogleMapsReady {
   private loadSDK(): Promise<any> {
     console.log("Loading Google Maps SDK");
     return new Promise((resolve, reject) => {
-      if (!this.mapsLoaded) {
+      if (!GoogleMapsReady.mapsLoaded) {
         Network.getStatus().then((status) => {
           if (status.connected) {
             this.injectSDK().then((res) => {
@@ -88,7 +90,7 @@ export class GoogleMapsReady {
   private injectSDK(): Promise<any> {
     return new Promise((resolve, reject) => {
       window['mapInit'] = () => {
-        this.mapsLoaded = true;
+        GoogleMapsReady.mapsLoaded = true;
         resolve(true);
       }
       let script = this.renderer.createElement('script');
