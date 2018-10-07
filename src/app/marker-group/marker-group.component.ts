@@ -6,7 +6,7 @@ import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 import { Plugins } from '@capacitor/core';
 
 
-import { MockDataService, quickUuid, IMarkerGroup, IPhoto } from '../providers/mock-data.service';
+import { MockDataService, quickUuid, IMarkerGroup, IPhoto,IMarker } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
@@ -38,7 +38,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   public miCollection$: {[uuid:string]:  Observable<IPhoto[]>} = {};
 
   @Input() mg: IMarkerGroup;
-  @Input() mListLayout: string;  // enum=['edit', 'default']
+  // layout mode of parent, enum=['edit', 'child', 'default']
+  @Input() mListLayout: string;  
   @Input() mgFocus: IMarkerGroup;
 
   @Output() mgFocusChange: EventEmitter<IMarkerGroup> = new EventEmitter<IMarkerGroup>();
@@ -84,9 +85,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           this.dataService.ready()
           .then( ()=>{
             const subject = new SubjectiveService(this.dataService.Photos);
-            this._miSub[mg.uuid] = subject
+            this._miSub[mg.uuid] = MockDataService.getSubjByParentUuid(mg.uuid, subject) as SubjectiveService<IPhoto>;
             this.miCollection$[mg.uuid] = subject.get$(mg.markerItemIds);
-            this.dataService.markerCollSubjectDict[mg.uuid] = subject;
+            // this.dataService.markerCollSubjectDict[mg.uuid] = subject;
             // this.miCollection$[mg.uuid].subscribe( items=>{
             //   if (items.length>2)
             //     console.warn(`>>> photo$ for mg: ${mg.label || mg.seq}: count=${items.length}`)

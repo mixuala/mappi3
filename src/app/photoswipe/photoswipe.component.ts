@@ -44,8 +44,10 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   }
 
   ngOnDestroy(){
-    this.toggle_appFullscreen(false);
-    this.gallery.destroy();
+    if (this.gallery) {
+      this.toggle_appFullscreen(false);
+      this.gallery.destroy();
+    }
   }
 
   reset():Promise<void> {
@@ -63,26 +65,28 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   }
 
   launch(gallery:any) {
+    const self = this;
     gallery.listen('close', ()=>{
-      this.toggle_appFullscreen(false);
+      self.toggle_appFullscreen(false);
     })
 
     gallery.listen('destroy', () => {
         // This is required to remove component from DOM
         // TODO: what's the ionic v4 equivalent?
-        // this.viewCtrl.dismiss();
-        if (this._fsClosure) {
-          this.gallery.framework.unbind(this._fsClosure.el, this._fsClosure.type, this._fsClosure.handler);
-          this._fsClosure.el.classList.toggle("pswp__button--fs", true);
-          this._fsClosure = null;
+        // self.viewCtrl.dismiss();
+        console.warn("PhotoswipeComponent.gallery destroy event")
+        if (self._fsClosure) {
+          self.gallery.framework.unbind(self._fsClosure.el, self._fsClosure.type, self._fsClosure.handler);
+          self._fsClosure.el.classList.toggle("pswp__button--fs", true);
+          self._fsClosure = null;
         }
-        this.gallery = null;
+        self.gallery = null;
     });
 
     gallery.init();
-    this.setup_fullscreen_override(gallery);
+    self.setup_fullscreen_override(gallery);
     // gallery.ui.hideControls();
-    this.gallery = gallery;
+    self.gallery = gallery;
   }
 
   /**
@@ -139,6 +143,10 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   }
   toggle_appFullscreen(value?:boolean){
     const parent = this.galleryElement.closest('ION-APP');
+    if (!parent) {
+      console.warn("Cannot find ION=APP, has the view already been destroyed?")
+      return;
+    }
     if (typeof value == 'undefined') 
       value = !parent.classList.contains('fullscreen-gallery');
     // console.info("toggle_fullscreen", value);

@@ -2,6 +2,10 @@ ion-card {
   margin:0;
 }
 
+ion-card-content {
+  padding-top: 0;
+}
+
 
 // ip6/7/8 PORTRAIT
 @media only screen 
@@ -16,9 +20,7 @@ ion-card {
 }
 
 
-ion-card-content {
-  padding-top: 0;
-}
+
 
 
 ion-item.gallery { 

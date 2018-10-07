@@ -10,15 +10,34 @@
 </ion-header>
 
 <ion-content>
-  <ion-list>
-    <ion-item *ngFor="let item of items">
-      <ion-icon [name]="item.icon" slot="start"></ion-icon>
-      {{item.title}}
-      <div class="item-note" slot="end">
-        {{item.note}}
-      </div>
-    </ion-item>
-  </ion-list>
+    
+    <!-- list -->
+    <ng-container [ngSwitch]="layout">
+      <ion-grid no-padding *ngSwitchCase="'default'">
+          <ion-row>
+              <ion-col size="12" size-sm="6" size-xl="4" 
+              *ngFor="let item of mListCollection$ | async"
+              >
+                  <app-marker-list
+                    [mList]=item
+                    (mListChange)="childComponentsChange($event)"
+                  ></app-marker-list>
+
+              </ion-col>
+          </ion-row>
+
+        <!-- <ion-row>
+          <ion-col size="12" size-sm="6" size-xl="4" 
+          class="marker-list-focus" 
+          ngClass.center="mgFocus" 
+          *ngFor="let mg of mListCollection$ | async"
+          >
+            <app-marker-group *ngIf="mg?._rest_action!='delete'" [mg]="mg" [mListLayout]="layout" (mgChange)="childComponentsChange($event)"
+                  [(mgFocus)]="mgFocus"></app-marker-group>
+          </ion-col>
+        </ion-row> -->
+      </ion-grid>
+    </ng-container>
   <!--
     <div *ngIf="selectedItem" padding>
       You navigated here from <b>{{selectedItem.title }}</b>

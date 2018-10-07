@@ -4,7 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { IonicModule } from '@ionic/angular';
 import { RouterModule } from '@angular/router';
 
+import { SharedComponentModule } from '../app.module';
 import { ListPage } from './list.page';
+
 
 @NgModule({
   imports: [
@@ -16,8 +18,10 @@ import { ListPage } from './list.page';
         path: '',
         component: ListPage
       }
-    ])
+    ]),
+    SharedComponentModule,
   ],
-  declarations: [ListPage]
+  declarations: [ListPage,
+  ]
 })
 export class ListPageModule {}

@@ -9,6 +9,7 @@ import { RestyService } from './resty.service';
 })
 export class SubjectiveService<T> {
 
+
   public subject$: BehaviorSubject<T[]>;
   public resty: RestyService<T>;
   private _observable$: Observable<T[]>;
@@ -61,8 +62,11 @@ export class SubjectiveService<T> {
       this.next(arr)
     });
   }
-
+  // deprecate, use watch$()
   observe$():Observable<T[]> {
+    return this._observable$;
+  }
+  watch$():Observable<T[]> {
     return this._observable$;
   }
 

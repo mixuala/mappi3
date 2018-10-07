@@ -1,8 +1,8 @@
 import { Component, EventEmitter, OnInit, OnChanges, Input, Output, SimpleChange} from '@angular/core';
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 
-import { MockDataService, IPhoto } from '../providers/mock-data.service';
 import { MappiMarker } from '../providers/mappi/mappi.service';
+import { MockDataService, IPhoto, IMarker } from '../providers/mock-data.service';
 
 
 

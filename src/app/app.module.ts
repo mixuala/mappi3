@@ -1,4 +1,6 @@
 import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { BrowserModule } from '@angular/platform-browser';
 import { RouterModule, RouteReuseStrategy, Routes } from '@angular/router';
 import { QRCodeModule } from 'angularx-qrcode';
@@ -12,15 +14,23 @@ import { AppRoutingModule } from './app-routing.module';
 import {
   MappiService
 } from './providers/mappi/mappi.service';
+import { MarkerListComponent } from './marker-list/marker-list.component';
+import { MarkerGroupComponent } from './marker-group/marker-group.component';
+import { MarkerItemComponent } from './marker-item/marker-item.component';
+import { MarkerGroupFocusDirective } from './marker-group/marker-group-focus.directive';
+import { GoogleMapsComponent } from './google-maps/google-maps.component';
 import { MockDataService } from './providers/mock-data.service';
 import { RestyService } from './providers/resty.service';
 import { SubjectiveService } from './providers/subjective.service';
 import { PhotoService } from './providers/photo/photo.service';
+import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
+
 
 
 @NgModule({
-  declarations: [
-    AppComponent, 
+  declarations: [AppComponent, 
+  ],
+  exports: [
   ],
   entryComponents: [],
   imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,
@@ -36,3 +46,28 @@ import { PhotoService } from './providers/photo/photo.service';
   bootstrap: [AppComponent]
 })
 export class AppModule {}
+
+
+
+@NgModule({
+  imports: [
+    CommonModule,
+    FormsModule,
+    IonicModule,
+  ],
+  declarations: [
+    MarkerListComponent,
+    MarkerGroupComponent, MarkerGroupFocusDirective,
+    MarkerItemComponent,
+    GoogleMapsComponent,
+    PhotoswipeComponent,
+  ],
+  exports: [
+    MarkerListComponent,
+    MarkerGroupComponent, MarkerGroupFocusDirective,
+    MarkerItemComponent,
+    GoogleMapsComponent,
+    PhotoswipeComponent,  
+  ],
+})
+export class SharedComponentModule {}

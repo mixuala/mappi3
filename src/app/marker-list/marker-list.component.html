@@ -1,3 +1,73 @@
-<p>
-  marker-list works!
-</p>
+
+<div [ngSwitch]="mListLayout" *ngIf="(markerList$ | async) as mList">
+
+  <ion-card *ngSwitchCase="'gallery'">
+
+    <ion-card-header>
+      <ion-toolbar color="primary">
+        <ion-title>{{ mList.label || mList.seq+1 }}</ion-title>
+        <ion-buttons slot="end">
+            <ion-button href="/home/{{mList.uuid}}">
+              <ion-icon name="arrow-forward" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+      </ion-toolbar>
+      <ion-item>
+          
+        <ion-buttons >
+          <ion-button color="primary" fill="outline" slot="start">
+              <ion-icon name="pin"></ion-icon>
+              <ion-badge color="primary">{{mList.markerGroupIds.length}}</ion-badge>
+          </ion-button>
+        </ion-buttons>
+        
+
+        <ion-buttons slot="end">
+          <ion-button color="primary" fill="outline" (click)="toggleEditMode()">
+            <ion-icon name="create" slot="icon-only" *ngIf="!edit"></ion-icon>
+            <ion-icon name="save" slot="icon-only" *ngIf="edit"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-item>
+    </ion-card-header>
+
+    <ion-card-content>
+      
+      <ion-label>
+        <p>loc: [{{ mList.loc }}]</p>
+        <p>offset: [{{ mList.locOffset }}]</p>
+      </ion-label>
+      <ion-label *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
+        {{mg.label}}
+      </ion-label>
+
+      <ion-item class="gallery">
+        <ng-container *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
+          <ng-container *ngIf="mg?.markerItemIds.length; else gallery_pinIcon">
+            <ng-container *ngIf="getSubjByParentUuid_Watch$(mg.uuid) | async as items">
+              <app-marker-item *ngIf="items[0] as mi" [mi]="mi" [mgLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
+            </ng-container>
+          </ng-container>
+          <ng-template #edit_pinIcon>
+            <ion-button class="as-thumbnail" slot="start" expand="full" size="large" color="primary">
+              <ion-icon name="pin" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ng-template>
+        </ng-container>
+      </ion-item>
+    </ion-card-content>
+  </ion-card>
+
+    <!-- <ng-container *ngIf="mList.markerGroupIds.length">
+      <ng-container *ngFor="let mg of mgCollection$[mList.uuid] | async">
+
+          <app-marker-group *ngIf="mList?._rest_action!='delete'"
+          [mg]="mg" [mListLayout]="'default'" 
+          (click)="thumbClicked(mList, mg)"
+          (miChange)="childComponentsChange($event)"></app-marker-group>
+          
+      </ng-container>
+    </ng-container> -->
+
+
+</div>

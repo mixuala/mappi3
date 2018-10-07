@@ -47,6 +47,17 @@ export interface IPhoto  extends IMarker {
 }
 
 
+export interface IMarkerList extends IMarker {
+  label: string;
+  zoom?: number;
+  markerGroupIds: string[];
+  count_markers?: number;
+  count_items?: number;
+  created?: Date;
+  modified?: Date;
+}
+
+
 
 @Injectable({
   providedIn: 'root'
@@ -57,16 +68,29 @@ export class MockDataService {
   static sizes:any[] = [[640,480],[480,640], [960,640], [640,960]];
   static photo_baseurl: string = "https://picsum.photos/80?image=";
 
+  public MarkerLists:RestyService<IMarkerList>;
   public MarkerGroups:RestyService<IMarkerGroup>;
   public Photos:RestyService<IPhoto>;
 
+  public sjMarkerLists:SubjectiveService<IMarkerList>;
   public sjMarkerGroups:SubjectiveService<IMarkerGroup>;
   public sjPhotos:SubjectiveService<IPhoto>;
 
-  // local cache of map BehaviorSubjects
-  public markerCollSubjectDict: {[uuid: string]:SubjectiveService<IMarker>} = {};
-
   private _ready:Promise<void>;
+  private static MARKER_LISTS = [];
+
+  /**
+   * helper functions
+   */
+  // local cache of SubjectiveService<IMarker>
+  public static subjectCache: {[uuid: string]:SubjectiveService<IMarker>} = {};
+  static getSubjByParentUuid(uuid:string, subj?:SubjectiveService<IMarker>){
+    if (subj)
+      MockDataService.subjectCache[uuid] = subj;   
+    return MockDataService.subjectCache[uuid] || null;
+  }
+
+  
 
   constructor() { 
     this._ready = Promise.resolve()
@@ -94,11 +118,44 @@ export class MockDataService {
     .then (()=>{
       this.sjPhotos = new SubjectiveService(this.Photos);
       this.sjMarkerGroups = new SubjectiveService(this.MarkerGroups);
+    })
+    .then (()=>{
+      // return this.sjMarkerGroups.get$().toPromise()
+      return this.MarkerGroups.get()
+    })
+    .then ((mgs)=>{
+      // add some random markerLists
+      const count = 4;
+      for (let i of Array(count)) {
+        const mgCount = Math.floor(Math.random() *  4)+1;
+        const shuffledMarkerGroups = this.shuffle(mgs, mgCount);
+        const markerList = MockDataService.createMarkerList(shuffledMarkerGroups);
+        console.log(`uuid:${markerList.uuid}, markerGroups=` , shuffledMarkerGroups)
+        MockDataService.MARKER_LISTS.push(markerList);
+      }
+        
+      this.MarkerLists = new RestyService(MockDataService.MARKER_LISTS, "MarkerList");
+      this.sjMarkerLists = new SubjectiveService(this.MarkerLists);
     });    
   }
 
   ready():Promise<void> {
     return this._ready;
+  }
+
+  static createMarkerList( mgs:IMarkerGroup[]){
+    const first = mgs[0];
+    const seq = MockDataService.MARKER_LISTS.length;
+    const markerList = {
+      label: `marker list ${seq}`,
+      uuid: quickUuid(),
+      loc: first.loc.slice(),
+      locOffset: first.locOffset.slice(),
+      position: Object.assign({},first.position),
+      markerGroupIds: mgs.map(o=>o.uuid),
+      count_markers: mgs.length,
+    }
+    return markerList;
   }
 
   static inflateMarkerGroup(copyOfPhotos:IPhoto[], o:IMarkerGroup, seq?:number){

@@ -2,6 +2,7 @@ import { Component, OnInit, ViewChild,
   OnChanges,  SimpleChange,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { catchError, flatMap } from 'rxjs/operators';
 import { AlertController, ActionSheetController } from '@ionic/angular';
@@ -15,7 +16,6 @@ import  { MockDataService, quickUuid,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
-import { IpcNetConnectOpts } from 'net';
 
 
 const { Browser, Device } = Plugins;
@@ -64,7 +64,7 @@ export class HomePage implements OnInit {
          */
         // MappiMarker.reset();
         const subject = this._getSubjectForMarkerItems(value);
-        this.markerCollection$ = subject.observe$();
+        this.markerCollection$ = subject.watch$();
         break;
       case "groups":
         // MappiMarker.reset();
@@ -79,6 +79,7 @@ export class HomePage implements OnInit {
     public dataService: MockDataService,
     public actionSheetController: ActionSheetController,
     public photoService: PhotoService,
+    private route: ActivatedRoute,
     private cd: ChangeDetectorRef,
   ){
     this.dataService.ready()
@@ -88,13 +89,17 @@ export class HomePage implements OnInit {
   }
 
   private _getSubjectForMarkerItems(mg:IMarkerGroup):SubjectiveService<IMarker>{
-    return this.dataService.markerCollSubjectDict[mg.uuid];
+    return MockDataService.getSubjByParentUuid(mg.uuid);
+  }
+
+  getSubjByParentUuid_Watch$ = (uuid:string)=>{
+    const found = MockDataService.getSubjByParentUuid(uuid);
+    return found && found.watch$();
   }
 
 
 
-
-  // sibling subscribes to the SAME BehaviorSubject
+  // TEST only: sibling subscribes to the SAME BehaviorSubject
   siblingClicked(o:any){
     if (this.layout!='edit') return;
     const mg = o;
@@ -191,11 +196,31 @@ export class HomePage implements OnInit {
 
   ngOnInit() {
     this.layout = "default";
+    const mListId = this.route.snapshot.paramMap.get('uuid');
 
-    this.markerCollection$ = this.mgCollection$ = this._mgSub.get$();
-    // this.mgCollection$.subscribe( arr=>{
-    //   console.warn("HomePage.mgCollection$, count=", arr.length);
-    // });
+    // // BUG: mgCollection$ must be set here, or template will not load
+    this._mgSub = this.dataService.sjMarkerGroups;
+    this.mgCollection$ = this._mgSub.get$([]);
+
+    this.dataService.ready()
+    .then( ()=>{
+      let mgSubject = MockDataService.getSubjByParentUuid(mListId) as SubjectiveService<IMarkerGroup>;
+      if (!mgSubject) {
+        // for testing only, reload /home
+        console.warn("DEV ONLY: Subject not ready, loading all markerGroups")
+        const DEV_Subject = this._mgSub;
+        DEV_Subject.get$('all');
+        MockDataService.getSubjByParentUuid(mListId, DEV_Subject);
+        mgSubject = DEV_Subject;
+      } 
+      this.markerCollection$ = this.mgCollection$ = mgSubject.watch$();
+      this._mgSub = mgSubject;
+      // this.mgCollection$.subscribe( arr=>{
+      //   console.info(`HomePage ${mListId} mgs, count=`, arr.length);
+      //   arr.forEach( o=>console.log(o))
+      // });
+    } )
+    
   }
 
 
