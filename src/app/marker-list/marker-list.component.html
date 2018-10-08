@@ -3,11 +3,11 @@
 
   <ion-card *ngSwitchCase="'gallery'">
 
-    <ion-card-header>
+    <ion-card-header (click)="nav(mList)">
       <ion-toolbar color="primary">
         <ion-title>{{ mList.label || mList.seq+1 }}</ion-title>
         <ion-buttons slot="end">
-            <ion-button href="/home/{{mList.uuid}}">
+            <ion-button [href]="'/home/'+mList.uuid">
               <ion-icon name="arrow-forward" slot="icon-only"></ion-icon>
             </ion-button>
           </ion-buttons>

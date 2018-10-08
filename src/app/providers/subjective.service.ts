@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { from, of, pipe, merge, Observable, BehaviorSubject } from 'rxjs';
-import { catchError,  map , scan, mergeMap} from 'rxjs/operators';
+import { Observable, BehaviorSubject } from 'rxjs';
+import { takeUntil,  map } from 'rxjs/operators';
 
 import { RestyService } from './resty.service';
 

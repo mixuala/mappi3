@@ -68,8 +68,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   }
 
   ngOnDestroy() {
-    // Only need to unsubscribe if its a multi event Observable
-    console.warn("don't forget to destroy the miCollection$ subscriptions", this.miCollection$)
+    // NOTE: async pipe subscriptions in view are automatically unsubscribed
+    // console.warn("don't forget to destroy subscriptions")
   }
 
   ngOnChanges(o){

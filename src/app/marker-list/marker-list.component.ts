@@ -2,8 +2,11 @@ import { Component, OnInit, Input, Output,
   OnChanges,  SimpleChange,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Router } from '@angular/router';
+import { Observable, Subject, BehaviorSubject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 
+import { IViewNavEvents } from "../app-routing.module";
 import  { 
   MockDataService, quickUuid,
   IMarker, IMarkerGroup, IPhoto, IMarkerList
@@ -13,7 +16,8 @@ import { SubjectiveService } from '../providers/subjective.service';
 @Component({
   selector: 'app-marker-list',
   templateUrl: './marker-list.component.html',
-  styleUrls: ['./marker-list.component.scss']
+  styleUrls: ['./marker-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MarkerListComponent implements OnInit {
 
@@ -28,10 +32,13 @@ export class MarkerListComponent implements OnInit {
   private _mgSub: {[uuid:string]: SubjectiveService<IMarkerGroup>} = {};
   public mgCollection$: {[uuid:string]:  Observable<IMarkerGroup[]>} = {};
 
+  private done$: Subject<boolean> = new Subject<boolean>();
+
   @Input() mList: IMarkerList;
 
   constructor(
     public dataService: MockDataService,
+    private router: Router,
     private cd: ChangeDetectorRef,
   ) {
     this.dataService.ready()
@@ -39,8 +46,18 @@ export class MarkerListComponent implements OnInit {
     })
    }
 
+  nav(item:IMarkerList){
+    // this.router.navigate(['/home', {uuid: item.uuid}]);
+    this.router.navigateByUrl(`/home/${item.uuid}`);
+  }
+
   ngOnInit() {
     this.mListLayout = this.mListLayout || 'gallery';
+  }
+
+  ngOnDestroy(){
+    console.warn("MarkerList onDestroy")
+    this.done$.next(true);
   }
 
 
@@ -58,7 +75,9 @@ export class MarkerListComponent implements OnInit {
           .then( ()=>{
             
             const childSubj = this.loadMarkerGroups(mList);
-            childSubj.watch$().subscribe( items=>{
+            const done = childSubj.watch$()
+              .pipe(takeUntil(this.done$))
+              .subscribe( items=>{
               items.forEach( mg=>this.cacheDescendents(mg) )
               // items.forEach( o=>console.log(`uuid:${mList.uuid} markerGroupId:`, o))
             });
@@ -133,6 +152,29 @@ export class MarkerListComponent implements OnInit {
   }
 
 
+   /*
+   * additional event handlers, possibly called from @ViewChilds
+   */ 
+  childComponentsChange( change: {data:IMarkerGroup, action:string}){
+    if (!change.data) return;
+    const ml = change.data;
+    switch(change.action){
+      case 'selected':
+        // this._selectedMarkerGroup = mg.uuid;
+        break;
+      case 'add':
+        ml['_rest_action'] = 'post';
+        return;
+      case 'update_marker':
+        return;   
+      case 'update':
+        ml['_rest_action'] = ml['_rest_action'] || 'put';
+        return;    
+      case 'remove':
+        ml['_rest_action'] = 'delete';
+        return;
+    }
+  }
 
 
 

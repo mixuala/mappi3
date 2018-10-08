@@ -5,6 +5,7 @@ import { Component, OnInit, Input, Output,
 import { Router } from '@angular/router';
 import { Observable, BehaviorSubject } from 'rxjs';
 
+import { IViewNavEvents } from "../app-routing.module";
 import  { 
   MockDataService,
   IMarker, IMarkerGroup, IPhoto, IMarkerList
@@ -46,6 +47,14 @@ export class ListPage implements OnInit {
     this.mListCollection$.subscribe( arr=>{
       console.info(`ListPage mLists, count=`, arr.length);
     });
+  }
+
+
+  viewWillEnter(){
+    console.warn("viewWillEnter: ListPage, but MarkerListComponent is not detecting changes");
+    setTimeout(()=>this.cd.detectChanges())
+    // called when returning to ListPage, 
+    // BUT, MarkerListComponent does not call ngOnChanges() or ngOnInit()
   }
 
 

@@ -3,12 +3,13 @@ import { Component, OnInit, ViewChild,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { catchError, flatMap } from 'rxjs/operators';
+import { Observable, Subject, BehaviorSubject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AlertController, ActionSheetController } from '@ionic/angular';
 import { Plugins } from '@capacitor/core';
 import { QRCodeModule } from 'angularx-qrcode';
 
+import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
 import  { MockDataService, quickUuid,
@@ -26,7 +27,7 @@ const { Browser, Device } = Plugins;
   styleUrls: ['home.page.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class HomePage implements OnInit {
+export class HomePage implements OnInit, IViewNavEvents {
 
   // layout of markerList > markerGroups > markerItems: [edit, default]
   public layout: string;
@@ -110,7 +111,7 @@ export class HomePage implements OnInit {
   public gmap:any;
   setMap(o:{map:google.maps.Map,key:string}){
     this.gmap=o;
-    console.log("google.maps.Map", this.gmap.map)
+    // console.log("google.maps.Map", this.gmap.map)
   }
   // TODO: move to GoogleMapsComponent??
   // see: https://developers.google.com/maps/documentation/maps-static/dev-guide
@@ -189,7 +190,6 @@ export class HomePage implements OnInit {
     await actionSheet.present();
   }
 
-
   async browserOpen(url):Promise<void> {
     return await Browser.open({url:url})
   }
@@ -220,16 +220,14 @@ export class HomePage implements OnInit {
       //   arr.forEach( o=>console.log(o))
       // });
     } )
+  }
 
-    console.warn("ngOnInit: reuse this.map=google.maps.Map correctly")
-    // BUG: this.map is not being reused, new instance created each time view is initialized
-    
+  viewWillLeave(){
+    console.log("viewWillLeave: HomePage")
   }
 
   ngOnDestroy() {
     console.warn("ngOnDestroy: unsubscribe to all subscriptions.")
-    // BUG: this.map is not being reused, new instance created each time view is initialized
-
   }
 
 
@@ -317,6 +315,7 @@ export class HomePage implements OnInit {
     }) 
     .then( (options:any)=>{
       const mg = this._getPlaceholder(options, count);
+      mg.label = `Marker created ${new Date().toISOString()}`
       this.childComponentsChange({data:mg, action:'add'});
       return mg;
     })
@@ -534,7 +533,17 @@ export class HomePage implements OnInit {
           })
           .then( res=>{
             this._mgSub.reload( remainingItems.map(o=>o.uuid) );
-          })          
+            return res;
+          })
+          .then( (res:IMarkerGroup[])=>{
+            // propagate changes to MarkerList
+            const mListId = this.route.snapshot.paramMap.get('uuid');
+            const mList = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId);
+            mList.markerGroupIds = res.map( o=>o.uuid);
+            this.dataService.MarkerLists.put(mList.uuid, mList);
+            // put this on a setTimeout??
+            this.dataService.sjMarkerLists.reload();
+          })
         case "rollback":
           const uuids = this._getCachedMarkerGroups('rollback')
           .map( o=>o.uuid );

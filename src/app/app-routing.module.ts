@@ -17,6 +17,12 @@ const routes: Routes = [
   }
 ];
 
+// see: https://forum.ionicframework.com/t/ionic-4-event-to-trigger-navigation-back-to-page/141676/2
+export interface IViewNavEvents {
+  viewWillEnter?:()=>void,
+  viewWillLeave?:()=>void,
+}
+
 @NgModule({
   imports: [RouterModule.forRoot(routes)],
   exports: [RouterModule]
