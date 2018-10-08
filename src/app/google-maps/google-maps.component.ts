@@ -30,7 +30,7 @@ export class GoogleMapsComponent implements OnInit {
   @Input('apiKey') apiKey: string;
   @Input() items: mappi.IMappiMarker[];
   @Input() mode: string;
-
+  
 
   @Input() selected:string;
   
@@ -40,10 +40,12 @@ export class GoogleMapsComponent implements OnInit {
   @Output() selectedChange: EventEmitter<string> = new EventEmitter<string>();
 
 
-  public static map: any;
-  public map: any;
+  public static map: google.maps.Map;
+  public static currentLoc: google.maps.LatLng;
+
+  public map: google.maps.Map;
   public markers: any[] = [];
-  private _mapReady: Promise<void>;
+  private _mapSDKReady: Promise<void>;
   private mapReadyResolvers: [(value?:any)=>void, (value?:any)=>void];
 
   /**
@@ -67,7 +69,7 @@ export class GoogleMapsComponent implements OnInit {
       })
     )
     loading.push(
-      this._mapReady = new Promise( (resolve, reject)=> {
+      this._mapSDKReady = new Promise( (resolve, reject)=> {
         this.mapReadyResolvers = [resolve, reject];
       })
     )
@@ -78,95 +80,124 @@ export class GoogleMapsComponent implements OnInit {
 
   ngOnInit() {
     new GoogleMapsReady(this.apiKey, this.renderer, this._document).init()
-    .then((res) => {
+    .then(() => {
       return this.loadMap(false);
     }, (err) => {
       console.log(err);
       this.mapReadyResolvers[1]("Could not initialize Google Maps");
     })
-    .then( ()=> {
-      console.log("> GoogleMapsComponent ngOnInit");
+    .then( (map:google.maps.Map)=> {
+      console.warn("> GoogleMapsComponent ngOnInit, map.id=", this.map['id']);
       this.mapReadyResolvers[0](true);
     });
   }
 
   ngOnDestroy() {
+    google.maps.event.clearInstanceListeners(this.map);
+    return;
+
     /**
      * hide google.maps.Map DOM element offscreen, reuse later
+     * BUG: this doesn't seem to work with ios
      */
-    this.stash_GoogleMap('hide');
+    this.stash_GoogleMap(this.map);
   }
+
+  private loadMap(force?:boolean): Promise<google.maps.Map> { 
+    const mapOptions:google.maps.MapOptions = {
+      zoom: 15
+    };
+    return new Promise((resolve, reject) => {
+      if (!force && GoogleMapsComponent.map) {
+        this.map = this.stash_GoogleMap();  // unstash
+        if (GoogleMapsComponent.currentLoc) {
+          mapOptions.center = GoogleMapsComponent.currentLoc;
+        }
+        
+        setTimeout( ()=>{
+          this.map.setOptions(mapOptions);
+          console.log(">>> TIMEOUT mapZoom", this.map.getZoom());
+        },10)
+        return resolve(this.map);
+      }      
+
+      // get map center then resolve
+      this.getCurrentPosition()
+      .then ( (position)=>{
+        mapOptions.center = position;
+        this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
+        this.map['id'] = this.map['id'] || `gmap-${Date.now() % 99}`;
+        return resolve(this.map);
+      });
+    });
+  }
+
+  getCurrentPosition():Promise<google.maps.LatLng> {
+    if (GoogleMapsComponent.currentLoc)
+      return Promise.resolve(GoogleMapsComponent.currentLoc);
+
+    return Geolocation.getCurrentPosition()
+    .then(
+      (position) => {
+        console.log(position);
+        return GoogleMapsComponent.currentLoc = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+      }, 
+      (err) => {
+        if (err.message.startsWith("Origin does not have permission to use Geolocation")) {
+          console.warn("Geolocation error, using test data");
+          const position = {latitude: 3.1581906, longitude: 101.7379296};
+          GoogleMapsComponent.currentLoc = new google.maps.LatLng(position.latitude, position.longitude);
+          return Promise.resolve(GoogleMapsComponent.currentLoc);
+        }
+        console.error(err);
+        Promise.reject('GoogleMapsComponent: Could not initialise map.');
+    })
+  }
+
 
   /**
    * move google.maps.Map instance/dom offscreen onDestroy, 
    * reuse in onInit
-   * @param action string [hide | restore]
+   * @param map google.maps.Map, stash map if provided, otherwise restore
    */
-  private stash_GoogleMap(action:string) {
-    const parent = this.element.nativeElement;
+  private stash_GoogleMap(map?:google.maps.Map):google.maps.Map {
+    let parent = this.element.nativeElement;
     let stash = document.getElementById('stash-google-maps');
     if (!stash) {
       stash = this.renderer.createElement('DIV');
       stash.id = 'stash-google-maps';
-      stash.style.display = "none";
+      // stash.style.display = "none";
+      stash.style.visibility = "hidden";
       this.renderer.appendChild(this._document.body, stash);
     }
 
-    switch (action) {
-      case 'hide':
-        while (parent.childNodes.length > 0) {
-          stash.appendChild(parent.childNodes[0]);
-        }
-        google.maps.event.clearInstanceListeners(this.map);
-        break;
-      case 'restore':
-        this.map = GoogleMapsComponent.map;
-        while (parent.childNodes.length > 0) {
-          // remove loading spinner, etc.
-          parent.removeChild(parent.childNodes[0]);
-        }
-        while (stash.childNodes.length > 0) {
-          parent.appendChild(stash.childNodes[0]);
-        }
-      break;
-    }
-  }
-
-  private loadMap(force?:boolean): Promise<any> { 
-
-    if (!force && GoogleMapsComponent.map) {
-      this.stash_GoogleMap('restore');
-    }
-    return new Promise((resolve, reject) => {
-      const centerMap = ()=> {
-        Geolocation.getCurrentPosition().then((position) => {
-          console.log(position);
-          let latLng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-          let mapOptions = {
-            center: latLng,
-            zoom: 15
-          };
-
-          GoogleMapsComponent.map = this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
-
-          resolve(true);
-        }, (err) => {
-          console.error(err);
-          reject('Could not initialise map. No access to location???');
-        });
+    if (map) {
+      // stash map
+      GoogleMapsComponent.map = map;
+      while (parent.childNodes.length > 0) {
+        stash.appendChild(parent.childNodes[0]);
       }
-      setTimeout( ()=>{
-        console.log("requesting browser location information");
-        centerMap();
-      }, 100)
-    });
+      // NOTE: clearing listeners here disables map UI components on restore
+      // google.maps.event.clearInstanceListeners(this.map);
+      return null;
+
+    } else {
+
+      // restore stashed map to current GoogleMapComponent.element.nativeElement
+      while (parent.childNodes.length > 0) {
+        // remove loading spinner, etc.
+        parent.removeChild(parent.childNodes[0]);
+      }
+      while (stash.childNodes.length > 0) {
+        parent.appendChild(stash.childNodes[0]);
+      }
+      return GoogleMapsComponent.map;
+    }
   }
 
   public onMapReady():void {
     this.mapReady.emit({map:this.map, key:this.apiKey});
     this.mgCollection$ = this._mgSub.get$();
-    // this.mgCollection$.subscribe( items=>{
-    // })
   }
 
   ngOnChanges(o){
@@ -200,13 +231,13 @@ export class GoogleMapsComponent implements OnInit {
           break;
         case 'items':
           if (change.firstChange) {
-            console.warn(">>> firstChange marker count=", change.currentValue.length);
+            // console.warn(">>> firstChange marker count=", change.currentValue.length);
             // return;
           }
-          this._mapReady
+          this._mapSDKReady
           .then( ()=>{
             let items:IMarker[] = change.currentValue;
-            console.warn("*** items marker count=", change.currentValue.length);
+            // console.warn("*** items marker count=", change.currentValue.length);
             var gm = this.map;
             items.forEach( (m,i)=>m.seq=i);  // reindex for labels
             // ignore markers that are marked for delete pending commit
@@ -227,19 +258,22 @@ export class GoogleMapsComponent implements OnInit {
     });
   }
 
-  public setMapBoundsWithMinZoom(markers:IMarker[], minZoom=10){
-    console.log(">> MapBounds, count=", markers.length)
+  public setMapBoundsWithMinZoom(markers:IMarker[], minZoom=15){
     // adjust google.maps.LatLngBounds
-    const bounds = new google.maps.LatLngBounds();
+    const bounds = new google.maps.LatLngBounds(null);
     markers.forEach(o=>{
+      // console.log("bounds.extend()", MappiMarker.position(o))
       bounds.extend(MappiMarker.position(o));
     });
+    console.log(`* bounds.extend, count=${markers.length}, bounds=`, bounds)
 
     // This is needed to set the zoom after fitbounds, 
+    // begin with zoom=15
     let initialZoom = true;
     const listen_zoom = google.maps.event.addListener(this.map, 'zoom_changed', ()=>{
       google.maps.event.addListenerOnce(this.map, 'bounds_changed', (event)=> {
-        if (this.map.getZoom() > minZoom && this.map.initialZoom == true) {
+        // console.log("*** map.zoom=", this.map.getZoom());
+        if (this.map.getZoom() > minZoom && initialZoom == true) {
             // Change max/min zoom here
             this.map.setZoom(minZoom);
             initialZoom = false;
@@ -248,7 +282,6 @@ export class GoogleMapsComponent implements OnInit {
       });
     });
     const padding= {left:60, right:60, top:40, bottom:40};
-    // this.map.panToBounds(bounds,padding);
     this.map.fitBounds(bounds,padding);
     setTimeout( ()=>{listen_zoom.remove()}, 2000)
   }

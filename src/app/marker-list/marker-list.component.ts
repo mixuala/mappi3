@@ -48,6 +48,7 @@ export class MarkerListComponent implements OnInit {
 
   nav(item:IMarkerList){
     // this.router.navigate(['/home', {uuid: item.uuid}]);
+    console.log("click: nav to item=", item.uuid)
     this.router.navigateByUrl(`/home/${item.uuid}`);
   }
 

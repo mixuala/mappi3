@@ -27,10 +27,12 @@ export class GoogleMapsReady {
   ){  }
 
   public init(): Promise<any> {
+    if (GoogleMapsReady.mapsLoaded) 
+      return Promise.resolve(true);
     return new Promise((resolve, reject) => {
       this.loadSDK()
       .then( () =>{
-        console.log("Google Maps ready.");
+        console.log("Google Maps SDK loaded.");
         resolve(true);
       },
       (err) => {
@@ -58,9 +60,8 @@ export class GoogleMapsReady {
               this.networkHandler = Network.addListener('networkStatusChange', (status) => {
                 if (status.connected) {
                   this.networkHandler.remove();
-                  this.init().then((res) => {
-                    console.log("Google Maps ready.")
-                  }, (err) => {
+                  this.init()
+                  .catch((err) => {
                     console.log(err);
                   });
                 }
