@@ -4,6 +4,10 @@ ion-card {
 
 ion-card-content {
   padding-top: 0;
+  ion-item.gallery {
+    --padding-start: 0;
+    --inner-padding-end:0;
+  }
 }
 
 

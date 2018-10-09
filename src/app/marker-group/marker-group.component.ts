@@ -1,4 +1,4 @@
-import { Component, EventEmitter, OnInit, OnChanges, Input, Output, 
+import { Component, ElementRef, EventEmitter, OnInit, OnChanges, Input, Output, 
   Host, HostBinding, Optional, SimpleChange, 
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
@@ -50,6 +50,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
     public dataService: MockDataService,
     public photoService: PhotoService,
+    private element: ElementRef, 
     private cd: ChangeDetectorRef,
   ) {
     this.dataService.ready()
@@ -61,6 +62,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   ngOnInit() {
     this.mgLayout = this.mgLayout || 'gallery';
+    const clientWidth = this.element.nativeElement.closest('ion-content').clientWidth;
+    const thumbsize = clientWidth < 768 ? 56 : 80 * 2;
+    this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
+    console.log("markerItem limit=", this.miLimit)
     // console.log("MarkerGroupComponent.ngOnInit(): mglayout=", this.mgLayout)
     // this.markerGroup$.subscribe( o=>{
     //   console.info("next() markerGroup$", o);
