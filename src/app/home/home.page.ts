@@ -17,6 +17,7 @@ import  { MockDataService, quickUuid,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
+import { GoogleMapsComponent } from '../google-maps/google-maps.component';
 
 
 const { Browser, Device } = Plugins;
@@ -113,54 +114,12 @@ export class HomePage implements OnInit, IViewNavEvents {
     this.gmap=o;
     // console.log("google.maps.Map", this.gmap.map)
   }
-  // TODO: move to GoogleMapsComponent??
-  // see: https://developers.google.com/maps/documentation/maps-static/dev-guide
-  getStaticMap(){
-    // helper functions
-    const round6 = (n:number):number=>Math.round(n*1e6)/1e6
-    const mapDim = (fit640?:boolean)=>{
-      const MAX_DIM = 640;
-      const {width, height} = map.getDiv().getBoundingClientRect();
-      const max_dim = Math.min( Math.max( width, height), MAX_DIM);
-      let scale = max_dim/Math.max(width,height);
-      if (!fit640) scale = Math.min(1, scale);
-      return [width,height].map(n=>Math.floor(n*scale));
-    }  
-    
-    const baseurl = "https://maps.googleapis.com/maps/api/staticmap?";
-    const map = this.gmap.map;
-    const markerSyles={
-      size: 'mid',
-      color: 'green',
-    }
-    const markerGroups = this._getCachedMarkerGroups('visible');
-    const markerSpec = []
-    markerGroups.forEach( (m,i)=>{
-      const {lat, lng} = m.position;
-      markerSyles['label'] = i+1;
-      const marker = [
-        Object.entries(markerSyles).map( el=>el.join(':') ).join('%7C'),
-        [lat,lng].map( n=>round6(n) ).join(','),
-      ]
-      markerSpec.push(marker.join('%7C'));
-    })
 
-    const params = {
-      center: map.getCenter().toUrlValue(),
-      zoom: map.getZoom(),
-      size: mapDim().join('x'), // '512x512',
-      scale:2,
-      mapType: map.getMapTypeId(),
-      markers: markerSpec.join('&markers='),
-      key: this.gmap.key
-    }
-    // console.log(params);
-    // console.log(markerSpec);
-    const url = baseurl + Object.entries(params).map( el=>el.join('=') ).join('&');
-    console.log(url); 
-    // this.presentActionSheet_ShowMap(url);
-    this.qrcodeData = url;
-    
+  getStaticMap(){
+    const {map, key} = this.gmap;
+    const markers = this._getCachedMarkerGroups('visible');
+    this.qrcodeData = GoogleMapsComponent.getStaticMap(map, key, markers );
+    return
   }
 
 
