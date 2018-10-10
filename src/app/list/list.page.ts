@@ -70,6 +70,17 @@ export class ListPage implements OnInit {
     // called when navigating to HomePage, 
   }
 
+  nav(item:IMarkerList, options:any){
+    // this.router.navigate(['/home', {uuid: item.uuid}]);
+    console.log("click: nav to item=", item.uuid)
+    this.router.navigate(['home', item.uuid], {
+      queryParams:{
+        layout:'edit'
+      }
+    });
+  }
+
+
   private _getSubjectForMarkerGroups(mL:IMarkerList):SubjectiveService<IMarker>{
     return MockDataService.getSubjByParentUuid(mL.uuid);
   }
@@ -91,6 +102,23 @@ export class ListPage implements OnInit {
       )
     }    
   }
+
+
+  createOpenMarkerList(ev:any={}){
+    return this.createMarkerList(ev)
+    .then( mL=>{
+      const mLists = this._mListSub.value()
+      mLists.push(mL);
+      this._mListSub.next(mLists);
+
+      // need to commit changes before nav?
+      console.log("new markerList", mL)
+
+      this.nav(mL, {layout:'edit'});
+    })
+  }
+
+
 
   /**
    * create a new MarkerList from 

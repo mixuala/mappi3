@@ -30,7 +30,7 @@
               *ngFor="let item of mListCollection$ | async"
               >
                   <app-marker-list
-                    [mList]=item
+                    [mList]=item [parentLayout]="layout" 
                     (mListChange)="childComponentsChange($event)"
                   ></app-marker-list>
 

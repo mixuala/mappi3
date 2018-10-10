@@ -13,15 +13,15 @@ import { MockDataService, IPhoto, IMarker } from '../providers/mock-data.service
 })
 export class MarkerItemComponent implements OnInit , OnChanges {
 
-  public miLayout: string;  // enum=['gallery', 'edit']
+  public layout: string;  // enum=['gallery', 'edit']
 
   // PARENT Subject/Observable
   public miSubject: BehaviorSubject<IPhoto> = new BehaviorSubject<IPhoto>(null);
   public photo$: Observable<IPhoto> = this.miSubject.asObservable();
+  private stash:any = {};
 
   @Input() mi: IPhoto;
-  @Input() mgLayout: string;  // enum=[gallery, list, edit, focus-marker-group]  
-
+  @Input() parentLayout: string;  // enum=[gallery, list, edit, focus-marker-group]  
   @Output() miChange: EventEmitter<{data:IPhoto, action:string}> = new EventEmitter<{data:IPhoto, action:string}>();
 
   constructor(
@@ -29,7 +29,7 @@ export class MarkerItemComponent implements OnInit , OnChanges {
   ) { }
 
   ngOnInit() {
-    this.miLayout = this.miLayout || 'gallery';
+    this.layout = this.layout || 'gallery';
   }
 
   ngOnChanges(o){
@@ -41,7 +41,7 @@ export class MarkerItemComponent implements OnInit , OnChanges {
           const mi = change.currentValue;
           this.miSubject.next(mi);
           break;
-        case 'mgLayout':
+        case 'parentLayout':
           // console.log("MarkerGroupComponent.ngOnChanges(): layout=", change["currentValue"])
           this.mgLayoutChanged()
           break;
@@ -51,11 +51,11 @@ export class MarkerItemComponent implements OnInit , OnChanges {
   
   mgLayoutChanged(){
     // propagate layout change to MarkerItemComponent (child)
-    if (['edit', 'focus-marker-group'].includes(this.mgLayout)) {
-      self["_stash_miLayout"] = this.miLayout;
-      this.miLayout = "edit";
+    if (['edit', 'focus-marker-group'].includes(this.parentLayout)) {
+      self["_stash_miLayout"] = this.layout;
+      this.layout = "edit";
     }
-    else this.miLayout = this["_stash_miLayout"];
+    else this.layout = this["_stash_miLayout"];
   }
 
   removeMarkerItem(o:IPhoto){

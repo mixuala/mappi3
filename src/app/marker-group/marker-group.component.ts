@@ -1,5 +1,5 @@
 import { Component, ElementRef, EventEmitter, OnInit, OnChanges, Input, Output, 
-  Host, HostBinding, Optional, SimpleChange, 
+  Host, Optional, SimpleChange, 
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
@@ -23,11 +23,11 @@ const { Device } = Plugins;
 })
 export class MarkerGroupComponent implements OnInit , OnChanges {
 
-  // layout of wiwMarkerGroup = [gallery, list, edit, focus-marker-group]  
-  public mgLayout: string;
+  // layout of MarkerGroup = [gallery, list, edit, focus-marker-group]  
+  public layout: string;
   // set thumbnail overflow break. 
-  // TODO: set according to element width, inject ElementRef
   public miLimit:number = 3;  
+  private stash:any = {};
   
   // PARENT Subject/Observable
   public mgSubject: BehaviorSubject<IMarkerGroup> = new BehaviorSubject<IMarkerGroup>(null);
@@ -39,7 +39,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   @Input() mg: IMarkerGroup;
   // layout mode of parent, enum=['edit', 'child', 'default']
-  @Input() mListLayout: string;  
+  @Input() parentLayout: string;  
   @Input() mgFocus: IMarkerGroup;
 
   @Output() mgFocusChange: EventEmitter<IMarkerGroup> = new EventEmitter<IMarkerGroup>();
@@ -61,7 +61,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
    }
 
   ngOnInit() {
-    this.mgLayout = this.mgLayout || 'gallery';
+    this.layout = this.layout || 'gallery';
     const clientWidth = this.element.nativeElement.closest('ion-content').clientWidth;
     const thumbsize = clientWidth < 768 ? 56 : 80 * 2;
     this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
@@ -101,9 +101,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             if (doChangeDetection) setTimeout(()=>this.cd.detectChanges())
           });
           break;
-        case 'mListLayout':
+        case 'parentLayout':
           // console.log("MarkerGroupComponent.ngOnChanges(): layout=", change["currentValue"])
-          this.mListLayoutChanged()
+          this.parentLayoutChanged()
           break;
         case 'mgFocus':
           if (!this.mgFocusBlur) break;
@@ -116,19 +116,19 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     });
   }
 
-  mListLayoutChanged(){
+  parentLayoutChanged(){
     // propagate layout change to MarkerGroupComponent (child)
-    if (this.mListLayout == "edit") {
-      self["_stash_mgLayout"] = this.mgLayout;
-      this.mgLayout = "edit";
+    if (this.parentLayout == "edit") {
+      this.stash.layout = this.layout;
+      this.layout = "edit";
     }
-    else this.mgLayout = this["_stash_mgLayout"];
+    else this.layout = this.stash.layout;
   }
 
   toggleEditMode(action:string) {
-    if (this.mgLayout != "focus-marker-group") {
-      this["_stash_mgLayout"] = this.mgLayout;
-      this.mgLayout = "focus-marker-group";
+    if (this.layout != "focus-marker-group") {
+      this.stash.layout = this.layout;
+      this.layout = "focus-marker-group";
 
       // hide all MarkerGroupComponents that are not in layout="focus-marker-group" mode
       this.mgFocusChange.emit( this.mgSubject.value )      
@@ -137,13 +137,13 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       this.applyChanges(action)
       .then( 
         res=>{
-          this.mgLayout = this["_stash_mgLayout"];
+          this.layout = this.stash.layout;
           this.mgFocusChange.emit( null );
         },
         err=>console.log('ERROR saving changes')
       )
     }
-    console.log(`MarkerGroupComponent: ${this.mgSubject.value.label},  mgLayout=${this.mgLayout} `)
+    console.log(`MarkerGroupComponent: ${this.mgSubject.value.label},  mgLayout=${this.layout} `)
   }
 
   selectMarkerGroup(o:IMarkerGroup){

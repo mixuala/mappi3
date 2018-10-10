@@ -23,7 +23,8 @@ import { SubjectiveService } from '../providers/subjective.service';
 export class MarkerListComponent implements OnInit {
 
   // layout of markerList = [gallery, list, edit, focus-marker-list]  
-  public mListLayout: string;
+  public layout: string;
+  private stash:any = {};
 
   // PARENT Subject/Observable
   public mListSubject: BehaviorSubject<IMarkerList> = new BehaviorSubject<IMarkerList>(null);
@@ -36,6 +37,7 @@ export class MarkerListComponent implements OnInit {
   private done$: Subject<boolean> = new Subject<boolean>();
 
   @Input() mList: IMarkerList;
+  @Input() parentLayout: string;  
 
   constructor(
     public dataService: MockDataService,
@@ -54,7 +56,7 @@ export class MarkerListComponent implements OnInit {
   }
 
   ngOnInit() {
-    this.mListLayout = this.mListLayout || 'gallery';
+    this.layout = this.layout || 'gallery';
   }
 
   ngOnDestroy(){
@@ -87,8 +89,8 @@ export class MarkerListComponent implements OnInit {
             if (doChangeDetection) setTimeout(()=>this.cd.detectChanges())
           });
           break;
-        case 'mListLayout':
-
+          case 'parentLayout':
+          this.parentLayoutChanged()
           break;
         case 'mListFocus':
 
@@ -131,26 +133,46 @@ export class MarkerListComponent implements OnInit {
   }
 
 
+  parentLayoutChanged(){
+    // propagate layout change to MarkerGroupComponent (child)
+    if (this.parentLayout == "edit") {
+      this.stash.layout = this.layout;
+      this.layout = "edit";
+    }
+    else this.layout = this.stash.layout;
+  }
 
-  toggleEditMode(action:string) {
-    // if (this.mListLayout != "focus-marker-list") {
-    //   this["_stash_mListLayout"] = this.mListLayout;
-    //   this.mListLayout = "focus-marker-list";
+  // toggleEditMode(action:string) {
+  //   if (this.layout != "focus-marker-group") {
+  //     this.stash.layout = this.layout;
+  //     this.layout = "focus-marker-group";
 
-    //   // hide all MarkerGroupComponents that are not in layout="focus-marker-list" mode
-    //   this.mListFocusChange.emit( this.mListSubject.value )      
-    // }
-    // else {
-    //   this.applyChanges(action)
-    //   .then( 
-    //     res=>{
-    //       this.mListLayout = this["_stash_mListLayout"];
-    //       this.mListFocusChange.emit( null );
-    //     },
-    //     err=>console.log('ERROR saving changes')
-    //   )
-    // }
-    console.log(`MarkerGroupComponent: ${this.mListSubject.value.label},  mListLayout=${this.mListLayout} `)
+  //     // hide all MarkerGroupComponents that are not in layout="focus-marker-group" mode
+  //     this.mListFocusChange.emit( this.mListSubject.value )      
+  //   }
+  //   else {
+  //     this.applyChanges(action)
+  //     .then( 
+  //       res=>{
+  //         this.layout = this.stash.layout;
+  //         this.mListFocusChange.emit( null );
+  //       },
+  //       err=>console.log('ERROR saving changes')
+  //     )
+  //   }
+  //   console.log(`MarkerListComponent: ${this.mListSubject.value.label},  layout=${this.layout} `)
+  // }
+
+  selectMarkerList(o:IMarkerList){
+    this.mListChange.emit({data:o, action:'selected'});
+  }
+
+  thumbClicked(mL:IMarkerList, mi:IPhoto){
+    this.selectMarkerList(mL)
+    this.thumbClick.emit({mList:mL, mi});
+  }
+
+
   removeMarkerGroup(o:IMarkerList){
     this.mListChange.emit( {data:o, action:'remove'} );
   }

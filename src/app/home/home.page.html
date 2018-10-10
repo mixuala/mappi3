@@ -1,7 +1,7 @@
 <ion-header>
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-back-button class="mobile-only"></ion-back-button>
+      <ion-back-button class="mobile-only" text=""></ion-back-button>
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-buttons slot="end">
@@ -9,7 +9,7 @@
           <ion-icon name="cloud-download" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
-          <ion-icon name="create" slot="icon-only"></ion-icon>
+          <ion-icon name="add" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='edit'">
           <ion-icon name="checkmark" slot="icon-only"></ion-icon>
@@ -19,7 +19,7 @@
         </ion-button>         
     </ion-buttons>    
     <ion-title>
-      Home
+      Map {{parent?.label || parent?.seq}}
     </ion-title>
   </ion-toolbar>
 </ion-header>
@@ -106,7 +106,7 @@
   <!-- NOTE: ion-reorder does NOT drag-drop app-markger-group unless wrapped by ion-list -->
                   <ion-list *ngFor="let item of mgCollection$ | async" >
                     <app-marker-group *ngIf="item?._rest_action!='delete'"
-                      [mg]="item" [mListLayout]="layout" 
+                      [mg]="item" [parentLayout]="layout" 
                       (mgChange)="childComponentsChange($event)" [(mgFocus)]="mgFocus" ></app-marker-group>
                   </ion-list>
                   <ion-list>
@@ -133,7 +133,7 @@
           ngClass.centered="mgFocus"
           *ngFor="let item of mgCollection$ | async">
           <app-marker-group  *ngIf="item?._rest_action!='delete'"
-            [mg]="item" [mListLayout]="layout" 
+            [mg]="item" [parentLayout]="layout" 
             (mgChange)="childComponentsChange($event)"
             (thumbClick)="openGallery($event)"
             [(mgFocus)]="mgFocus" ></app-marker-group>

@@ -1,8 +1,7 @@
 
-<div [ngSwitch]="mListLayout" *ngIf="(markerList$ | async) as mList">
+<div [ngSwitch]="layout" *ngIf="(markerList$ | async) as mList">
 
   <ion-card *ngSwitchCase="'gallery'">
-
     <ion-card-header (click)="nav(mList)">
       <ion-toolbar color="primary">
         <ion-title>{{ mList.label || mList.seq+1 }}</ion-title>
@@ -37,7 +36,7 @@
         <ng-container *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
           <ng-container *ngIf="mg?.markerItemIds.length; else gallery_pinIcon">
             <ng-container *ngIf="getSubjByParentUuid_Watch$(mg.uuid) | async as items">
-              <app-marker-item *ngIf="items[0] as mi" [mi]="mi" [mgLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
+              <app-marker-item *ngIf="items[0] as mi" [mi]="mi" [parentLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
             </ng-container>
           </ng-container>
           <ng-template #edit_pinIcon>

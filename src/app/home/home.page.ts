@@ -32,6 +32,8 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   // layout of markerList > markerGroups > markerItems: [edit, default]
   public layout: string;
+  public parent: IMarkerList;
+
   // Observable for MarkerGroupComponent
   public mgCollection$ : Observable<IMarkerGroup[]>;
   // Observable for GoogleMapsComponent
@@ -81,6 +83,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     public dataService: MockDataService,
     public actionSheetController: ActionSheetController,
     public photoService: PhotoService,
+    private router: Router,
     private route: ActivatedRoute,
     private cd: ChangeDetectorRef,
   ){
@@ -156,6 +159,9 @@ export class HomePage implements OnInit, IViewNavEvents {
   ngOnInit() {
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
+    this.parent = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId)
+
+    console.log("HomePage: markerList" , this.parent)
 
     // // BUG: mgCollection$ must be set here, or template will not load
     this._mgSub = this.dataService.sjMarkerGroups;
@@ -178,7 +184,16 @@ export class HomePage implements OnInit, IViewNavEvents {
       //   console.info(`HomePage ${mListId} mgs, count=`, arr.length);
       //   arr.forEach( o=>console.log(o))
       // });
-    } )
+    })
+    .then( ()=>{
+      const layout = this.route.snapshot.queryParams.layout;
+      if ( layout=='edit' ) 
+        setTimeout( ()=>{
+          this.toggleEditMode('edit');
+          this.cd.detectChanges();
+        },100
+        );
+    })
   }
 
   viewWillLeave(){
@@ -190,8 +205,8 @@ export class HomePage implements OnInit, IViewNavEvents {
   }
 
 
-  toggleEditMode(action:string) {
-    if (this.layout != "edit") {
+  toggleEditMode(action?:string) {
+    if (this.layout != "edit" || action=='edit') {
       this.toggle.layout = this.layout;
       this.layout = "edit";
       console.log("home.page.ts: layout=", this.layout)
@@ -377,6 +392,10 @@ export class HomePage implements OnInit, IViewNavEvents {
     }
   }
 
+  /**
+   * 
+   * @param ev photoswipe gallery
+   */
   openGallery(ev:{mg:IMarkerGroup, mi:IPhoto}) {
     const {mg, mi} = ev;
     const items:PhotoSwipe.Item[] = []; 

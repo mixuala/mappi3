@@ -1,5 +1,5 @@
-<div [ngSwitch]="mgLayout" *ngIf="(markerGroup$ | async) as marker">
-    <!-- layout={{mgLayout}} -->
+<div [ngSwitch]="layout" *ngIf="(markerGroup$ | async) as marker">
+    <!-- layout={{layout}} -->
   <!-- 'focus-marker-group' view -->
   <ion-card *ngSwitchCase="'focus-marker-group'">
     <ion-card-header color="secondary">
@@ -7,13 +7,13 @@
         <ion-icon name="pin" slot="start" color="primary"></ion-icon>
         <ion-label>{{ marker.label || marker.seq+1 }}</ion-label>
         <ion-buttons slot="end">
-          <ion-button  color="light" fill="outline" (click)="toggleEditMode()" *ngIf="mgLayout!='focus-marker-group'">
+          <ion-button  color="light" fill="outline" (click)="toggleEditMode()" *ngIf="layout!='focus-marker-group'">
             <ion-icon name="create" slot="icon-only"></ion-icon>
           </ion-button>
-          <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="mgLayout=='focus-marker-group'">
+          <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='focus-marker-group'">
             <ion-icon name="checkmark" slot="icon-only"></ion-icon>
           </ion-button>
-          <ion-button  color="danger" fill="outline" (click)="toggleEditMode('rollback')" *ngIf="mgLayout=='focus-marker-group'">
+          <ion-button  color="danger" fill="outline" (click)="toggleEditMode('rollback')" *ngIf="layout=='focus-marker-group'">
             <ion-icon name="close" slot="icon-only"></ion-icon>
           </ion-button>                      
         </ion-buttons>
@@ -22,11 +22,11 @@
 
     <ion-card-content>
       <ion-reorder-group 
-        [disabled]="mgLayout!='focus-marker-group'"
+        [disabled]="layout!='focus-marker-group'"
         (ionItemReorder)="reorderMarkerItem($event)">
         <ion-list *ngFor="let mi of miCollection$[marker.uuid] | async">
           <app-marker-item *ngIf="mi?._rest_action!='delete'"
-           [mi]="mi" [mgLayout]="mgLayout" (miChange)="childComponentsChange($event)"></app-marker-item>
+           [mi]="mi" [parentLayout]="layout" (miChange)="childComponentsChange($event)"></app-marker-item>
         </ion-list>
         <ion-list>            
           <ion-item class="add-marker-item wrap-btn-as-thumbnail" (click)="createMarkerItem($event)">
@@ -58,8 +58,8 @@
         </ion-label>
         <ion-buttons slot="end">
           <ion-button color="primary" fill="outline" (click)="toggleEditMode()">
-            <ion-icon name="create" slot="icon-only" *ngIf="mListLayout!='edit'"></ion-icon>
-            <ion-icon name="save" slot="icon-only" *ngIf="mListLayout=='edit'"></ion-icon>
+            <ion-icon name="create" slot="icon-only" *ngIf="parentLayout!='edit'"></ion-icon>
+            <ion-icon name="save" slot="icon-only" *ngIf="parentLayout=='edit'"></ion-icon>
           </ion-button>
         </ion-buttons>
       </ion-item>
@@ -68,9 +68,9 @@
     <ion-card-content>
       <ion-item class="gallery">
         <ng-container *ngIf="marker?.markerItemIds.length; else gallery_pinIcon">
-          <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async">
+          <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async | slice:0:miLimit">
               <app-marker-item *ngIf="mi?._rest_action!='delete'"
-              [mi]="mi" [mgLayout]="mgLayout" 
+              [mi]="mi" [parentLayout]="layout" 
               (click)="thumbClicked(marker, mi)"
               (miChange)="childComponentsChange($event)"></app-marker-item>
           </ng-container>
@@ -82,7 +82,7 @@
           </ion-button>
         </ng-template>
 
-        <ion-badge color="primary" float-right *ngIf="marker.markerItemIds.length-miLimit>0">+{{marker.markerItemIds.length-miLimit}}</ion-badge>
+        <ion-badge color="primary" float-right *ngIf="marker.markerItemIds.length>miLimit">+{{marker.markerItemIds.length-miLimit}}</ion-badge>
 
       </ion-item>
     </ion-card-content>
@@ -92,10 +92,10 @@
   <ion-item-sliding *ngSwitchCase="'edit'">
     <ion-item>
       <ng-container *ngIf="marker?.markerItemIds.length; else edit_pinIcon">
-        <ng-container *ngIf="miCollection$[marker.uuid] | async as items">
+        <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async | slice:0:1">
           <ion-badge class="thumbnail-overlay" color="primary"> {{marker.seq+1}} </ion-badge>
-          <app-marker-item *ngIf="items[0] as mi"
-            [mi]="mi" [mgLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
+          <app-marker-item [mi]="mi" [parentLayout]="'gallery'" 
+            (miChange)="childComponentsChange($event)"></app-marker-item>
         </ng-container>
       </ng-container>
       <ng-template #edit_pinIcon>
@@ -125,7 +125,7 @@
           <ng-container *ngIf="marker?.markerItemIds.length; else edit_pinIcon">
             <ng-container *ngIf="miCollection$[marker.uuid] | async as items">
               <app-marker-item *ngIf="items[0] as mi"
-                [mi]="mi" [mgLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
+                [mi]="mi" [parentLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
             </ng-container>
           </ng-container>
           <ng-template #edit_pinIcon>
@@ -161,7 +161,7 @@
         <ng-container *ngIf="marker?.markerItemIds.length; else list_pinIcon">
           <ion-list *ngIf="miCollection$[marker.uuid] | async as items">
             <app-marker-item *ngIf="items[0] as mi"
-              [mi]="mi" [mgLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
+              [mi]="mi" [parentLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
           </ion-list>
         </ng-container>
         <ng-template #list_pinIcon>
