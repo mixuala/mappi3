@@ -8,10 +8,12 @@ import { filter, takeUntil } from 'rxjs/operators';
 
 import { IViewNavEvents } from "../app-routing.module";
 import  { 
-  MockDataService,
-  IMarker, IMarkerGroup, IPhoto, IMarkerList
+  MockDataService, RestyTrnHelper, quickUuid,
+  IMarker, IMarkerGroup, IPhoto, IMarkerList, IRestMarker,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
+import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
+import { MarkerGroupComponent } from '../marker-group/marker-group.component';
 
 
 
@@ -31,6 +33,7 @@ export class ListPage implements OnInit {
 
   constructor( 
     public dataService: MockDataService,
+    public photoService: PhotoService,
     private router: Router,
     private cd: ChangeDetectorRef,
   ){
@@ -67,4 +70,118 @@ export class ListPage implements OnInit {
     // called when navigating to HomePage, 
   }
 
+  private _getSubjectForMarkerGroups(mL:IMarkerList):SubjectiveService<IMarker>{
+    return MockDataService.getSubjByParentUuid(mL.uuid);
+  }
+
+  toggleEditMode(action:string) {
+    if (this.layout != "edit") {
+      this.toggle.layout = this.layout;
+      this.layout = "edit";
+      console.log("list.page.ts: layout=", this.layout)
+    }
+    else {
+      return this.applyChanges(action)
+      .then( 
+        res=>{
+          this.layout = this.toggle.layout;
+          console.log("list.page.ts: layout=", this.layout)
+        },
+        err=>console.log('ERROR saving changes')
+      )
+    }    
+  }
+
+  /**
+   * create a new MarkerList from 
+   *    1) a map click/location (set the map center) or 
+   *    2) from the create button,
+   *  specifying either a selected image or mapCenter as the marker location
+   * @param data IMarker properties, specifically [loc | seq]
+   * @param ev click event
+   * 
+   */
+  createMarkerList(ev:any={}, data:any={}):Promise<IMarkerList>{
+    const target = ev.target && ev.target.tagName;
+    const count = data.seq || this._mListSub.value().length;
+    const item = RestyTrnHelper.getPlaceholder('MarkerList');
+    item.label = `Map created ${item.created.toISOString()}`
+    item.seq = count;
+    const child = RestyTrnHelper.getPlaceholder('MarkerGroup');
+    child.label = `Marker created ${child.created.toISOString()}`
+    child.seq = 0;
+    return Promise.resolve(true)
+    .then ( ()=>{
+      if (target=='ION-BUTTON') {
+        return this.photoService.choosePhoto(0)
+        .then( p=>{
+          RestyTrnHelper.setFKfromChild(child, p);
+          RestyTrnHelper.setLocFromChild(child, p);
+          RestyTrnHelper.setFKfromChild(item, child);
+          RestyTrnHelper.setLocFromChild(item, child);
+          return item;
+        })
+      }
+      return Promise.reject('continue');
+    })
+    .catch( (err)=>{
+      if (err=='continue') {
+        // no IPhoto returned, get a placeholder
+        const position = data.position || GoogleMapsComponent.map.getCenter();
+        RestyTrnHelper.setLocToDefault(item, position);
+        RestyTrnHelper.setLocToDefault(child, position);
+        return item;
+      }
+    }) 
+    .then( (item:IRestMarker)=>{
+      // RestyTrnHelper.childComponentsChange({data:child, action:'add'}, this._mListSub);
+      RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
+      return item;
+    })
+    .then( this.emitMarkerGroup );
+  }
+
+  emitMarkerGroup(mL:IMarkerList):Promise<IMarkerList> {
+    if (mL.markerGroupIds.length) {
+      // NOTE: this subject is NOT created until the MarkerGroup is rendered
+      setTimeout( ()=>{
+        const subject = this._getSubjectForMarkerGroups(mL);
+        if (!subject) console.warn("ERROR: possible race condition when creating MarkerList from IPhoto")
+        const mg = mL['_commit_child_item'];
+        subject.next([mg])
+      },100)
+    }
+    return Promise.resolve( mL);
+  }
+
+
+  /*
+   * additional event handlers, possibly called from @ViewChilds
+   */
+  childComponentsChange( change: {data:IMarker, action:string}){
+    if (!change.data) return;
+    switch(change.action){
+      case 'selected':
+        return this.selectedMarkerList = change.data.uuid;
+      default:
+        return RestyTrnHelper.childComponentsChange(change, this._mListSub);
+    }
+  }
+
+
+  applyChanges(action:string):Promise<IMarker[]> {
+    return RestyTrnHelper.applyChanges(action, this._mListSub, this.dataService)
+    .then( (items)=>{
+      // post-save actions
+      switch(action){
+        case "commit":
+          return this.dataService.sjMarkerLists.reload()
+          .then( ()=>items )
+      }
+      return items;
+    });
+  }
+
 }
+
+

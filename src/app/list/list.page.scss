@@ -1,1 +1,54 @@
 
+.marker-list-focus.blur {
+  display: none;
+}
+
+ion-grid {
+  padding: 5px 0;
+
+  ion-col.center {
+    margin: 0 auto;
+  }
+}
+
+/**
+ * set layout dims on google maps container, google maps will fit inside
+ */
+ ion-header.google-maps-wrap {
+  height: var(--google-map-height);
+  width: 100vw;
+}
+
+
+ion-reorder-group > ion-list {
+  margin: 0;
+}
+
+ion-card-content {
+  padding-top: 0;
+}
+
+
+ion-thumbnail {
+  width: var(--thumbnail-size);
+  height: var(--thumbnail-size);
+  margin: 1px 1px 1px 0;
+}
+
+ion-button.as-thumbnail {
+  width: var(--thumbnail-size);
+  --height: var(--thumbnail-size);
+  margin: 1px 1px 1px 0;
+
+  &.button-ios ion-icon {
+    font-size:48px;
+  }  
+}
+
+// layout=edit, fix left whitespace for ion-item:last-child > ion-button.as-thumbnail 
+ion-item.wrap-btn-as-thumbnail{
+  border:none;
+  margin-left: 16px;
+  --padding-start: 0;
+}
+

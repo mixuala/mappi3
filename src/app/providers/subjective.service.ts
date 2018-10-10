@@ -9,7 +9,7 @@ import { RestyService } from './resty.service';
 })
 export class SubjectiveService<T> {
 
-
+  public readonly className:string;
   public subject$: BehaviorSubject<T[]>;
   public resty: RestyService<T>;
   private _observable$: Observable<T[]>;
@@ -17,6 +17,7 @@ export class SubjectiveService<T> {
   constructor(resty:RestyService<T>) {
     this.resty = resty;
     this.subject$ = new BehaviorSubject<T[]>([]);
+    this.className = resty.className;
    }
 
   static sortBySeq = map( (v:any[],j)=>{
@@ -53,13 +54,15 @@ export class SubjectiveService<T> {
     return this.subject$.value.slice();  // return a copy
   }
   
-  reload(ids?:any[]){
+  reload(ids?:any[]):Promise<T[]>{
     if (!ids) {
       ids = this.subject$.value.map( o=>o['uuid'] );
     } 
-    this.resty.get(ids).then( arr=>{
+    return this.resty.get(ids)
+    .then( arr=>{
       arr.sort( (a,b)=>a['seq']-b['seq'] ).forEach((o,i)=>o['seq']=i);
-      this.next(arr)
+      this.next(arr);
+      return arr
     });
   }
   // deprecate, use watch$()

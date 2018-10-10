@@ -8,9 +8,10 @@ import { takeUntil } from 'rxjs/operators';
 
 import { IViewNavEvents } from "../app-routing.module";
 import  { 
-  MockDataService, quickUuid,
-  IMarker, IMarkerGroup, IPhoto, IMarkerList
+  MockDataService, RestyTrnHelper, quickUuid,
+  IMarker, IMarkerGroup, IPhoto, IMarkerList, IRestMarker,
 } from '../providers/mock-data.service';
+import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import { SubjectiveService } from '../providers/subjective.service';
 
 @Component({
@@ -150,13 +151,35 @@ export class MarkerListComponent implements OnInit {
     //   )
     // }
     console.log(`MarkerGroupComponent: ${this.mListSubject.value.label},  mListLayout=${this.mListLayout} `)
+  removeMarkerGroup(o:IMarkerList){
+    this.mListChange.emit( {data:o, action:'remove'} );
   }
+
+  // BUG: after reorder, <ion-item-options> is missing from dropped item
+  reorderMarkerGroup(ev){
+    const mL = this.mListSubject.value;
+    const mgSubj = this._mgSub[mL.uuid]; 
+    const {from, to} = ev.detail;
+    const copy = RestyTrnHelper.getCachedMarkers(mgSubj.value(), 'visible')
+    let move = copy.splice(from,1);
+    copy.splice( to, 0, move[0]);
+
+    // re-index after move
+    for (let i=Math.min(from,to);i<=Math.max(from,to);i++){
+      const o = copy[i];
+      o.seq=i;
+      RestyTrnHelper.childComponentsChange({data:o, action:'move'}, mgSubj )
+    }
+    
+    mgSubj.next(RestyTrnHelper.getCachedMarkers(mgSubj.value()) as IMarkerGroup[]);
+  }
+  
 
 
    /*
    * additional event handlers, possibly called from @ViewChilds
    */ 
-  childComponentsChange( change: {data:IMarkerGroup, action:string}){
+  childComponentsChange( change: {data:IRestMarker, action:string}){
     if (!change.data) return;
     const ml = change.data;
     switch(change.action){
@@ -177,6 +200,9 @@ export class MarkerListComponent implements OnInit {
     }
   }
 
+
+
+  private asPositionLabel = MappiMarker.asPositionLabel;
 
 
 }

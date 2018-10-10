@@ -3,6 +3,8 @@ import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
 import { Observable, BehaviorSubject } from 'rxjs';
 
+import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
+
 export function quickUuid() {
   // re-export
   return _quickUuid();
@@ -16,21 +18,23 @@ export interface IMarker {
     lat: number,
     lng: number,
   },
-  seq?: number,   
+  seq?: number,
+  placeId?: string,
+}
+
+
+export interface IRestMarker extends IMarker {
+  _rest_action?: string;
+  _commit_child_item?: IMarker;
+  _loc_was_map_center?: boolean;
 }
 
 export interface IMarkerGroup extends IMarker {
   label?: string,  
-  placeId?: string,
   // MarkerGroup hasMany MarkerItems, use Photos for now.
   markerItemIds: string[],  // uuid[]
   [propName: string]: any;
 }
-
-// export interface IMarkerItem {
-//   id: number,
-//   type: string,
-// }
 
 export interface IPhoto  extends IMarker {
   dateTaken: string,
@@ -93,27 +97,32 @@ export class MockDataService {
   
 
   constructor() { 
+    const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo');
+    const emptyMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
+    const emptyMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
+
     this._ready = Promise.resolve()
     .then (()=>{
       this.Photos = new RestyService(PHOTOS, "Photo");
       this.MarkerGroups = new RestyService(MARKER_GROUPS, "MarkerGroup");
   
       // clean photos data
-      PHOTOS.forEach( (o,i,l)=>{ 
-        MockDataService.inflatePhoto(o, i);
+      const photos:IPhoto[] = PHOTOS.map( (o,i,l)=>{
+        o = Object.assign({}, emptyPhoto, o)
+        return MockDataService.inflatePhoto(o, i);
       });
-      this.Photos = new RestyService(PHOTOS, "Photo");
+      this.Photos = new RestyService(photos, "Photo");
 
       // clean marker data
       return this.Photos.get()
     })
     .then( photos=>{
       const shuffledMarkerItems = this.shuffle(photos);
-      MARKER_GROUPS.forEach( (o,i,l)=> {
-        MockDataService.inflateMarkerGroup(shuffledMarkerItems, o, i);
+      const mgs = MARKER_GROUPS.map( (o,i,l)=> {
+        o = Object.assign({}, emptyMarkerGroup, o);
+        return MockDataService.inflateMarkerGroup(shuffledMarkerItems, o, i);
       });
-      const check = MARKER_GROUPS;
-      this.MarkerGroups = new RestyService(MARKER_GROUPS, "MarkerGroup");
+      this.MarkerGroups = new RestyService(mgs, "MarkerGroup");
     })
     .then (()=>{
       this.sjPhotos = new SubjectiveService(this.Photos);
@@ -129,9 +138,9 @@ export class MockDataService {
       for (let i of Array(count)) {
         const mgCount = Math.floor(Math.random() *  4)+1;
         const shuffledMarkerGroups = this.shuffle(mgs, mgCount);
-        const markerList = MockDataService.createMarkerList(shuffledMarkerGroups);
-        console.log(`uuid:${markerList.uuid}, markerGroups=` , shuffledMarkerGroups)
-        MockDataService.MARKER_LISTS.push(markerList);
+        const o = MockDataService.inflateMarkerListFromMarkerGroups(shuffledMarkerGroups, emptyMarkerList, i);
+        console.log(`uuid:${o.uuid}, markerGroups=` , shuffledMarkerGroups)
+        MockDataService.MARKER_LISTS.push(o);
       }
         
       this.MarkerLists = new RestyService(MockDataService.MARKER_LISTS, "MarkerList");
@@ -143,27 +152,26 @@ export class MockDataService {
     return this._ready;
   }
 
-  static createMarkerList( mgs:IMarkerGroup[]){
+  static inflateMarkerListFromMarkerGroups( mgs:IMarkerGroup[], o:IMarkerList, seq?:number ){
     const first = mgs[0];
-    const seq = MockDataService.MARKER_LISTS.length;
-    const markerList = {
+    seq = seq || MockDataService.MARKER_LISTS.length;
+    const data = {
       label: `marker list ${seq}`,
+      seq: seq,
       uuid: quickUuid(),
-      loc: first.loc.slice(),
-      locOffset: first.locOffset.slice(),
-      position: Object.assign({},first.position),
+      loc: first.loc.slice() as [number, number],
+      locOffset: first.locOffset.slice() as [number, number],
+      position: null,
       markerGroupIds: mgs.map(o=>o.uuid),
       count_markers: mgs.length,
     }
-    return markerList;
+    data.position = MappiMarker.position(data);
+    return Object.assign({},o,data);
   }
 
   static inflateMarkerGroup(copyOfPhotos:IPhoto[], o:IMarkerGroup, seq?:number){
     o.seq = seq;
-    o.position = {
-      lat: o.loc[0] + o.locOffset[0],
-      lng: o.loc[1] + o.locOffset[1],
-    }
+    o.position = MappiMarker.position(o);
     // add multiple FKs, shuffled, random count
     const count = Math.min( Math.floor(Math.random() *  4)+1,  copyOfPhotos.length);
     o.markerItemIds = copyOfPhotos.splice(0,count).map( o=>o['uuid'] )
@@ -173,6 +181,7 @@ export class MockDataService {
   static inflatePhoto(o:IPhoto, seq?:number){
     const random = Math.min( Math.floor(Math.random() *  99))
     o.seq = seq;
+    o.position = MappiMarker.position(o);
     o.src = MockDataService.photo_baseurl + random;
     o.thumbnail = o.src.trim();
     let size = MockDataService.sizes[ random % MockDataService.sizes.length];
@@ -220,3 +229,235 @@ export const PHOTOS: IPhoto[] = [
   {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?image={id}" , width:0, height:0 },    
 ]
 
+
+
+
+
+
+
+
+
+
+/**
+ * helpers to manage transcactions (commit/rollback) for RestyService<T>
+ */
+
+
+export class RestyTrnHelper {
+  static objectHierarchy = {
+    className : ['MarkerList', 'MarkerGroup', 'Photo'],
+    schema: ['MarkerLists', 'MarkerGroups', 'Photos'],
+    hasMany: ['MarkerGroupIds', 'MarkerItemIds']
+  }
+
+  static getCachedMarkers(items:IRestMarker[], option?:string):IRestMarker[] {
+    
+    if (option=='rollback') 
+      items = items.filter( (o)=>o._rest_action!= 'post') // skip added items
+    else if (option=='visible')
+      items = items.filter( (o)=>o._rest_action!= 'delete') // skip removed items
+    else if (option=='removed')
+      items = items.filter( (o)=>o._rest_action== 'delete') // skip removed items  
+
+    items.sort( (a,b)=>a.seq-b.seq );
+    return items;
+  }
+
+  static getPlaceholder ( className:string, data:any = {} ) {
+    const now = new Date();
+    const base = {
+      uuid: quickUuid(),
+      loc: [0,0], 
+      locOffset:[0,0], 
+      placeId: null,
+      label: '',
+      seq: null,
+      created: now,
+      modified: now,
+    }
+    let extras = {}
+    switch (className){
+      case 'Photo': // MarkerItem
+        extras = {
+          dateTaken: null,
+          orientation: null,
+          src: null,
+          thumbnail: null,
+          width: null,
+          height: null,
+          image: {
+            width:null,
+            height:null,
+          }
+        }
+        break;
+      case 'MarkerGroup':
+        extras = {
+          markerItemIds:[],
+        }
+        break;
+      case 'MarkerList':
+        extras = {
+          markerGroupIds:[],
+          zoom: null,
+          count_markers: 0,
+          count_items: 0,
+        }
+        break;
+    }
+    return Object.assign(base, extras, data);
+  }
+
+  static setFKfromChild (data:any, child:IRestMarker) {
+    const hasMany_Keys = RestyTrnHelper.objectHierarchy.hasMany;
+    const found = Object.keys(data).filter( k=>hasMany_Keys.includes(k))
+    switch (found[0]) {
+      case 'markerItemIds': data['markerItemIds'] = [child.uuid]; break;
+      case 'markerGroupIds': data['markerGroupIds'] = [child.uuid]; break;
+    }
+    data._commit_child_item = child;
+    child._rest_action = 'post';
+  }
+  static setLocFromChild (data:any, child:IRestMarker) {
+      const {loc, locOffset, position, placeId} = child;
+      Object.assign(data, {loc, locOffset, position, placeId});
+  }
+  static setLocToDefault (data:IRestMarker, defaultPosition:{lat:number, lng: number} | google.maps.LatLng) {
+    if (defaultPosition instanceof google.maps.LatLng)
+      defaultPosition = defaultPosition.toJSON();
+    const options = {
+      loc: [defaultPosition.lat, defaultPosition.lng],
+      locOffset: [0,0],
+      position: defaultPosition,
+      placeId: null,
+      _loc_was_map_center: true,
+    }
+    Object.assign(data, options);
+  }
+
+
+  static childComponentsChange( change: {data:IRestMarker, action:string}, subj: SubjectiveService<IMarker>){
+    if (!change.data) return;
+    const markers = subj.value();
+    const marker = change.data;
+    switch(change.action){
+      // case 'selected':
+      //   this._selectedMarkerGroup = mg.uuid;
+      //   break;
+      case 'add':
+        const newMarker = change.data;
+        newMarker['_rest_action'] = 'post';
+        const items = this.getCachedMarkers(markers);
+        items.push(newMarker);
+        subj.next(items);
+        return;
+      case 'update_marker':
+
+        // update google.map.Marker position directly
+        const m = MappiMarker.findByUuid([marker.uuid]).shift();
+        m.setPosition(marker.position);
+
+
+        subj.next(this.getCachedMarkers(markers));
+        return;   
+      case 'update':
+        marker['_rest_action'] = marker['_rest_action'] || 'put';
+        return;    
+      case 'move':
+        marker['_rest_action'] = marker['_rest_action'] || 'put';
+        return;
+      case 'remove':
+        marker['_rest_action'] = 'delete';
+        subj.next(this.getCachedMarkers(markers));
+        return;
+    }
+  }
+
+  static applyChanges(action:string, subj: SubjectiveService<IMarker>, dataSvc:MockDataService):Promise<IMarker[]> {
+    return Promise.resolve(true)
+    .then( res=>{
+      const items = subj.value();
+      switch(action){
+        case "commit":
+          const remainingItems = RestyTrnHelper.getCachedMarkers(items, 'visible')
+          .sort( (a,b)=>a.seq-b.seq )
+          .map((o,i)=>{
+            o.seq = i;    // re-index remaining/visible items
+            if (!o._rest_action) o._rest_action = 'seq';
+            return o;
+          });
+          const allItems = remainingItems.concat(RestyTrnHelper.getCachedMarkers(items, 'removed'))
+          return RestyTrnHelper._childComponents_CommitChanges(allItems, subj, dataSvc)
+          .catch( err=>{
+            console.error(`ERROR: problem saving '${subj.className}' nodes.`, allItems);
+            Promise.reject(err);
+          })
+          .then( res=>{
+            return subj.reload( remainingItems.map(o=>o.uuid) );
+          })
+        case "rollback":
+          const uuids = RestyTrnHelper.getCachedMarkers(items, 'rollback')
+          .map( o=>o.uuid );
+          return subj.reload( uuids );
+      }
+    })
+  }
+
+  private static _schemaLookup(subj:SubjectiveService<any>, dataSvc:MockDataService, generation?:string):RestyService<IMarker>{
+    let found = RestyTrnHelper.objectHierarchy.className.findIndex( v=>v==subj.className)
+    try {
+      if (found==-1) throw new Error('className not found');
+
+      switch (generation){
+        case 'parent': found--; break;
+        case 'child': found++; break;
+      }
+      return dataSvc[ RestyTrnHelper.objectHierarchy.schema[found] ];
+    } catch (err) {
+      console.log(`ERROR lookup db schema from className`, err);
+    }
+  }
+
+  private static 
+  _childComponents_CommitChanges(changes:IRestMarker[], subj: SubjectiveService<IMarker>, dataSvc:MockDataService):Promise<any>{  
+    const resty:RestyService<IMarker> = RestyTrnHelper._schemaLookup(subj, dataSvc);
+    const done:Promise<IRestMarker|boolean>[] = changes.map( o=>{
+      const restAction = o._rest_action;
+      delete o._rest_action;
+      switch(restAction) {
+        case "post":
+          const restyChild:RestyService<IMarker> = RestyTrnHelper._schemaLookup(subj, dataSvc, 'child');
+          return Promise.resolve()
+          .then( ()=>{
+            if (o.hasOwnProperty('_commit_child_item')){
+              // console.warn( " >>>> commit child of" , o);
+              // recursively commit child
+              const child = o['_commit_child_item'];
+              const childSubj = MockDataService.getSubjByParentUuid(o.uuid)
+              return RestyTrnHelper._childComponents_CommitChanges([child], childSubj, dataSvc);
+              // return restyChild.post( o['_commit_child_item'] );
+            }
+            return o;
+          })
+          .then( 
+            (res)=>delete o['_commit_child_item']
+            ,(err)=>console.error(`Error saving child element: ${restyChild.className} of ${subj.className}`)  
+          )
+          .then( ()=>{
+            return resty.post(o);
+          })
+        case "put":
+          return resty.put(o.uuid, o);
+        case "seq":
+          // return true;
+          return resty.put(o.uuid, o, ['seq']);  
+        case "delete":
+          return resty.delete(o.uuid)
+      }
+    });
+    return Promise.all(done);
+  }
+
+
+ 
+}

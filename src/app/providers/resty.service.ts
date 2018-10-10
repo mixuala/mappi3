@@ -7,16 +7,16 @@ import { Observable, from } from 'rxjs';
 export class RestyService<T> {
 
   public debug:boolean = false;
-  protected classname: string = "RESTY";
+  public readonly className: string;
   protected _data:{[uuid:string]: T};
 
-  constructor(jsonArray:Array<T>=[], classname?:string) {
+  constructor(jsonArray:Array<T>=[], className?:string) {
     this._data = jsonArray.reduce( (res, o:T)=>{
       const uuid = o['uuid'] || quickUuid();
       res[uuid] = Object.assign({uuid}, o, {uuid});
       return res;
     },{});
-    this.classname = classname || this.classname;
+    this.className = className || "_unknown_";
    }
 
   get(uuid?:string | string[]):Promise<T[]>{
@@ -45,7 +45,7 @@ export class RestyService<T> {
   getById$(uuid:string):Observable<T>{
     return from(
       this.get([uuid]).then( a=>{
-        this.debug && console.log( `${this.classname}: getById$`, a[0]);
+        this.debug && console.log( `${this.className}: getById$`, a[0]);
         return a[0] })
     );
   }
@@ -69,7 +69,7 @@ export class RestyService<T> {
       return Promise.reject("ERROR: duplicate uuid");
       o['uuid'] = uuid;
     this._data[uuid] = o;
-    this.debug && console.log( `${this.classname}: POST`, o);
+    this.debug && console.log( `${this.className}: POST`, o);
 
     return Promise.resolve( o );
   }
@@ -89,7 +89,7 @@ export class RestyService<T> {
         })
       } else
         this._data[uuid] = o;
-      this.debug && console.log( `${this.classname}: PUT`, o);
+      this.debug && console.log( `${this.className}: PUT`, o);
       return Promise.resolve( o );
     }
     return Promise.reject("ERROR: object not found");
@@ -98,7 +98,7 @@ export class RestyService<T> {
   delete(uuid:string):Promise<boolean>{
     if (!uuid || !this._data[uuid]) 
       return Promise.reject(false);
-    this.debug && console.log( `${this.classname}: DELETE`, this._data[uuid]);  
+    this.debug && console.log( `${this.className}: DELETE`, this._data[uuid]);  
     delete this._data[uuid];
     return Promise.resolve(true);
 
