@@ -4,7 +4,7 @@ import { Platform } from '@ionic/angular';
 import * as Camera from '@ionic-native/camera/ngx';
 import { Plugins, CameraSource } from '@capacitor/core';
 
-import { MockDataService, IMarker, IPhoto, quickUuid } from '../mock-data.service';
+import { MockDataService, RestyTrnHelper, IMarker, IPhoto, quickUuid } from '../mock-data.service';
 
 const { Device } = Plugins;
 
@@ -193,6 +193,7 @@ export class PhotoService {
   }
 
   private _parseCameraWithExifResponse(resp:IExifPhoto, seq?:number):IPhoto{
+    const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo');
     function _exifDate2ISO(s) {
       let parts = s.split(' ');
       return `${parts[0].replace(/\:/g,"-")}T${parts[1]}`;
@@ -223,13 +224,12 @@ export class PhotoService {
     } catch (err) {
       localTime = null;
     }
-    const p:IPhoto = {
+    const p:IPhoto = Object.assign(emptyPhoto, {
       uuid: quickUuid(),
       dateTaken: localTime,
       orientation: tiff.Orientation || 1,
       src: resp.src,
       loc: gpsLoc,
-      locOffset: [0, 0],
       position: {
         lat: gpsLoc[0],
         lng: gpsLoc[1],
@@ -238,33 +238,34 @@ export class PhotoService {
       thumbnail: resp.src,    // TODO: get a thumbnail base64data
       width: exif.PixelXDimension,
       height: exif.PixelYDimension,
-    }
+    })
     // # final adjustments
     p.image = _calcImgSrcDim(resp);
     if (p.loc.join() === [0,0].join()) p["_loc_was_map_center"] = true;
     return p;
   }
+
   private _getPlaceholder(seq:number):Promise<IPhoto> {
+    const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo');
     return this.dataService.Photos.get()
-    .then(res => {
+    .then(photos => {
       // create placeholder mi derived from a random photo
-      const random = (Date.now() % 99) + 1;
-      const o = {
-        uuid: quickUuid(),
+      const random = {
+        num: (Date.now() % 99) + 1,
+        photo: photos[ Date.now() % photos.length ],
+        locOffset: [Math.random(), Math.random()].map(v => (v - 0.5) / 60),
+      }
+
+      const data = {
+        uuid: emptyPhoto.uuid,
         dateTaken: new Date().toISOString(),
-        thumbnail: null, 
-        src: null,
-        locOffset: [0, 0],
-        position: null,
+        locOffset: random.locOffset,       // randomize location
       };      
       // create a new photo by modifying attrs of a random clone
-      const p: IPhoto = Object.assign(res[random % res.length], o);
+      const p: IPhoto = Object.assign(emptyPhoto, random.photo, data);
       MockDataService.inflatePhoto(p, seq);
-      // randomize location
-      const randomOffset = [Math.random(), Math.random()].map(v => (v - 0.5) / 60);
-      // update IMarker
-      p.loc = [p.loc[0] + randomOffset[0], p.loc[1] + randomOffset[1]];
-      p.position = PhotoService.position(p);
+      p.loc = [p.position.lat, p.position.lng];
+      p.locOffset = [0,0];
       return p;
     })
   }

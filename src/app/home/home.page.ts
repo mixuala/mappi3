@@ -218,7 +218,7 @@ export class HomePage implements OnInit, IViewNavEvents {
           this.layout = this.toggle.layout;
           console.log("home.page.ts: layout=", this.layout)
         },
-        err=>console.log('ERROR saving changes')
+        err=>console.log('ERROR saving changes', err)
       )
     }    
   }
@@ -233,7 +233,7 @@ export class HomePage implements OnInit, IViewNavEvents {
   createMarkerGroup(ev:any={}, data:any={}):Promise<IMarkerGroup>{
     const target = ev.target && ev.target.tagName;
     const count = data.seq || this._mgSub.value().length;
-    const item = RestyTrnHelper.getPlaceholder('MarkerGroup');
+    const item:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
     item.label = `Marker created ${item.created.toISOString()}`
     item.seq = count;
     // let p: IPhoto;
@@ -241,20 +241,15 @@ export class HomePage implements OnInit, IViewNavEvents {
     .then ( ()=>{
       if (target=='ION-BUTTON') {
         return this.photoService.choosePhoto(0)
-        .then( child=>{
+        .then( (child:IPhoto)=>{
           RestyTrnHelper.setFKfromChild(item, child);
-          RestyTrnHelper.setLocFromChild(item, child);
-          return item;
-          // p = photo;
-          // const {loc, locOffset, position, placeId} = p;
-          // let options:any = {loc, locOffset, position, placeId};
-          // options.seq = count;
-          // options.markerItemIds = [p.uuid];
-          // options['_commit_child_item'] = p;
-          // p['_rest_action'] = 'post'
-          // // TODO: need to add IPhoto to the mg.subject
-          // // const subject = this._getSubjectForMarkerItems(mg);
-          // return options;
+          console.warn("createMarkerGroup, selected Photo", child.loc, child);
+          if (child.loc.join() != [0,0].join()) {
+            RestyTrnHelper.setLocFromChild(item, child);
+            return;
+          }
+          // WARN: selected photo does not include GPS loc
+          return Promise.reject('continue');
         })
       }
       return Promise.reject('continue');
@@ -262,19 +257,24 @@ export class HomePage implements OnInit, IViewNavEvents {
     .catch( (err)=>{
       if (err=='continue') {
         // no IPhoto returned, get a placeholder
-        const position = data.position || GoogleMapsComponent.map.getCenter();
-        RestyTrnHelper.setLocToDefault(item, position);
-        return item;
-        // const defaults = {
-        //   loc:[mapCenter.lat(), mapCenter.lng()],
-        //   seq: count,
-        // }
-        // const options = Object.assign({}, defaults, data);
-        // if (!data.loc) options["_loc_was_map_center"] = true;
-        // return options;
+        return Promise.resolve(true)
+        .then( ()=>{
+          let position = GoogleMapsComponent.map && GoogleMapsComponent.map.getCenter();
+          if (position) 
+            return position;
+          else
+            return GoogleMapsComponent.getCurrentPosition();
+        })
+        .then( (latlng:google.maps.LatLng)=>{
+          const position = latlng.toJSON();
+          console.warn("createMarkerGroup, default position", position);
+          RestyTrnHelper.setLocToDefault(item, position);
+          return item;
+        });
       }
+      console.warn(`HomePage.createMarkerGroup() `,err);
     })
-    .then( (item:IRestMarker)=>{
+    .then( ()=>{
       RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mgSub)
       return item;
     }) 
@@ -285,7 +285,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     //   RestyTrnHelper.childComponentsChange({data:mg, action:'add'}, this._mgSub)
     //   return mg;
     // })
-    .then( this.emitMarkerGroupItem );
+    .then( (item:IMarkerGroup)=>this.emitMarkerGroupItem(item) );
   }
 
   emitMarkerGroupItem(mg:IMarkerGroup):Promise<IMarkerGroup> {
@@ -503,16 +503,20 @@ export class HomePage implements OnInit, IViewNavEvents {
         case "commit":
           // propagate changes to MarkerList
           const itemUuids = this._mgSub.value().map(o => o.uuid);
-          const parentMgUuids = this.parent.markerGroupIds;
-          if (
-            this.parent["_rest_action"] ||
-            itemUuids.length != parentMgUuids.length ||
-            itemUuids.filter(v => !parentMgUuids.includes(v)).length > 0
-          ) {
-            this.parent.markerGroupIds = itemUuids;
-            this.parent['_rest_action'] = this.parent['_rest_action'] || 'put'
-            const subject = this.dataService.sjMarkerLists;
-            return RestyTrnHelper.applyChanges(action, subject, this.dataService);
+          try {
+            const parentMgUuids = this.parent.markerGroupIds;
+            if (
+              this.parent["_rest_action"] ||
+              itemUuids.length != parentMgUuids.length ||
+              itemUuids.filter(v => !parentMgUuids.includes(v)).length > 0
+              ) {
+                this.parent.markerGroupIds = itemUuids;
+                this.parent['_rest_action'] = this.parent['_rest_action'] || 'put'
+                const subject = this.dataService.sjMarkerLists;
+                return RestyTrnHelper.applyChanges(action, subject, this.dataService);
+              }
+          } catch (err){
+            console.warn("Error: cannot save to DEV MarkerGroup, parent is null")
           }
         case "rollback":
           const layout = this.route.snapshot.queryParams.layout;

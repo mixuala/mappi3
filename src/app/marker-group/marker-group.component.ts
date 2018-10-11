@@ -264,9 +264,13 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         case "commit":
           const allItems = this._getCachedMarkerItems(mg, 'commit')
           const remainingItems = this._getCachedMarkerItems(mg, 'visible')
+          remainingItems.forEach( (o,i)=>{
+            o.seq=i;
+            o._rest_action = o._rest_action || 'put'; 
+          })  // reindex before commit
           return this.childComponents_CommitChanges(allItems)
           .catch( err=>{
-            console.error("ERROR: problem saving child nodes ");
+            console.error("ERROR: problem saving child nodes", err);
             Promise.reject(err);
           })
           .then( res=>{

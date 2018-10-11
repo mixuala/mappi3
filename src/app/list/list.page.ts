@@ -106,15 +106,15 @@ export class ListPage implements OnInit {
 
 
   createOpenMarkerList(ev:any={}){
-    return this.createMarkerList(ev)
+    return this.createMarkerList(undefined)
     .then( mL=>{
       const mLists = this._mListSub.value()
       mLists.push(mL);
       this._mListSub.next(mLists);
-
+      
       // need to commit changes before nav?
       console.log("new markerList", mL)
-
+      
       this.nav(mL, {layout:'edit'});
     })
   }
@@ -133,22 +133,26 @@ export class ListPage implements OnInit {
   createMarkerList(ev:any={}, data:any={}):Promise<IMarkerList>{
     const target = ev.target && ev.target.tagName;
     const count = data.seq || this._mListSub.value().length;
-    const item = RestyTrnHelper.getPlaceholder('MarkerList');
+    const item:IMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
     item.label = `Map created ${item.created.toISOString()}`
     item.seq = count;
-    const child = RestyTrnHelper.getPlaceholder('MarkerGroup');
+    const child:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
     child.label = `Marker created ${child.created.toISOString()}`
     child.seq = 0;
     return Promise.resolve(true)
     .then ( ()=>{
       if (target=='ION-BUTTON') {
         return this.photoService.choosePhoto(0)
-        .then( p=>{
+        .then( (p:IPhoto)=>{
           RestyTrnHelper.setFKfromChild(child, p);
-          RestyTrnHelper.setLocFromChild(child, p);
           RestyTrnHelper.setFKfromChild(item, child);
-          RestyTrnHelper.setLocFromChild(item, child);
-          return item;
+          if (p.loc.join() != [0,0].join()) {
+            RestyTrnHelper.setLocFromChild(child, p);
+            RestyTrnHelper.setLocFromChild(item, child);
+            return;
+          }
+          // WARN: selected photo does not include GPS loc
+          return Promise.reject("continue");
         })
       }
       return Promise.reject('continue');
@@ -156,18 +160,29 @@ export class ListPage implements OnInit {
     .catch( (err)=>{
       if (err=='continue') {
         // no IPhoto returned, get a placeholder
-        const position = data.position || GoogleMapsComponent.map.getCenter();
-        RestyTrnHelper.setLocToDefault(item, position);
-        RestyTrnHelper.setLocToDefault(child, position);
-        return item;
+        return Promise.resolve(true)
+        .then( ()=>{
+          let position = GoogleMapsComponent.map && GoogleMapsComponent.map.getCenter();
+          if (position) 
+            return position;
+          else 
+            return GoogleMapsComponent.getCurrentPosition();
+        })
+        .then( (latlng:google.maps.LatLng)=>{
+          const position = latlng.toJSON();
+          RestyTrnHelper.setLocToDefault(item, position);
+          RestyTrnHelper.setLocToDefault(child, position);
+          return item;
+        })
       }
+      console.warn(`ListPage.createMarkerGroup() `,err);
     }) 
-    .then( (item:IRestMarker)=>{
+    .then( ()=>{
       // RestyTrnHelper.childComponentsChange({data:child, action:'add'}, this._mListSub);
       RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
       return item;
     })
-    .then( this.emitMarkerGroup );
+    .then( (item:IMarkerList)=>this.emitMarkerGroup(item) );
   }
 
   emitMarkerGroup(mL:IMarkerList):Promise<IMarkerList> {

@@ -122,7 +122,7 @@ export class GoogleMapsComponent implements OnInit {
       }      
 
       // get map center then resolve
-      this.getCurrentPosition()
+      GoogleMapsComponent.getCurrentPosition()
       .then ( (position)=>{
         mapOptions.center = position;
         this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
@@ -132,7 +132,7 @@ export class GoogleMapsComponent implements OnInit {
     });
   }
 
-  getCurrentPosition():Promise<google.maps.LatLng> {
+  static getCurrentPosition():Promise<google.maps.LatLng> {
     if (GoogleMapsComponent.currentLoc)
       return Promise.resolve(GoogleMapsComponent.currentLoc);
 

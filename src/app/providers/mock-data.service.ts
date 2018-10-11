@@ -247,7 +247,7 @@ export class RestyTrnHelper {
   static objectHierarchy = {
     className : ['MarkerList', 'MarkerGroup', 'Photo'],
     schema: ['MarkerLists', 'MarkerGroups', 'Photos'],
-    hasMany: ['MarkerGroupIds', 'MarkerItemIds']
+    hasMany: ['markerGroupIds', 'markerItemIds']
   }
 
   static getCachedMarkers(items:IRestMarker[], option?:string):IRestMarker[] {
@@ -279,8 +279,9 @@ export class RestyTrnHelper {
     switch (className){
       case 'Photo': // MarkerItem
         extras = {
+          className: 'Photo',
           dateTaken: null,
-          orientation: null,
+          orientation: 1,
           src: null,
           thumbnail: null,
           width: null,
@@ -293,11 +294,13 @@ export class RestyTrnHelper {
         break;
       case 'MarkerGroup':
         extras = {
+          className: 'MarkerGroup',
           markerItemIds:[],
         }
         break;
       case 'MarkerList':
         extras = {
+          className: 'MarkerList',
           markerGroupIds:[],
           zoom: null,
           count_markers: 0,
