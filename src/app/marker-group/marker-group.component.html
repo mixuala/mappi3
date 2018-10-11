@@ -88,6 +88,57 @@
     </ion-card-content>
   </ion-card>
 
+  <!-- 'share' view, readonly -->
+  <ion-card class="marker-group layout-share" *ngSwitchCase="'share'">
+      <ion-card-header padding-vertical color="secondary">
+        <ion-item>
+              <ion-chip class="marker" color="primary" fill="solid" (click)="selectMarkerGroup(marker)">
+                <ion-icon name="pin" slot="start"></ion-icon>
+                <ion-label>{{marker.seq+1}} </ion-label>
+              </ion-chip>
+
+          <ion-label>
+            <h3>
+              <ion-text color="primary">{{ marker.label || marker.seq+1 }}</ion-text>
+            </h3>
+            
+          </ion-label>
+          <ion-buttons slot="end">
+            <ion-button color="primary" fill="outline">
+              <ion-icon name="heart" slot="icon-only" ></ion-icon>
+            </ion-button>
+            <ion-button color="primary" fill="outline">
+              <ion-icon name="share" slot="icon-only" ></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-item>
+      </ion-card-header>
+  
+      <ion-card-content>
+        <ion-item no-padding>
+            <p>{{ asPositionLabel(marker) | json }}</p>
+        </ion-item>
+        <ion-item class="gallery">
+          <ng-container *ngIf="marker?.markerItemIds.length; else gallery_pinIcon">
+            <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async | slice:0:miLimit">
+                <app-marker-item *ngIf="mi?._rest_action!='delete'"
+                [mi]="mi" [parentLayout]="layout" 
+                (click)="thumbClicked(marker, mi)"></app-marker-item>
+            </ng-container>
+          </ng-container>
+  
+          <ng-template #gallery_pinIcon>
+            <ion-button class="as-thumbnail" slot="start" expand="full" size="large" color="primary">
+              <ion-icon name="pin" slot="icon-only"></ion-icon>
+            </ion-button>
+          </ng-template>
+  
+          <ion-badge color="primary" float-right *ngIf="marker.markerItemIds.length>miLimit">+{{marker.markerItemIds.length-miLimit}}</ion-badge>
+  
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+
   <!-- mode='edit': support ion-reorder and ion-item-sliding -->
   <ion-item-sliding *ngSwitchCase="'edit'">
     <ion-item>

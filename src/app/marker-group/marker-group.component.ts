@@ -122,6 +122,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       this.stash.layout = this.layout;
       this.layout = "edit";
     }
+    else if (this.parentLayout == "share") {
+      this.layout = "share";
+    }
     else this.layout = this.stash.layout;
   }
 

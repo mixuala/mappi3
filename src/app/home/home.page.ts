@@ -5,9 +5,6 @@ import { Component, OnInit, ViewChild,
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { AlertController, ActionSheetController } from '@ionic/angular';
-import { Plugins } from '@capacitor/core';
-import { QRCodeModule } from 'angularx-qrcode';
 
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
@@ -18,9 +15,6 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { GoogleMapsComponent } from '../google-maps/google-maps.component';
-
-
-const { Browser, Device } = Plugins;
 
 @Component({
   selector: 'app-home',
@@ -81,7 +75,6 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   constructor( 
     public dataService: MockDataService,
-    public actionSheetController: ActionSheetController,
     public photoService: PhotoService,
     private router: Router,
     private route: ActivatedRoute,
@@ -91,6 +84,11 @@ export class HomePage implements OnInit, IViewNavEvents {
     .then( ()=>{
       this._mgSub = this.dataService.sjMarkerGroups;
     })
+  }
+
+  nav(page:string, item:IMarkerList){
+    console.warn('check for commit/rollback before leaving view')
+    this.router.navigate([page, item.uuid]);
   }
 
   private _getSubjectForMarkerItems(mg:IMarkerGroup):SubjectiveService<IMarker>{
@@ -125,36 +123,6 @@ export class HomePage implements OnInit, IViewNavEvents {
     return
   }
 
-
-
-  async presentActionSheet_ShowMap(url) {
-    const actionSheet = await this.actionSheetController.create({
-      header: 'Map Image',
-      subHeader: url,
-      buttons: [{
-        text: 'Show Map',
-        icon: 'map',
-        handler: () => {
-          console.log(url);
-          setTimeout( ()=>{this.browserOpen(url)},500)
-          
-        }        
-      }, {
-        text: 'Cancel',
-        icon: 'close',
-        role: 'cancel',
-        handler: () => {
-          this.qrcodeData = null;
-          console.log('Cancel clicked');
-        }
-      }]
-    });
-    await actionSheet.present();
-  }
-
-  async browserOpen(url):Promise<void> {
-    return await Browser.open({url:url})
-  }
 
   ngOnInit() {
     this.layout = "default";
