@@ -388,8 +388,10 @@ export class GoogleMapsComponent implements OnInit {
       m.position = MappiMarker.position(m);
 
       // add marker from HomeComponent using mgCollection$ Observable
+      // => HomePage.mappiMarkerChange()
       this.itemChange.emit({data:m, action:'add'});
       console.log(Date.now(), 'addMarkerOnClick at', position.toJSON())
+      console.warn(`refactor to use RestyTrnHelper.create<T> with position=${position.toJSON()}`)
 
 
       // const dblclick_RemoveMarker = ListenerWrapper.make( ()=>{

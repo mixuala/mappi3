@@ -14,6 +14,7 @@ import  {
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { MarkerGroupComponent } from '../marker-group/marker-group.component';
+import { GoogleMapsComponent } from '../google-maps/google-maps.component';
 
 
 
