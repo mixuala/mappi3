@@ -19,7 +19,7 @@ import { HomePage } from './home.page';
         component: HomePage
       }
     ]),
-    QRCodeModule,
+    // QRCodeModule,
     SharedComponentModule,
   ],
   declarations: [HomePage,

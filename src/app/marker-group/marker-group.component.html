@@ -104,8 +104,8 @@
             
           </ion-label>
           <ion-buttons slot="end">
-            <ion-button color="primary" fill="outline">
-              <ion-icon name="heart" slot="icon-only" ></ion-icon>
+            <ion-button color="primary" fill="outline" (click)="toggleFavorite()">
+              <ion-icon [name]="stash.favorite ? 'heart' : 'heart-empty'" slot="icon-only" ></ion-icon>
             </ion-button>
             <ion-button color="primary" fill="outline">
               <ion-icon name="share" slot="icon-only" ></ion-icon>
@@ -169,35 +169,6 @@
       </ion-item-option>
     </ion-item-options>
   </ion-item-sliding>
-
-    <!-- mode='edit': support ion-reorder and ion-item-sliding -->
-    <ion-item-sliding *ngSwitchCase="'edit-no-reorder'">
-        <ion-item>
-          <ng-container *ngIf="marker?.markerItemIds.length; else edit_pinIcon">
-            <ng-container *ngIf="miCollection$[marker.uuid] | async as items">
-              <app-marker-item *ngIf="items[0] as mi"
-                [mi]="mi" [parentLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
-            </ng-container>
-          </ng-container>
-          <ng-template #edit_pinIcon>
-            <ion-button class="as-thumbnail" slot="start" expand="full" size="large" color="primary">
-              <ion-icon name="pin" slot="icon-only"></ion-icon>
-            </ion-button>
-          </ng-template>      
-    
-          <ion-label>
-            <h3>{{ marker.label || marker.seq }}</h3>
-            <p>{{ obj2String(marker.position) }}</p>
-          </ion-label>
-        </ion-item>  
-    
-        <ion-item-options>
-          <ion-item-option color="danger" slot="top" (click)="removeMarkerGroup(marker)">
-            <ion-icon name="trash" slot="top"></ion-icon>
-            <ion-label>Delete</ion-label>
-          </ion-item-option>
-        </ion-item-options>
-      </ion-item-sliding>
 
   <!-- (UNUSED) mode='list': show markerItem details -->
   <ion-card *ngSwitchCase="'list'">

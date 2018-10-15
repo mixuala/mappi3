@@ -7,7 +7,6 @@ import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AlertController, ActionSheetController } from '@ionic/angular';
 import { Plugins } from '@capacitor/core';
-import { QRCodeModule } from 'angularx-qrcode';
 
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, } from '../providers/mappi/mappi.service';
@@ -163,19 +162,14 @@ export class SharePage implements OnInit, IViewNavEvents {
     .then( ()=>{
       let mgSubject = MockDataService.getSubjByParentUuid(mListId) as SubjectiveService<IMarkerGroup>;
       if (!mgSubject) {
-        // for testing only, reload /home
-        console.warn("DEV ONLY: Subject not ready, loading all markerGroups")
-        const DEV_Subject = this._mgSub;
-        DEV_Subject.get$('all');
-        MockDataService.getSubjByParentUuid(mListId, DEV_Subject);
-        mgSubject = DEV_Subject;
+        return this.router.navigateByUrl('list');
       } 
       this.markerCollection$ = this.mgCollection$ = mgSubject.watch$();
       this._mgSub = mgSubject;
-      // this.mgCollection$.subscribe( arr=>{
-      //   console.info(`SharePage ${mListId} mgs, count=`, arr.length);
-      //   arr.forEach( o=>console.log(o))
-      // });
+      this.mgCollection$.subscribe( arr=>{
+        console.info(`SharePage ${mListId} mgs, count=`, arr.length);
+        arr.forEach( o=>console.log(o));
+      });
     })
   }
 

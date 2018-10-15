@@ -8,19 +8,16 @@ const routes: Routes = [
     pathMatch: 'full'
   },
   {
+    path: 'list',
+    loadChildren: './list/list.module#ListPageModule'
+  },  
+  {
     path: 'home/:uuid',
     loadChildren: './home/home.module#HomePageModule'
   },
   { path: 'home',   redirectTo: 'list',   pathMatch: 'full' },  
-  {
-    path: 'list',
-    loadChildren: './list/list.module#ListPageModule'
-  },
-  {
-    path: 'maps/:uuid',
-    loadChildren: './home/home.module#HomePageModule'    
-  },
-  { path: 'share/:uuid', loadChildren: './share/share.module#SharePageModule' },
+  { path: 'map/:uuid', loadChildren: './share/share.module#SharePageModule' },
+  { path: 'map',   redirectTo: 'list',   pathMatch: 'full' }, 
 ];
 
 // see: https://forum.ionicframework.com/t/ionic-4-event-to-trigger-navigation-back-to-page/141676/2

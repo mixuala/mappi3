@@ -100,16 +100,6 @@ export class HomePage implements OnInit, IViewNavEvents {
     return found && found.watch$();
   }
 
-
-
-  // TEST only: sibling subscribes to the SAME BehaviorSubject
-  siblingClicked(o:any){
-    if (this.layout!='edit') return;
-    const mg = o;
-    this.childComponentsChange({data:o, action:'remove'});
-    // this.applyChanges('commit');
-  }
-
   public gmap:any;
   setMap(o:{map:google.maps.Map,key:string}){
     this.gmap=o;
@@ -394,74 +384,7 @@ export class HomePage implements OnInit, IViewNavEvents {
       default:
         return RestyTrnHelper.childComponentsChange(change, this._mgSub);
     }
-
-
-    // const mg = change.data;
-    // switch(change.action){
-    //   case 'selected':
-    //     this._selectedMarkerGroup = mg.uuid;
-    //     break;
-    //   case 'add':
-    //     const newMg = change.data;
-    //     newMg['_rest_action'] = 'post';
-    //     const items = RestyTrnHelper._getCachedMarkerGroups(this._mgSub.value() );
-    //     items.push(newMg);
-    //     this._mgSub.next(items);
-    //     return;
-    //   case 'update_marker':
-    //     // mg.markerItemIds updates have already been committed
-
-    //     // update google.map.Marker position directly
-    //     const m = MappiMarker.findByUuid([mg.uuid]).shift();
-    //     m.setPosition(mg.position);
-
-    //     let mgs = RestyTrnHelper._getCachedMarkerGroups(this._mgSub.value() );
-    //     this._mgSub.next(mgs);
-    //     return;   
-    //   case 'update':
-    //     mg['_rest_action'] = mg['_rest_action'] || 'put';
-    //     // this._mgSub.next(RestyTrnHelper._getCachedMarkerGroups(this._mgSub.value() ));
-    //     return;    
-    //   case 'move':
-    //     mg['_rest_action'] = mg['_rest_action'] || 'put';
-    //     return;
-    //   case 'remove':
-    //     // called from MarkerGroupComponent.removeMarkerGroup()
-    //     mg['_rest_action'] = 'delete';
-    //     this._mgSub.next(RestyTrnHelper._getCachedMarkerGroups(this._mgSub.value() ));
-    //     return;
-    // }
   }
-
-  // childComponents_CommitChanges(items:IMarkerGroup[]):Promise<any>{
-  //   const children:Promise<IMarkerGroup|boolean>[] = items.map( o=>{
-  //     const restAction = o._rest_action;
-  //     delete o._rest_action;
-  //     switch(restAction) {
-  //       case "post":
-  //         return Promise.resolve()
-  //         .then( ()=>{
-  //           if (o.hasOwnProperty('_commit_child_item'))
-  //             return this.dataService.Photos.post( o['_commit_child_item']);
-  //         })
-  //         .then( 
-  //           (p:IPhoto)=>delete o['_commit_child_item']
-  //           ,(err)=>console.error("Error saving MarkerItem of MarkerGroup")  
-  //         )
-  //         .then( ()=>{
-  //           return this.dataService.MarkerGroups.post(o);
-  //         })
-  //       case "put":
-  //         return this.dataService.MarkerGroups.put(o.uuid, o);
-  //       case "seq":
-  //         // return true;
-  //         return this.dataService.MarkerGroups.put(o.uuid, o, ['seq']);  
-  //       case "delete":
-  //         return this.dataService.MarkerGroups.delete(o.uuid)
-  //     }
-  //   });
-  //   return Promise.all(children); 
-  // }
 
   applyChanges(action: string): Promise<IMarker[]> {
     return RestyTrnHelper.applyChanges(action, this._mgSub, this.dataService)
@@ -494,62 +417,8 @@ export class HomePage implements OnInit, IViewNavEvents {
       }
       return items;
     });
-  
 
-
-    // return Promise.resolve(true)
-    // .then( res=>{
-    //   switch(action){
-    //     case "commit":
-    //       const remainingItems = RestyTrnHelper._getCachedMarkerGroups(this._mgSub.value(), 'visible')
-    //       .sort( (a,b)=>a.seq-b.seq )
-    //       .map((o,i)=>{
-    //         o.seq = i;    // re-index remaining/visible items
-    //         if (!o._rest_action) o._rest_action = 'seq';
-    //         return o;
-    //       });
-    //       const allItems = remainingItems.concat(RestyTrnHelper._getCachedMarkerGroups(this._mgSub.value(), 'removed'))
-    //       return this.childComponents_CommitChanges(allItems)
-    //       .catch( err=>{
-    //         console.error("ERROR: problem saving child nodes ");
-    //         Promise.reject(err);
-    //       })
-    //       .then( res=>{
-    //         this._mgSub.reload( remainingItems.map(o=>o.uuid) );
-    //         return res;
-    //       })
-    //       .then( (res:IMarkerGroup[])=>{
-    //         // propagate changes to MarkerList
-    //         const mListId = this.route.snapshot.paramMap.get('uuid');
-    //         const mList = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId);
-    //         mList.markerGroupIds = res.map( o=>o.uuid);
-    //         this.dataService.MarkerLists.put(mList.uuid, mList);
-    //         // put this on a setTimeout??
-    //         this.dataService.sjMarkerLists.reload();
-    //         return res;
-    //       })
-    //     case "rollback":
-    //       const uuids = RestyTrnHelper._getCachedMarkerGroups(this._mgSub.value(), 'rollback')
-    //       .map( o=>o.uuid );
-    //       return this._mgSub.reload( uuids );
-    //   }
-    // })
   }
-
-  // private _getCachedMarkerGroups(option?:string):IMarkerGroup[] {
-  //   let items = this._mgSub.value();
-    
-  //   if (option=='rollback') 
-  //     items = items.filter( o=>o._rest_action!= 'post') // skip added items
-  //   else if (option=='visible')
-  //     items = items.filter( o=>o._rest_action!= 'delete') // skip removed items
-  //   else if (option=='removed')
-  //     items = items.filter( o=>o._rest_action== 'delete') // skip removed items  
-
-  //   items.sort( (a,b)=>a.seq-b.seq );
-  //   return items;
-  // }
-
 
   private obj2String(o) {
     let kv = Object.entries(o).reduce( (a,v)=> {a.push(v.join(':')); return a} ,[])

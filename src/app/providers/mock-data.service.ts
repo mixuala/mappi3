@@ -134,9 +134,9 @@ export class MockDataService {
     })
     .then ((mgs)=>{
       // add some random markerLists
-      const count = 4;
+      const count = 1;
+      const mgCount = 4;  // Math.floor(Math.random() *  4)+1;
       for (let i of Array(count)) {
-        const mgCount = Math.floor(Math.random() *  4)+1;
         const shuffledMarkerGroups = this.shuffle(mgs, mgCount);
         const o = MockDataService.inflateMarkerListFromMarkerGroups(shuffledMarkerGroups, emptyMarkerList, i);
         console.log(`uuid:${o.uuid}, markerGroups=` , shuffledMarkerGroups)

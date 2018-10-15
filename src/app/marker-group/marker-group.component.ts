@@ -87,6 +87,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           const doChangeDetection = mg._detectChanges;
           delete mg._detectChanges;
           // console.info("MG.ngOnChanges():",mg.uuid);
+
           this.dataService.ready()
           .then( ()=>{
             const subject = new SubjectiveService(this.dataService.Photos);
@@ -98,6 +99,11 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             //     console.warn(`>>> photo$ for mg: ${mg.label || mg.seq}: count=${items.length}`)
             // });
             this.mgSubject.next(mg);
+
+            // init owner data
+            mg.favorite = mg.favorite || false;  
+            this.toggleFavorite(null, mg); // initializes view component
+
             if (doChangeDetection) setTimeout(()=>this.cd.detectChanges())
           });
           break;
@@ -156,6 +162,20 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   thumbClicked(mg:IMarkerGroup, mi:IPhoto){
     this.selectMarkerGroup(mg)
     this.thumbClick.emit({mg, mi});
+  }
+
+  toggleFavorite(value?:boolean, mg?:IMarkerGroup){
+    mg = mg || this.mgSubject.value;
+    if (!mg) return
+
+    if (!this.stash.hasOwnProperty('favorite')) {
+      // sync view with data
+      this.stash.favorite = mg.favorite;
+      return;
+    }
+    this.stash.favorite = value != null ? value : !this.stash.favorite;
+    mg.favorite = this.stash.favorite;
+    this.mgSubject.next(mg);
   }
 
 

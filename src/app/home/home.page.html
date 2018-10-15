@@ -5,9 +5,6 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-buttons slot="end">
-        <ion-button fill="outline" (click)="nav('share', parent)" *ngIf="gmap && layout!='edit'">
-          <ion-icon name="share" slot="icon-only"></ion-icon>
-        </ion-button>
         <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
           <ion-icon name="add" slot="icon-only"></ion-icon>
         </ion-button>
@@ -38,19 +35,6 @@
 
 
 <ion-content no-padding class="marker-group-wrap content-right-if-mq-landscape">
-
-  <ion-toolbar class="sibling-component" *ngIf="false">
-    <ion-buttons>
-      <ng-container *ngFor="let item of mgCollection$ | async">
-        <ion-button 
-          *ngIf="item?._rest_action!='delete'"
-          (click)="siblingClicked(item)"
-          >
-          {{item.label || item.seq }}
-        </ion-button>
-      </ng-container>
-    </ion-buttons>
-  </ion-toolbar>
 
   <!-- groupItem -->
   <ng-container [ngSwitch]="layout">
