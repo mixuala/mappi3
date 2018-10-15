@@ -8,7 +8,7 @@
         <ion-label>{{ marker.label || marker.seq+1 }}</ion-label>
         <ion-buttons slot="end">
           <ion-button  color="light" fill="outline" (click)="toggleEditMode()" *ngIf="layout!='focus-marker-group'">
-            <ion-icon name="create" slot="icon-only"></ion-icon>
+            <ion-icon name="list" slot="icon-only"></ion-icon>
           </ion-button>
           <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='focus-marker-group'">
             <ion-icon name="checkmark" slot="icon-only"></ion-icon>
