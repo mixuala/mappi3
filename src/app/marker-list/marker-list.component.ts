@@ -177,27 +177,6 @@ export class MarkerListComponent implements OnInit {
     this.mListChange.emit( {data:o, action:'remove'} );
   }
 
-  // BUG: after reorder, <ion-item-options> is missing from dropped item
-  reorderMarkerGroup(ev){
-    const mL = this.mListSubject.value;
-    const mgSubj = this._mgSub[mL.uuid]; 
-    const {from, to} = ev.detail;
-    const copy = RestyTrnHelper.getCachedMarkers(mgSubj.value(), 'visible')
-    let move = copy.splice(from,1);
-    copy.splice( to, 0, move[0]);
-
-    // re-index after move
-    for (let i=Math.min(from,to);i<=Math.max(from,to);i++){
-      const o = copy[i];
-      o.seq=i;
-      RestyTrnHelper.childComponentsChange({data:o, action:'move'}, mgSubj )
-    }
-    
-    mgSubj.next(RestyTrnHelper.getCachedMarkers(mgSubj.value()) as IMarkerGroup[]);
-  }
-  
-
-
    /*
    * additional event handlers, possibly called from @ViewChilds
    */ 

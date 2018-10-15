@@ -3,6 +3,7 @@ import { Component, OnInit, ViewChild,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { List } from '@ionic/angular';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -36,6 +37,8 @@ export class HomePage implements OnInit, IViewNavEvents {
   public toggle:any = {};
 
   private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string}
+
+  @ViewChild('markerGroupList') slidingList: List;
 
   private _selectedMarkerGroup: string;
   public get selectedMarkerGroup() { return this._selectedMarkerGroup }
@@ -260,10 +263,10 @@ export class HomePage implements OnInit, IViewNavEvents {
   }
 
 
-  // BUG: after reorder, <ion-item-options> is missing from dropped item
   reorderMarkerGroup(ev){
-    // make changes to local copy, not BehaviorSubject/DB
-    const localCopy = RestyTrnHelper.getCachedMarkers(this._mgSub.value(), 'visible');
+    // make changes to local copy, not resty/DB
+    // localCopy includes o._rest_action='delete' items because from,to index includes the same
+    const localCopy = RestyTrnHelper.getCachedMarkers(this._mgSub.value());
     const {from, to} = ev.detail;
     let move = localCopy.splice(from,1);
     localCopy.splice( to, 0, move[0]);
@@ -381,6 +384,12 @@ export class HomePage implements OnInit, IViewNavEvents {
     switch(change.action){
       case 'selected':
         return this.selectedMarkerGroup = change.data.uuid;
+      case 'remove':
+        RestyTrnHelper.childComponentsChange(change, this._mgSub);
+
+        // BUG: ion-item-sliding
+        // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
+        return this.slidingList.closeSlidingItems();
       default:
         return RestyTrnHelper.childComponentsChange(change, this._mgSub);
     }

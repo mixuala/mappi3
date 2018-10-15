@@ -1,7 +1,8 @@
-import { Component, ElementRef, EventEmitter, OnInit, OnChanges, Input, Output, 
+import { Component, ElementRef, EventEmitter, OnInit, OnChanges, Input, Output, ViewChild,
   Host, Optional, SimpleChange, 
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
+import { List } from '@ionic/angular';
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 import { Plugins } from '@capacitor/core';
 
@@ -41,6 +42,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   // layout mode of parent, enum=['edit', 'child', 'default']
   @Input() parentLayout: string;  
   @Input() mgFocus: IMarkerGroup;
+
+  @ViewChild('markerItemList') slidingList: List;
 
   @Output() mgFocusChange: EventEmitter<IMarkerGroup> = new EventEmitter<IMarkerGroup>();
   @Output() mgChange: EventEmitter<{data:IMarkerGroup, action:string}> = new EventEmitter<{data:IMarkerGroup, action:string}>();
@@ -200,7 +203,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   reorderMarkerItem(ev){
     const mg = this.mgSubject.value;
     const {from, to} = ev.detail;
-    const copy = this._getCachedMarkerItems(mg, 'visible')
+    // make changes to local copy, not resty/DB
+    // localCopy includes o._rest_action='delete' items because from,to index includes the same
+    const copy = this._getCachedMarkerItems(mg)
     let move = copy.splice(from,1);
     copy.splice( to, 0, move[0]);
 
@@ -253,6 +258,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         mi['_rest_action'] = 'delete';
         items = this._getCachedMarkerItems(mg); 
         this._miSub[mg.uuid].next(items);
+
+        // BUG: ion-item-sliding
+        // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
+        this.slidingList.closeSlidingItems();
         break;
     }
   }

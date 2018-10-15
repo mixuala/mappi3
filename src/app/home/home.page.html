@@ -45,7 +45,7 @@
                 [disabled]="layout!='edit'" 
                 (ionItemReorder)="reorderMarkerGroup($event)">
   <!-- NOTE: ion-reorder does NOT drag-drop app-markger-group unless wrapped by ion-list -->
-                  <ion-list *ngFor="let item of mgCollection$ | async" >
+                  <ion-list *ngFor="let item of mgCollection$ | async" #markerGroupList>
                     <app-marker-group *ngIf="item?._rest_action!='delete'"
                       [mg]="item" [parentLayout]="layout" 
                       (mgChange)="childComponentsChange($event)" [(mgFocus)]="mgFocus" ></app-marker-group>

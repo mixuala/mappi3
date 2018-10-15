@@ -24,7 +24,7 @@
       <ion-reorder-group 
         [disabled]="layout!='focus-marker-group'"
         (ionItemReorder)="reorderMarkerItem($event)">
-        <ion-list *ngFor="let mi of miCollection$[marker.uuid] | async">
+        <ion-list *ngFor="let mi of miCollection$[marker.uuid] | async" #markerItemList>
           <app-marker-item *ngIf="mi?._rest_action!='delete'"
            [mi]="mi" [parentLayout]="layout" (miChange)="childComponentsChange($event)"></app-marker-item>
         </ion-list>
@@ -33,9 +33,6 @@
             <ion-button class="as-thumbnail" slot="start" expand="full" size="large">
               <ion-icon slot="icon-only" name="add"></ion-icon>
             </ion-button>
-            <!-- <ion-thumbnail slot="start">
-              <ion-img src="https://picsum.photos/80?image=0"></ion-img>
-            </ion-thumbnail> -->
             <ion-label color="primary"> Add photo/marker </ion-label>
           </ion-item>            
         </ion-list>

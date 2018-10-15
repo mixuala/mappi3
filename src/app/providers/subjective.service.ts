@@ -33,9 +33,10 @@ export class SubjectiveService<T> {
     else {
       this.resty.get(uuid)
       .then(arr=>{
-        if (arr.length && arr[0].hasOwnProperty('label'))
+        if (['MarkerList', 'MarkerGroup'].includes(this.resty.className)){
           arr.sort( (a,b)=>a['label']>b['label'] ? 1:-1 );
-        // arr.forEach( (o,i)=>o['seq']=i);
+          arr.forEach( (o,i)=>o['seq']=i);
+        }
         // arr.map( (o,i,l)=>{
         //   // HACK: persist alpha sort/.seq to original data
         //   this.resty["_data"][o['uuid']]=Object.assign({},o);
