@@ -13,7 +13,7 @@
           </ion-button>
       </ion-buttons>    
       <ion-title>
-        Map {{parent?.label || parent?.seq}}
+        {{parent?.label || parent?.seq}}
       </ion-title>
     </ion-toolbar>
   </ion-header>
@@ -88,7 +88,7 @@
             ngClass.centered="mgFocus"
             *ngFor="let item of mgCollection$ | async">
             <app-marker-group  *ngIf="item?._rest_action!='delete'"
-              [mg]="item" [parentLayout]="'share'" 
+              [mg]="item" [parentLayout]="'share'"
               (mgChange)="childComponentsChange($event)"
               (thumbClick)="openGallery($event)"
               [(mgFocus)]="mgFocus" ></app-marker-group>

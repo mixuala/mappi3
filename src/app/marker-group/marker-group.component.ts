@@ -183,6 +183,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     }
     this.stash.favorite = value != null ? value : !this.stash.favorite;
     mg.favorite = this.stash.favorite;
+    this.mgChange.emit( {data:mg, action:'favorite'} );
     this.mgSubject.next(mg);
   }
 

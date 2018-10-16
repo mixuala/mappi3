@@ -5,7 +5,7 @@ import { Component, OnInit, ViewChild,
 import { ActivatedRoute, Router } from '@angular/router';
 import { List } from '@ionic/angular';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, switchMap, skipWhile } from 'rxjs/operators';
 
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
@@ -33,6 +33,7 @@ export class HomePage implements OnInit, IViewNavEvents {
   public mgCollection$ : Observable<IMarkerGroup[]>;
   // Observable for GoogleMapsComponent
   public markerCollection$ : Observable<IMarker[]>;
+  public unsubscribe$ : Subject<boolean> = new Subject<boolean>();
   public qrcodeData: string = null;
   public toggle:any = {};
 
@@ -118,33 +119,35 @@ export class HomePage implements OnInit, IViewNavEvents {
 
 
   async ngOnInit() {
+
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
+    const mListSub = MockDataService.getSubjByUuid(mListId) || 
+    MockDataService.getSubjByUuid(mListId, new SubjectiveService(this.dataService.MarkerLists));
+    const mgSubj = MockDataService.getSubjByParentUuid(mListId) || 
+    MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
+    this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
+    this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$(); 
+    // this.mgCollection$.subscribe( mgs=>{
+    //   console.log("mgCollection$", mgs)
+    // })
     
-    console.log("HomePage: markerList" , this.parent)
-    
-    // // BUG: mgCollection$ must be set here, or template will not load
-    this.mgCollection$ = this.dataService.sjMarkerGroups.get$([]);
-    
-    await this.dataService.ready()
-    this.parent = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId)
-    if (!this.parent) {
-      const mL = await this.dataService.sjMarkerLists.resty.get([mListId]);
-      this.parent = mL[0];
-    };
-    let mgSubject = MockDataService.getSubjByParentUuid(this.parent.uuid) as SubjectiveService<IMarkerGroup>;
-    if (!mgSubject) {
-      this._mgSub = this.dataService.sjMarkerGroups;
-      this._mgSub.get$(this.parent.markerGroupIds)
-        // .subscribe( mgs=>console.log("*** markerGroups", mgs))
-      mgSubject = MockDataService.getSubjByParentUuid(this.parent.uuid, this._mgSub) as SubjectiveService<IMarkerGroup>;
-    } else 
-      this._mgSub = mgSubject;
+    await this.dataService.ready();
+    const done = mListSub.get$([mListId])
+    .pipe(
+      takeUntil(this.unsubscribe$),
+      skipWhile( v=>v.length==0),
+      switchMap( (mLists:IMarkerList[])=>{
+        this.parent = mLists[0];
+        if (!this.parent) return Promise.resolve([]);
+        return mgSubj.get$( this.parent.markerGroupIds )
+      })
+    )
+    .subscribe( res=>{
+      //   console.info(`HomePage ${mListId} mgs, count=`, arr.length, arr);
+    })
 
-    this.markerCollection$ = this.mgCollection$ = mgSubject.watch$();
-    // this.mgCollection$.subscribe( arr=>{
-    //   console.info(`HomePage ${mListId} mgs, count=`, arr.length, arr);
-    // });
+    // window['check'] = MockDataService.subjectCache;
 
     // detectChanges if in `edit` mode
     const layout = this.route.snapshot.queryParams.layout;
@@ -164,6 +167,8 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   ngOnDestroy() {
     console.warn("ngOnDestroy: unsubscribe to all subscriptions.")
+    this.unsubscribe$.next(true);
+    this.unsubscribe$.complete();
   }
 
 

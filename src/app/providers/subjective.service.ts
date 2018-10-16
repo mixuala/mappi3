@@ -15,12 +15,14 @@ export class SubjectiveService<T> {
   private _observable$: Observable<T[]>;
 
   constructor(resty:RestyService<T>) {
+    this.className = resty.className;
     this.resty = resty;
     this.subject$ = new BehaviorSubject<T[]>([]);
-    this.className = resty.className;
+    this._observable$ = this.subject$.pipe( SubjectiveService.sortBySeq );
    }
 
   static sortBySeq = map( (v:any[],j)=>{
+    if (!v) return v;
     v.sort( (a,b)=>a.seq-b.seq )
     return v;
   })
@@ -45,7 +47,7 @@ export class SubjectiveService<T> {
       })
     }
   
-    return this._observable$ = this.subject$.pipe( SubjectiveService.sortBySeq );
+    return this._observable$;
   }
   next( items:T[] ){
     items.sort( (a,b)=>a['seq']-b['seq'] );

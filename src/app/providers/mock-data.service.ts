@@ -91,11 +91,23 @@ export class MockDataService {
    * helper functions
    */
   // local cache of SubjectiveService<IMarker>
-  public static subjectCache: {[uuid: string]:SubjectiveService<IMarker>} = {};
-  static getSubjByParentUuid(uuid:string, subj?:SubjectiveService<IMarker>){
+  public static subjectCache: {
+    [uuid: string]:{
+      self:SubjectiveService<IMarker>, 
+      child:SubjectiveService<IMarker>
+    }
+  } = {};
+  static getSubjByUuid(uuid:string, subj?:SubjectiveService<IMarker>){
+    MockDataService.subjectCache[uuid] = MockDataService.subjectCache[uuid] || {self: null, child:null};
     if (subj)
-      MockDataService.subjectCache[uuid] = subj;   
-    return MockDataService.subjectCache[uuid] || null;
+      MockDataService.subjectCache[uuid].self = subj;   
+    return MockDataService.subjectCache[uuid].self || null;
+  }
+  static getSubjByParentUuid(uuid:string, subj?:SubjectiveService<IMarker>){
+    MockDataService.subjectCache[uuid] = MockDataService.subjectCache[uuid] || {self: null, child:null};
+    if (subj)
+      MockDataService.subjectCache[uuid].child = subj;   
+    return MockDataService.subjectCache[uuid].child || null;
   }
 
 
