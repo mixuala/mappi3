@@ -410,6 +410,10 @@ export class HomePage implements OnInit, IViewNavEvents {
   }
 
 
+  focusMarker(ev:{index:number, items:any[], uuid:string}){
+    this.selectedMarkerGroup = this.gallery.uuid;
+  }
+
   /*
    * additional event handlers, possibly called from @ViewChilds
    */ 

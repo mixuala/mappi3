@@ -4,6 +4,7 @@ import { Platform } from '@ionic/angular';
 import * as Camera from '@ionic-native/camera/ngx';
 import { Plugins, CameraSource } from '@capacitor/core';
 
+import { AppComponent } from '../../app.component';
 import { MockDataService, RestyTrnHelper, IMarker, IPhoto, quickUuid } from '../mock-data.service';
 
 const { Device } = Plugins;
@@ -176,7 +177,7 @@ export class PhotoService {
       switch (device.platform){
         case 'ios':
         case 'android':
-          const options = {targetWidth:320};
+          const options = {targetWidth: Math.min(AppComponent.screenWidth, AppComponent.screenHeight)};
           return this.exif_GetImage(options)
           .then( (data)=>{
             return this._parseCameraWithExifResponse(data, seq)
@@ -199,7 +200,7 @@ export class PhotoService {
       return `${parts[0].replace(/\:/g,"-")}T${parts[1]}`;
     }
     function _calcImgSrcDim(resp):{width:number,height:number}{
-      let {targetWidth, targetHeight} = resp;
+      let {targetWidth, targetHeight } = resp;
       const {PixelXDimension, PixelYDimension} = resp.exif;
       if (PixelXDimension && PixelYDimension) {
         if (!targetWidth && targetHeight) {
@@ -213,6 +214,20 @@ export class PhotoService {
         height: targetHeight,
       }
     }
+    function _rotateDim(p:IPhoto):IPhoto{
+      if (p.orientation > 4){
+        const {width, height} = p;
+        p.width = height;
+        p.height = width;
+      }
+      if (p.orientation > 4){
+        const {width, height} = p.image;
+        p.image.width = height;
+        p.image.height = width;
+      }
+      return p;
+    }
+
     const exif:any = resp.exif || {};
     const tiff:any = resp.tiff || {};
     const gps:any = resp.gps || {};
@@ -241,6 +256,7 @@ export class PhotoService {
     })
     // # final adjustments
     p.image = _calcImgSrcDim(resp);
+    _rotateDim(p);
     if (p.loc.join() === [0,0].join()) p["_loc_was_map_center"] = true;
     return p;
   }

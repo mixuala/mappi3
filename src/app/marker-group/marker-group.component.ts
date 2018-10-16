@@ -6,7 +6,7 @@ import { List } from '@ionic/angular';
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 import { Plugins } from '@capacitor/core';
 
-
+import { AppComponent } from '../app.component';
 import { MockDataService, quickUuid, IMarkerGroup, IPhoto,IMarker } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
@@ -72,15 +72,15 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   }
 
   async ngAfterViewInit(){
-    try {
-      if (['gallery', 'share'].includes(this.layout)){
-        const clientWidth = this.element.nativeElement.closest('ION-CONTENT').clientWidth;
-        if (!clientWidth) return setTimeout( ()=>this.ngAfterViewInit(), 10);
-        const thumbsize = clientWidth < 768 ? 56 : 80 * 2;
-        this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
-        console.log("markerItem limit=", this.miLimit)
+    if (['gallery', 'share'].includes(this.layout)){
+      let clientWidth = Math.min(AppComponent.screenHeight, AppComponent.screenWidth);
+      if (clientWidth < AppComponent.screenWidth){
+        clientWidth = AppComponent.screenWidth * 0.5;
       }
-    } catch (err){}
+      const thumbsize = AppComponent.screenWidth < 768 ? 56 : 80;
+      this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
+      console.log("markerItem limit=", this.miLimit)
+    }
   }
 
   ngOnDestroy() {

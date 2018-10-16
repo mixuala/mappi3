@@ -1,4 +1,5 @@
-import { Component, OnDestroy, OnInit, AfterViewInit, ElementRef, Input, ViewEncapsulation,
+import { Component, OnDestroy, OnInit, AfterViewInit, 
+  ElementRef, EventEmitter, Input, Output, ViewEncapsulation,
   ChangeDetectionStrategy, SimpleChange } from '@angular/core';
 
 import * as PhotoSwipe from 'photoswipe';  
@@ -26,7 +27,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   private _fsClosure:{el:Element, type:string, handler:(e:Event)=>void};
 
   @Input() data:{items:PhotoSwipe.Item[], index:number, uuid:string};
-  
+  @Output() indexChange: EventEmitter<{index:number, items:any[], uuid:string}> = new EventEmitter<{index:number, items:any[], uuid:string}>();
   constructor(
     private elementRef: ElementRef,
     // private viewCtrl: ViewController,
@@ -185,6 +186,13 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
               , galleryOptions
               );
             this.launch(gallery);
+            gallery.listen('afterChange', ()=>{
+              this.indexChange.emit({
+                items:gallery.items, 
+                index:gallery.getCurrentIndex(), 
+                uuid:uuid
+              });
+            });
           });
           break;
       }

@@ -46,7 +46,7 @@ export class SharePage implements OnInit, IViewNavEvents {
   public qrcodeData: string = null;
   public toggle:any = {};
 
-  private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string}
+  private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string, mgUuids?:string[]}
 
   private _selectedMarkerGroup: string;
   public get selectedMarkerGroup() { return this._selectedMarkerGroup }
@@ -207,20 +207,32 @@ export class SharePage implements OnInit, IViewNavEvents {
    */
   openGallery(ev:{mg:IMarkerGroup, mi:IPhoto}) {
     const {mg, mi} = ev;
-    const items:PhotoSwipe.Item[] = []; 
+    const items:PhotoSwipe.Item[] = [];
+    const mgUuids:string[] = []; // index lookup to MarkerGroup.uuid
 
-    const mgPhotos_subject = this._getSubjectForMarkerItems(mg);
-    mgPhotos_subject.value().map( (p:IPhoto)=>{
-      items.push({
-        src: p.src,
-        w: p.width,
-        h: p.height,
+    // get all photos for all markerGroups in this markerList
+    const mgs = this._mgSub.value();
+    let found:number;
+    mgs.forEach( mg=>{
+      const mgPhotos_subject = this._getSubjectForMarkerItems(mg);
+      mgPhotos_subject.value().map( (p:IPhoto)=>{
+        items.push({
+          src: p.src,
+          w: p.width,
+          h: p.height,
+        });
+        mgUuids.push(mg.uuid);
+        if (p.uuid == mi.uuid)
+          found = items.length-1;
       });
-    });
-    const found = mgPhotos_subject.value().findIndex( p=>p.uuid==mi.uuid );
-    const index = ~found ? found : 0;
-    const uuid = mg.uuid;
-    this.gallery = {items, index, uuid};
+    })
+    const index = found || 0;
+    const uuid = this.parent.uuid;
+    this.gallery = {items, index, uuid, mgUuids};
+  }
+
+  focusMarker(ev:{index:number, items:any[], uuid:string}){
+    this.selectedMarkerGroup = this.gallery.mgUuids[ev.index];
   }
 
 

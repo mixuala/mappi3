@@ -31,6 +31,7 @@ import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
   declarations: [AppComponent, 
   ],
   exports: [
+    AppComponent,
   ],
   entryComponents: [],
   imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,

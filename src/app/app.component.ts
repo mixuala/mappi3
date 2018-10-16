@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, HostListener } from '@angular/core';
 
 import { Platform } from '@ionic/angular';
 import { SplashScreen } from '@ionic-native/splash-screen/ngx';
@@ -22,12 +22,23 @@ export class AppComponent {
     },
   ];
 
+  public static screenHeight:number;
+  public static screenWidth:number;
+
+  @HostListener('window:resize', ['$event'])
+  onResize(event?) {
+    AppComponent.screenHeight = window.innerHeight;
+    AppComponent.screenWidth = window.innerWidth;
+    // console.log("screenWidth=", AppComponent.screenWidth);
+  }
+
   constructor(
     private platform: Platform,
     private splashScreen: SplashScreen,
     private statusBar: StatusBar
   ) {
     this.initializeApp();
+    this.onResize();
   }
 
   initializeApp() {
