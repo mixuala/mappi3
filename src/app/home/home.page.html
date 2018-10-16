@@ -1,5 +1,5 @@
 <ion-header>
-  <ion-toolbar color="success">
+  <ion-toolbar color="tertiary">
     <ion-buttons slot="start">
       <ion-back-button class="mobile-only" text=""></ion-back-button>
       <ion-menu-button></ion-menu-button>
@@ -26,7 +26,7 @@
   <app-google-maps *ngIf="markerCollection$ | async as items"
   apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94" 
   [items]="items"
-  [mode]="layout"
+  [mode]="mapSettings"
   [(selected)]="selectedMarkerGroup"
   (itemChange)="mappiMarkerChange($event)"
   (mapReady)="setMap($event)"

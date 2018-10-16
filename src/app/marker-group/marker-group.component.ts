@@ -72,13 +72,15 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   }
 
   async ngAfterViewInit(){
-    if (['gallery', 'share'].includes(this.layout)){
-      const clientWidth = this.element.nativeElement.closest('ION-CONTENT').clientWidth;
-      if (!clientWidth) return setTimeout( ()=>this.ngAfterViewInit(), 10);
-      const thumbsize = clientWidth < 768 ? 56 : 80 * 2;
-      this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
-      console.log("markerItem limit=", this.miLimit)
-    }
+    try {
+      if (['gallery', 'share'].includes(this.layout)){
+        const clientWidth = this.element.nativeElement.closest('ION-CONTENT').clientWidth;
+        if (!clientWidth) return setTimeout( ()=>this.ngAfterViewInit(), 10);
+        const thumbsize = clientWidth < 768 ? 56 : 80 * 2;
+        this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
+        console.log("markerItem limit=", this.miLimit)
+      }
+    } catch (err){}
   }
 
   ngOnDestroy() {
@@ -102,18 +104,14 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             const subject = new SubjectiveService(this.dataService.Photos);
             this._miSub[mg.uuid] = MockDataService.getSubjByParentUuid(mg.uuid, subject) as SubjectiveService<IPhoto>;
             this.miCollection$[mg.uuid] = subject.get$(mg.markerItemIds);
-            // this.dataService.markerCollSubjectDict[mg.uuid] = subject;
-            // this.miCollection$[mg.uuid].subscribe( items=>{
-            //   if (items.length>2)
-            //     console.warn(`>>> photo$ for mg: ${mg.label || mg.seq}: count=${items.length}`)
-            // });
             this.mgSubject.next(mg);
 
             // init owner data
             mg.favorite = mg.favorite || false;  
             this.toggleFavorite(null, mg); // initializes view component
 
-            if (doChangeDetection) setTimeout(()=>this.cd.detectChanges())
+            if (doChangeDetection) 
+              setTimeout(()=>this.cd.detectChanges(), 10);
           });
           break;
         case 'parentLayout':
@@ -146,7 +144,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     if (this.layout != "focus-marker-group") {
       this.stash.layout = this.layout;
       this.layout = "focus-marker-group";
-
       // hide all MarkerGroupComponents that are not in layout="focus-marker-group" mode
       this.mgFocusChange.emit( this.mgSubject.value )      
     }

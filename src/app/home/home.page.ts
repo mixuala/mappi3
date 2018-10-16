@@ -15,7 +15,7 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
-import { GoogleMapsComponent } from '../google-maps/google-maps.component';
+import { GoogleMapsComponent , IMapActions } from '../google-maps/google-maps.component';
 
 @Component({
   selector: 'app-home',
@@ -27,6 +27,11 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   // layout of markerList > markerGroups > markerItems: [edit, default]
   public layout: string;
+  public mapSettings: IMapActions = {
+    dragend: false,
+    click: false,
+    clickadd: false,
+  }
   public parent: IMarkerList;
 
   // Observable for MarkerGroupComponent
@@ -67,9 +72,19 @@ export class HomePage implements OnInit, IViewNavEvents {
         // MappiMarker.reset();
         const subject = this._getSubjectForMarkerItems(value);
         this.markerCollection$ = subject.watch$();
+        this.mapSettings = {
+            dragend: true,
+            click: true,
+            clickadd: false,
+          }
         break;
       case "groups":
         // MappiMarker.reset();
+        this.mapSettings = {
+          dragend: false,
+          click: false,
+          clickadd: false,
+        }
         this.selectedMarkerGroup = value ? value.uuid : null;
         this.markerCollection$ = this.mgCollection$;
         break;
@@ -161,6 +176,12 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   }
 
+  viewWillEnter(){
+    // this.mapSettings = Object.assign({}, this.mapSettings);
+    this._mgSub.reload();
+    console.log("viewWillEnter: HomePage")
+  }
+
   viewWillLeave(){
     console.log("viewWillLeave: HomePage")
   }
@@ -176,6 +197,11 @@ export class HomePage implements OnInit, IViewNavEvents {
     if (this.layout != "edit" || action=='edit') {
       this.toggle.layout = this.layout;
       this.layout = "edit";
+      this.mapSettings = {
+        dragend: true,
+        click: true,
+        clickadd: true,
+      }
       console.log("home.page.ts: layout=", this.layout)
     }
     else {
@@ -183,6 +209,11 @@ export class HomePage implements OnInit, IViewNavEvents {
       .then( 
         res=>{
           this.layout = this.toggle.layout;
+          this.mapSettings = {
+            dragend: false,
+            click: false,
+            clickadd: false,
+          }
           console.log("home.page.ts: layout=", this.layout)
         },
         err=>console.log('ERROR saving changes', err)
@@ -306,56 +337,52 @@ export class HomePage implements OnInit, IViewNavEvents {
           // create MarkerGroup at IMarker location
           await this.createMarkerGroup(undefined, mm)
           // manually trigger ChangeDetection when click from google.maps
-          setTimeout(() => this.cd.detectChanges(),10);
-          return;
+          break;
         case 'update':    // NOTE: can update IMarkerGroup or IPhoto
-          return this.handle_MarkerGroupMoved(change);
+          this.handle_MarkerGroupMoved(change);
+          break;
       }
     } else if (this.mgFocus) {
       this.handle_MarkerItemMoved(change);
     }
+    setTimeout(() => this.cd.detectChanges(),10);
   }
 
   handle_MarkerGroupMoved(change:{data:IMarker, action:string}){
     const mm = change.data;
-    const items = RestyTrnHelper.getCachedMarkers(this._mgSub.value() );
-    const found = items.findIndex(o => o.uuid == mm.uuid);
-    if (~found) {
-      const { loc, locOffset } = mm;
-      const mg = Object.assign(items[found], { loc, locOffset });
-      mg.position = MappiMarker.position(mg);
-      this.childComponentsChange({ data: mg, action: 'update' });
-      // run changeDetection, by changing object reference
-      // items.splice(found, 1, mg);
-      this._mgSub.next(items as IMarkerGroup[]);
-
-      setTimeout(()=>this.cd.detectChanges())
-      // BUG: need to call cd.detectChanges from the MarkerItemComponent
-      console.warn("BUG: need to call cd.detectChanges from the MarkerItemComponent");
+    const subject = this._mgSub;
+    // const items = RestyTrnHelper.getCachedMarkers( subj.value() );
+    const items = subject.value();
+    if (change.action = 'update') {
+      const found = items.findIndex(o => o.uuid == mm.uuid);
+      if (~found) {
+        const { loc, locOffset } = mm;
+        const marker = Object.assign(items[found], { loc, locOffset });
+        marker.position = MappiMarker.position(marker);
+        marker['modified'] = new Date();
+        marker['_detectChanges'] = 1;   // signal MarkerGroupComponent to do ChangeDetection
+        // this.childComponentsChange({ data: marker, action: 'update' });
+        marker['_rest_action'] = marker['_rest_action'] || 'put';
+        subject.next(items);
+      }
     }
   }
 
   handle_MarkerItemMoved(change:{data:IMarker, action:string}){
-    const marker = change.data;
+    const mm = change.data;
     const mg = this.mgFocus;
-    const miCollectionSubject = this._getSubjectForMarkerItems( mg );
-    const items = miCollectionSubject.value();
+    const subject = this._getSubjectForMarkerItems( mg );
+    const items = subject.value();
     if (change.action = 'update') {
-      const found = items.findIndex(o => o.uuid == marker.uuid);
+      const found = items.findIndex(o => o.uuid == mm.uuid);
       if (~found) {
-        const { loc, locOffset } = marker;
-        const mi = Object.assign(items[found], { loc, locOffset });
-        mi.position = MappiMarker.position(mi);
-
-        // needs to be MarkerGroupComponent, or needs to be moved to component controller
-        // this.MarkerGroupComponent.childComponentsChange({ data: mi, action: 'update' });
-        mi['_rest_action'] = mi['_rest_action'] || 'put';
-        
-        // run changeDetection, by changing object reference
-        // items.splice(found, 1, mi);
-        miCollectionSubject.next(items);
-
-        setTimeout(()=>this.cd.detectChanges())
+        const { loc, locOffset } = mm;
+        const marker = Object.assign(items[found], { loc, locOffset });
+        marker.position = MappiMarker.position(marker);
+        marker['modified'] = new Date();
+        marker['_detectChanges'] = 1;   // signal MarkerGroupComponent to do ChangeDetection
+        marker['_rest_action'] = marker['_rest_action'] || 'put';
+        subject.next(items);
       }        
     }
   }

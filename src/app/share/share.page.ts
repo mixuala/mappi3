@@ -16,7 +16,7 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
-import { GoogleMapsComponent } from '../google-maps/google-maps.component';
+import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
 
 
 const { Browser, Device } = Plugins;
@@ -32,6 +32,10 @@ export class SharePage implements OnInit, IViewNavEvents {
 
   // layout of markerList > markerGroups > markerItems: [edit, default]
   public layout: string;
+  public mapSettings: IMapActions = {
+    dragend: false,
+    click: false,
+  }
   public parent: IMarkerList;
 
   // Observable for MarkerGroupComponent
@@ -180,6 +184,12 @@ export class SharePage implements OnInit, IViewNavEvents {
 
   }
 
+  viewWillEnter(){
+    // this.mapSettings = Object.assign({}, this.mapSettings);
+    this._mgSub.reload();
+    console.log("viewWillEnter: SharePage")
+  }
+
   viewWillLeave(){
     console.log("viewWillLeave: SharePage")
   }
@@ -226,7 +236,9 @@ export class SharePage implements OnInit, IViewNavEvents {
         return this.selectedMarkerGroup = change.data.uuid;
       case 'favorite':
         // DEV: commit immediately
+        marker['modified'] = new Date();
         const done = await this._mgSub.resty.put(marker.uuid, marker as IMarkerGroup);
+        this._mgSub.reload();
     }
   }
 

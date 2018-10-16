@@ -80,10 +80,13 @@ export class RestyService<T> {
     if (!o)
       return Promise.reject(false);
     const uuid = o['uuid'] || quickUuid();
+    const now = new Date();
     if (Object.keys(this._data).includes(uuid)) 
       return Promise.reject("ERROR: duplicate uuid");
     const cleaned = RestyService.cleanProperties(o);
     cleaned['uuid'] = uuid;
+    if (!cleaned['created']) cleaned['created'] = now;
+    if (!cleaned['modified']) cleaned['modified'] = now;
     this._data[uuid] = cleaned as T;
     this.debug && console.log( `${this.className}: POST`, cleaned);
     if (Storage){
@@ -101,6 +104,7 @@ export class RestyService<T> {
     const cleaned = RestyService.cleanProperties(o, fields);  
     if (this._data[uuid]) {
       o['uuid'] = uuid;
+      o['modified'] = new Date();
       Object.assign(this._data[uuid], cleaned);
       if (Storage){
         await Storage.set({key:o['uuid'], value:JSON.stringify(this._data[uuid])});

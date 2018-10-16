@@ -17,6 +17,13 @@ import { MarkerItemComponent } from '../marker-item/marker-item.component';
 
 const { Geolocation } = Plugins;
 
+export interface IMapActions {
+  dragend?: boolean;  //  ((m:IMarker)=>void);
+  click?:  boolean;  //  ((m:IMarker)=>void);
+  dblclick?:  boolean;  //  ((m:IMarker)=>void);
+  [propName: string]: any;
+}
+
 @Component({
   selector: 'app-google-maps',
   templateUrl: './google-maps.component.html',
@@ -29,7 +36,7 @@ export class GoogleMapsComponent implements OnInit {
 
   @Input('apiKey') apiKey: string;
   @Input() items: mappi.IMappiMarker[];
-  @Input() mode: string;
+  @Input() mode: IMapActions = {};
   
 
   @Input() selected:string;
@@ -205,11 +212,19 @@ export class GoogleMapsComponent implements OnInit {
       let [k,change] = en;
       switch(k){
         case 'mode':
-          if (change.firstChange) 
-            break;
-          this.click_AddMarker(change.currentValue=='edit');
-          const listen = change.currentValue=='edit';
-          console.info(">>> CLICK to add Marker", listen)
+          for (const [k,v] of Object.entries(change.currentValue)){
+            MappiMarker.markers.forEach( m=>{
+              // toggle listeners for each key
+              if (m._listeners && m._listeners[k]){ 
+                m._listeners[k](!!v);
+                if (k=='dragend') m.setDraggable(!!v);
+              }
+            });
+            if (k=='clickadd') {
+              this.click_AddMarker(!!v);
+              // console.info(">>> CLICK to add Marker", !!v)
+            }
+          } 
           break;
         case 'selected':
           // see: https://stackoverflow.com/questions/19296323/google-maps-marker-set-background-color?noredirect=1&lq=1
@@ -231,32 +246,65 @@ export class GoogleMapsComponent implements OnInit {
           });
           break;
         case 'items':
-          if (change.firstChange) {
-            // console.warn(">>> firstChange marker count=", change.currentValue.length);
-            // return;
-          }
-          this._mapSDKReady
-          .then( ()=>{
+        this._mapSDKReady
+        .then( ()=>{
             let items:IMarker[] = change.currentValue;
-            // console.warn("*** items marker count=", change.currentValue.length);
-            var gm = this.map;
-            items.forEach( (m,i)=>m.seq=i);  // reindex for labels
-            // ignore markers that are marked for delete pending commit
-            const visible = items.filter(o=>o['_rest_action']!='delete');
-            const visibleUuids = visible.map(o=>o.uuid);
-            // const markerUuids = MappiMarker.markers.map(o=>o.uuid);
-            const hidden = MappiMarker.markers.filter(o=>!visibleUuids.includes(o.uuid));
-            visible.forEach( (marker,i)=>{
-              const mm:mappi.IMappiMarker = marker;
-              this.addOneMarker(marker);
-            })
-            MappiMarker.hide(hidden);
-
-            if (visible.length) this.setMapBoundsWithMinZoom(visible);
+            const diff = this.diffMarkers(change);
+            this.renderMarkers(diff);
           })
           break;
       }
     });
+  }
+
+  // TODO: debounce this call, it's running about 4x each view transition
+  debounced_renderMarkers:(items:IMarker[])=>void = null;
+
+  /**
+   * Simple diff on change, if the count of visible, current, and previous markers are the same,
+   * then just check uuid and modified are equal to skip additional rendering
+   * @param change SimpleChange
+   */
+  diffMarkers(change:SimpleChange):IMarker[] {
+    try {
+      const visible = MappiMarker.visible();
+      if (visible.length == change.currentValue.length &&
+        visible.length == change.previousValue.length)
+      {
+        const diff = change.currentValue.filter( (o,i) => {
+          const prev = change.previousValue[i];
+          return !(o.uuid == prev.uuid && o.modified == prev.modified);
+        })
+        if (diff.length == 0){
+          console.warn("*** diffMarkers: SKIP", change.currentValue, change.previousValue)
+          return null;
+        }
+      }
+    } catch (err) {}
+    return change.currentValue;
+  }
+
+  /**
+   * 
+   * @param items IMarker[], if null, then skip rendering step
+   */
+  renderMarkers(items:IMarker[]) {
+    if (items===null) return;
+    var gm = this.map;
+    items.forEach( (m,i)=>m.seq=i);  // reindex for labels
+    // ignore markers that are marked for delete pending commit
+    const visible = items.filter(o=>o['_rest_action']!='delete');
+    const visibleUuids = visible.map(o=>o.uuid);
+    // const markerUuids = MappiMarker.markers.map(o=>o.uuid);
+    const hidden = MappiMarker.markers.filter(o=>!visibleUuids.includes(o.uuid));
+    visible.forEach( (marker,i)=>{
+      const mm:mappi.IMappiMarker = marker;
+      this.addOneMarker(marker);
+    })
+    MappiMarker.hide(hidden);
+
+    if (visible.length) this.setMapBoundsWithMinZoom(visible);
+    const check = MappiMarker.visible();
   }
 
   public setMapBoundsWithMinZoom(markers:IMarker[], minZoom=15){
@@ -289,6 +337,7 @@ export class GoogleMapsComponent implements OnInit {
 
   public addOneMarker(mm:mappi.IMappiMarker): void {
     const self = this;
+    const position = MappiMarker.position(mm);
     const found = MappiMarker.markers.find( o=>o.uuid==mm.uuid);
     if (found) {
       mm._marker = found;
@@ -298,14 +347,16 @@ export class GoogleMapsComponent implements OnInit {
         color: mm.uuid == self.selected ? 'black' : 'darkred',
         fontWeight: mm.uuid == self.selected ? '900' : '400',
       });
-      return;
+      mm._marker.setPosition(position);
+      mm._marker.setDraggable(!!this.mode['dragend']);
+      mm._marker._listeners.dragend(!!this.mode['dragend']);
+      mm._marker._listeners.click(!!this.mode['click']);
     } 
     else {
-      const position = MappiMarker.position(mm);
       mm._marker = MappiMarker.make(mm.uuid, {        
         map: self.map,
         // animation: google.maps.Animation.BOUNCE,
-        draggable: true,
+        draggable: (!!this.mode['dragend']),
         position: position,
         // label: `${mm.seq+1}`
         label: {
@@ -315,12 +366,12 @@ export class GoogleMapsComponent implements OnInit {
         }
       });
       mm._marker._listeners = mm._marker._listeners || {};
-      mm._marker._listeners.dragend = self.listen_DragEnd(mm);
-      mm._marker._listeners.click = self.listen_Click(mm);
+      mm._marker._listeners.dragend = self.listen_DragEnd(mm)(!!this.mode['dragend']);
+      mm._marker._listeners.click = self.listen_Click(mm)(!!this.mode['click']);;
     }
   }
 
-  public addMarkers(items:mappi.IMappiMarker[]){
+  public XXXaddMarkers(items:mappi.IMappiMarker[]){
     // const newItems = MappiMarker.except(items.map(o=>o._marker));
     items.forEach( (mm,i)=>{
       if (mm._marker) {
@@ -330,6 +381,8 @@ export class GoogleMapsComponent implements OnInit {
           color: mm.uuid == this.selected ? 'black' : 'darkred',
           fontWeight: mm.uuid == this.selected ? '900' : '400',
         })
+        mm._marker._listeners.dragend(!!this.mode['dragend']);
+        mm._marker._listeners.click(!!this.mode['click']);
         return;
       }  
       this.addOneMarker(mm);
@@ -341,8 +394,13 @@ export class GoogleMapsComponent implements OnInit {
     const click_Marker = ListenerWrapper.make( ()=>{
       return mm._marker.addListener('click',(ev)=>{
   
-        this.selectedChange.emit(mm.uuid);
-        
+        if (typeof this.mode['click'] != 'boolean'){
+          // this.mode['click'](mm);
+        } else {
+          // default action
+          this.selectedChange.emit(mm.uuid);
+        }
+
         console.log("marker clicked: label=", mm._marker.getLabel().text, mm.uuid);
   
       })
@@ -355,10 +413,15 @@ export class GoogleMapsComponent implements OnInit {
       return mm._marker.addListener('dragend',(ev)=>{
         console.log("marker dragged to", mm._marker.getPosition().toJSON());
   
-        MappiMarker.moveItem(mm, mm._marker);
-        this.itemChange.emit({data:mm, action:'update'}); 
-        // => handled by HomePageComponent.mappMarkerChange()
-  
+        if (typeof this.mode['dragend'] != 'boolean'){
+          // this.mode['dragend'](mm);
+        } else {
+          // default action
+          MappiMarker.moveItem(mm, mm._marker);
+          this.itemChange.emit({data:mm, action:'update'}); 
+          // => handled by HomePageComponent.mappMarkerChange()
+        }
+        
       })
     })(true);  
     return dragend_Marker;
