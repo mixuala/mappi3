@@ -147,7 +147,7 @@ export class SharePage implements OnInit, IViewNavEvents {
     return await Browser.open({url:url})
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
     this.parent = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId)
@@ -155,22 +155,28 @@ export class SharePage implements OnInit, IViewNavEvents {
     console.log("SharePage: markerList" , this.parent)
 
     // // BUG: mgCollection$ must be set here, or template will not load
-    this._mgSub = this.dataService.sjMarkerGroups;
-    this.mgCollection$ = this._mgSub.get$([]);
-
-    this.dataService.ready()
-    .then( ()=>{
-      let mgSubject = MockDataService.getSubjByParentUuid(mListId) as SubjectiveService<IMarkerGroup>;
-      if (!mgSubject) {
-        return this.router.navigateByUrl('list');
-      } 
-      this.markerCollection$ = this.mgCollection$ = mgSubject.watch$();
+    this.mgCollection$ = this.dataService.sjMarkerGroups.get$([]);
+    
+    await this.dataService.ready()
+    this.parent = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId)
+    if (!this.parent) {
+      const mL = await this.dataService.sjMarkerLists.resty.get([mListId]);
+      this.parent = mL[0];
+    };
+    let mgSubject = MockDataService.getSubjByParentUuid(this.parent.uuid) as SubjectiveService<IMarkerGroup>;
+    if (!mgSubject) {
+      this._mgSub = this.dataService.sjMarkerGroups;
+      this._mgSub.get$(this.parent.markerGroupIds)
+        // .subscribe( mgs=>console.log("*** markerGroups", mgs))
+      mgSubject = MockDataService.getSubjByParentUuid(this.parent.uuid, this._mgSub) as SubjectiveService<IMarkerGroup>;
+    } else 
       this._mgSub = mgSubject;
-      this.mgCollection$.subscribe( arr=>{
-        console.info(`SharePage ${mListId} mgs, count=`, arr.length);
-        arr.forEach( o=>console.log(o));
-      });
-    })
+
+    this.markerCollection$ = this.mgCollection$ = mgSubject.watch$();  
+    // this.mgCollection$.subscribe( arr=>{
+    //   console.info(`SharePage ${mListId} mgs, count=`, arr.length, arr);
+    // });
+
   }
 
   viewWillLeave(){

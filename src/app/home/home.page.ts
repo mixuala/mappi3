@@ -120,29 +120,31 @@ export class HomePage implements OnInit, IViewNavEvents {
   async ngOnInit() {
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
-    this.parent = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId)
-
+    
     console.log("HomePage: markerList" , this.parent)
-
+    
     // // BUG: mgCollection$ must be set here, or template will not load
-    this._mgSub = this.dataService.sjMarkerGroups;
-    this.mgCollection$ = this._mgSub.get$([]);
-
+    this.mgCollection$ = this.dataService.sjMarkerGroups.get$([]);
+    
     await this.dataService.ready()
-    let mgSubject = MockDataService.getSubjByParentUuid(mListId) as SubjectiveService<IMarkerGroup>;
+    this.parent = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId)
+    if (!this.parent) {
+      const mL = await this.dataService.sjMarkerLists.resty.get([mListId]);
+      this.parent = mL[0];
+    };
+    let mgSubject = MockDataService.getSubjByParentUuid(this.parent.uuid) as SubjectiveService<IMarkerGroup>;
     if (!mgSubject) {
-      // for testing only, reload /home
-      console.warn("DEV ONLY: Subject not ready, loading all markerGroups")
-      const DEV_Subject = this._mgSub;
-      DEV_Subject.get$('all');
-      MockDataService.getSubjByParentUuid(mListId, DEV_Subject);
-      mgSubject = DEV_Subject;
-    } 
+      this._mgSub = this.dataService.sjMarkerGroups;
+      this._mgSub.get$(this.parent.markerGroupIds)
+        // .subscribe( mgs=>console.log("*** markerGroups", mgs))
+      mgSubject = MockDataService.getSubjByParentUuid(this.parent.uuid, this._mgSub) as SubjectiveService<IMarkerGroup>;
+    } else 
+      this._mgSub = mgSubject;
+
     this.markerCollection$ = this.mgCollection$ = mgSubject.watch$();
-    this._mgSub = mgSubject;
-    this.mgCollection$.subscribe( arr=>{
-      console.info(`HomePage ${mListId} mgs, count=`, arr.length, arr);
-    });
+    // this.mgCollection$.subscribe( arr=>{
+    //   console.info(`HomePage ${mListId} mgs, count=`, arr.length, arr);
+    // });
 
     // detectChanges if in `edit` mode
     const layout = this.route.snapshot.queryParams.layout;

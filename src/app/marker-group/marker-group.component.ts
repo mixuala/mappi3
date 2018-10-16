@@ -71,12 +71,13 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     // })
   }
 
-  ngAfterViewInit(){
+  async ngAfterViewInit(){
     if (['gallery', 'share'].includes(this.layout)){
-      const clientWidth = this.element.nativeElement.closest('ion-content').clientWidth;
+      const clientWidth = this.element.nativeElement.closest('ION-CONTENT').clientWidth;
+      if (!clientWidth) return setTimeout( ()=>this.ngAfterViewInit(), 10);
       const thumbsize = clientWidth < 768 ? 56 : 80 * 2;
       this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
-      // console.log("markerItem limit=", this.miLimit)
+      console.log("markerItem limit=", this.miLimit)
     }
   }
 

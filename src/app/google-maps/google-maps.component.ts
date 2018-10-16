@@ -197,7 +197,7 @@ export class GoogleMapsComponent implements OnInit {
 
   public onMapReady():void {
     this.mapReady.emit({map:this.map, key:this.apiKey});
-    this.mgCollection$ = this._mgSub.get$();
+    // this.mgCollection$ = this._mgSub.get$();
   }
 
   ngOnChanges(o){
