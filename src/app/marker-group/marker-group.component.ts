@@ -118,7 +118,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           if (!this.mgFocusBlur) break;
           const focus = change.currentValue;
           const hide = focus && this.mgSubject.value.uuid != focus.uuid || false
-          // console.log(`** mgFocusChange: ${this.marker.label} hideen=${hide}`)
           this.mgFocusBlur.blur(hide)
           break;
       }

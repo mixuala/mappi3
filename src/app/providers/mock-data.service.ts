@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
+import { Plugins } from '@capacitor/core';
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
 import { Observable, BehaviorSubject } from 'rxjs';
 
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
+
+const { Storage } = Plugins;
 
 export function quickUuid() {
   // re-export
@@ -24,6 +27,7 @@ export interface IMarker {
 
 
 export interface IRestMarker extends IMarker {
+  className?: string;
   _rest_action?: string;
   _commit_child_item?: IMarker;
   _loc_was_map_center?: boolean;
@@ -80,7 +84,7 @@ export class MockDataService {
   public sjMarkerGroups:SubjectiveService<IMarkerGroup>;
   public sjPhotos:SubjectiveService<IPhoto>;
 
-  private _ready:Promise<void>;
+  private _ready:Promise<any>;
   private static MARKER_LISTS = [];
 
   /**
@@ -94,69 +98,108 @@ export class MockDataService {
     return MockDataService.subjectCache[uuid] || null;
   }
 
-  
 
   constructor() { 
+    this._ready = this.loadDatasources()
+    .then( ()=>console.log("TESTDATA READY"));
+    return;
+  }
+
+  ready():Promise<any> {
+    return this._ready;
+  }
+
+  async loadStorage():Promise<any> {
+    const result = await Storage.keys();
+    const data = {'Photo': [], 'MarkerGroup': [], 'MarkerList': [], 'unknown':{}};
+    if (result.keys.length==0) 
+      return Promise.resolve(false);
+
+    await Promise.all(result.keys.map( async (uuid)=> {
+      const resp:object = await Storage.get({key:uuid});
+      const o:IRestMarker = JSON.parse(resp['value']);
+      switch (o.className) {
+        case 'Photo':
+        case 'MarkerGroup':
+        case 'MarkerList':
+          data[o.className].push(o); break;
+        default:
+          data.unknown[uuid] = o;
+      }
+    }));
+    return Promise.resolve(data);
+  }
+
+  async loadTestData(): Promise<any> {
     const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo');
     const emptyMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
     const emptyMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
 
-    this._ready = Promise.resolve()
-    .then (()=>{
-      this.Photos = new RestyService(PHOTOS, "Photo");
-      this.MarkerGroups = new RestyService(MARKER_GROUPS, "MarkerGroup");
-  
-      // clean photos data
-      const photos:IPhoto[] = PHOTOS.map( (o,i,l)=>{
-        o = Object.assign({}, emptyPhoto, o)
-        return MockDataService.inflatePhoto(o, i);
-      });
-      this.Photos = new RestyService(photos, "Photo");
+    const data = {'Photo': [], 'MarkerGroup': [], 'MarkerList': [], 'unknown':{}};
+    
+    // load Photos
+    const photos:IPhoto[] = PHOTOS.map( (o,i,l)=>{
+      o = Object.assign({}, emptyPhoto, o)
+      return MockDataService.inflatePhoto(o, i);
+    });
+    this.Photos = new RestyService(photos, "Photo");
+    data['Photo'] = await this.Photos.get();
 
-      // clean marker data
-      return this.Photos.get()
-    })
-    .then( photos=>{
-      const shuffledMarkerItems = this.shuffle(photos);
-      const mgs = MARKER_GROUPS.map( (o,i,l)=> {
-        o = Object.assign({}, emptyMarkerGroup, o);
-        return MockDataService.inflateMarkerGroup(shuffledMarkerItems, o, i);
-      });
-      this.MarkerGroups = new RestyService(mgs, "MarkerGroup");
-    })
-    .then (()=>{
+    // load MarkerGroups from Photos
+    const shuffledMarkerItems = this.shuffle(data['Photo']);
+    const mgs = MARKER_GROUPS.map( (o,i,l)=> {
+      o = Object.assign({}, emptyMarkerGroup, o);
+      return MockDataService.inflateMarkerGroup(shuffledMarkerItems, o, i);
+    });
+    this.MarkerGroups = new RestyService(mgs, "MarkerGroup");
+    data['MarkerGroup'] = await this.MarkerGroups.get();
+
+    // load MarkerLists from MarkerGroups
+    // add some random markerLists
+    const count = 1;
+    const mgCount = 4;  // Math.floor(Math.random() *  4)+1;
+    for (let i=0;i<count;i++ ) {
+      const shuffledMarkerGroups = this.shuffle(data['MarkerGroup'], mgCount);
+      const o = MockDataService.inflateMarkerListFromMarkerGroups(shuffledMarkerGroups, emptyMarkerList, i);
+      data['MarkerList'].push(o);
+    }
+    this.MarkerLists = new RestyService(data['MarkerList'], "MarkerList");
+    data['MarkerList'] = await this.MarkerLists.get();
+
+    console.log("TESTDATA", data);
+    return data;
+  }
+
+  loadDatasources() {
+    return Promise.resolve() // return promise immediately for this.ready()
+    .then ( async ()=>{
+      // Storage.clear();
+      let data = await this.loadStorage();
+      if (data){
+        this.Photos = new RestyService(data.Photo, "Photo");
+        this.MarkerGroups = new RestyService(data.MarkerGroup, "MarkerGroup");
+        this.MarkerLists = new RestyService(data.MarkerList, "MarkerList");
+      }
+      else {
+        const testdata = await this.loadTestData();
+        ['Photo', 'MarkerGroup', 'MarkerList'].forEach( className=>{
+          testdata[className].forEach( async o=>{
+            const allowed = RestyService.cleanProperties(o);
+            await Storage.set({key: o.uuid, value: JSON.stringify(allowed)})
+          });
+        })
+      }
       this.sjPhotos = new SubjectiveService(this.Photos);
       this.sjMarkerGroups = new SubjectiveService(this.MarkerGroups);
-    })
-    .then (()=>{
-      // return this.sjMarkerGroups.get$().toPromise()
-      return this.MarkerGroups.get()
-    })
-    .then ((mgs)=>{
-      // add some random markerLists
-      const count = 1;
-      const mgCount = 4;  // Math.floor(Math.random() *  4)+1;
-      for (let i of Array(count)) {
-        const shuffledMarkerGroups = this.shuffle(mgs, mgCount);
-        const o = MockDataService.inflateMarkerListFromMarkerGroups(shuffledMarkerGroups, emptyMarkerList, i);
-        console.log(`uuid:${o.uuid}, markerGroups=` , shuffledMarkerGroups)
-        MockDataService.MARKER_LISTS.push(o);
-      }
-        
-      this.MarkerLists = new RestyService(MockDataService.MARKER_LISTS, "MarkerList");
       this.sjMarkerLists = new SubjectiveService(this.MarkerLists);
-    });    
+      return Promise.resolve(true);
+    })
   }
 
-  ready():Promise<void> {
-    return this._ready;
-  }
-
-  static inflateMarkerListFromMarkerGroups( mgs:IMarkerGroup[], o:IMarkerList, seq?:number ){
+  static inflateMarkerListFromMarkerGroups( mgs:IMarkerGroup[], o:IMarkerList, seq:number ){
     const first = mgs[0];
-    seq = seq || MockDataService.MARKER_LISTS.length;
     const data = {
-      label: `marker list ${seq}`,
+      label: `Map ${seq+1}`,
       seq: seq,
       uuid: quickUuid(),
       loc: first.loc.slice() as [number, number],
@@ -295,12 +338,14 @@ export class RestyTrnHelper {
       case 'MarkerGroup':
         extras = {
           className: 'MarkerGroup',
+          label: null,
           markerItemIds:[],
         }
         break;
       case 'MarkerList':
         extras = {
           className: 'MarkerList',
+          label: null,
           markerGroupIds:[],
           zoom: null,
           count_markers: 0,

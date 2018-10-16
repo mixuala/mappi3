@@ -1,5 +1,8 @@
 import { Injectable } from '@angular/core';
+import { Plugins } from '@capacitor/core';
 import { Observable, from } from 'rxjs';
+
+const { Storage } = Plugins;
 
 @Injectable({
   providedIn: 'root'
@@ -17,7 +20,19 @@ export class RestyService<T> {
       return res;
     },{});
     this.className = className || "_unknown_";
-   }
+  }
+
+  static cleanProperties(o, keys?:string[]){
+    let whitelist = Object.keys(o).filter( k=>!k.startsWith('_'));
+    if (keys)
+      whitelist = keys.filter( k=>whitelist.includes(k));
+    
+    const clean = whitelist.reduce( (res,k)=>{
+      res[k] = o[k];
+      return res;
+    },{});
+    return clean;
+  }
 
   get(uuid?:string | string[]):Promise<T[]>{
     return Promise.resolve()
@@ -61,48 +76,54 @@ export class RestyService<T> {
     }
   }
 
-  post(o:T):Promise<T>{
+  async post(o:T):Promise<T>{
     if (!o)
       return Promise.reject(false);
     const uuid = o['uuid'] || quickUuid();
     if (Object.keys(this._data).includes(uuid)) 
       return Promise.reject("ERROR: duplicate uuid");
-      o['uuid'] = uuid;
-    this._data[uuid] = o;
-    this.debug && console.log( `${this.className}: POST`, o);
-
+    const cleaned = RestyService.cleanProperties(o);
+    cleaned['uuid'] = uuid;
+    this._data[uuid] = cleaned as T;
+    this.debug && console.log( `${this.className}: POST`, cleaned);
+    if (Storage){
+      await Storage.set({key:o['uuid'], value:JSON.stringify(cleaned)});
+    }
     return Promise.resolve( o );
   }
   post$(o:T):Observable<T>{
     return from( this.post(o) );
   }
 
-  put(uuid:string, o:T, fields?:string[]):Promise<T>{
+  async put(uuid:string, o:T, fields?:string[]):Promise<T>{
     if (!uuid) 
       return Promise.reject(false);
+    const cleaned = RestyService.cleanProperties(o, fields);  
     if (this._data[uuid]) {
       o['uuid'] = uuid;
-      if (fields) {
-        const rec = this._data[uuid];
-        fields.forEach( k=>{
-          if (rec.hasOwnProperty(k)) rec[k] = o[k];
-        })
-      } else
-        this._data[uuid] = o;
+      Object.assign(this._data[uuid], cleaned);
+      if (Storage){
+        await Storage.set({key:o['uuid'], value:JSON.stringify(this._data[uuid])});
+      }
       this.debug && console.log( `${this.className}: PUT`, o);
       return Promise.resolve( o );
     }
     return Promise.reject("ERROR: object not found");
   }
 
-  delete(uuid:string):Promise<boolean>{
+  async delete(uuid:string):Promise<boolean>{
     if (!uuid || !this._data[uuid]) 
       return Promise.reject(false);
     this.debug && console.log( `${this.className}: DELETE`, this._data[uuid]);  
     delete this._data[uuid];
+    if (Storage){
+      await Storage.remove({key:uuid});
+    }
     return Promise.resolve(true);
 
   }
+
+
 
 }
 

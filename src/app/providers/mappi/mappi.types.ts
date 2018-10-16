@@ -14,7 +14,7 @@ export interface IUuidMarker extends google.maps.Marker {
 export interface IMappiMarker extends IMarker {
   label?: string;
   // use for GoogleMapsComponent
-  marker?: IUuidMarker;
+  _marker?: IUuidMarker;
   listeners?: any  // move to marker._listeners;
   [propName: string]: any;
 }

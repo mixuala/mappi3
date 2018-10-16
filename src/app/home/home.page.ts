@@ -117,7 +117,7 @@ export class HomePage implements OnInit, IViewNavEvents {
   }
 
 
-  ngOnInit() {
+  async ngOnInit() {
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
     this.parent = this.dataService.sjMarkerLists.value().find( o=>o.uuid==mListId)
@@ -128,33 +128,32 @@ export class HomePage implements OnInit, IViewNavEvents {
     this._mgSub = this.dataService.sjMarkerGroups;
     this.mgCollection$ = this._mgSub.get$([]);
 
-    this.dataService.ready()
-    .then( ()=>{
-      let mgSubject = MockDataService.getSubjByParentUuid(mListId) as SubjectiveService<IMarkerGroup>;
-      if (!mgSubject) {
-        // for testing only, reload /home
-        console.warn("DEV ONLY: Subject not ready, loading all markerGroups")
-        const DEV_Subject = this._mgSub;
-        DEV_Subject.get$('all');
-        MockDataService.getSubjByParentUuid(mListId, DEV_Subject);
-        mgSubject = DEV_Subject;
-      } 
-      this.markerCollection$ = this.mgCollection$ = mgSubject.watch$();
-      this._mgSub = mgSubject;
-      // this.mgCollection$.subscribe( arr=>{
-      //   console.info(`HomePage ${mListId} mgs, count=`, arr.length);
-      //   arr.forEach( o=>console.log(o))
-      // });
-    })
-    .then( ()=>{
-      const layout = this.route.snapshot.queryParams.layout;
-      if ( layout=='edit' ) 
-        setTimeout( ()=>{
-          this.toggleEditMode('edit');
-          this.cd.detectChanges();
-        },100
-        );
-    })
+    await this.dataService.ready()
+    let mgSubject = MockDataService.getSubjByParentUuid(mListId) as SubjectiveService<IMarkerGroup>;
+    if (!mgSubject) {
+      // for testing only, reload /home
+      console.warn("DEV ONLY: Subject not ready, loading all markerGroups")
+      const DEV_Subject = this._mgSub;
+      DEV_Subject.get$('all');
+      MockDataService.getSubjByParentUuid(mListId, DEV_Subject);
+      mgSubject = DEV_Subject;
+    } 
+    this.markerCollection$ = this.mgCollection$ = mgSubject.watch$();
+    this._mgSub = mgSubject;
+    this.mgCollection$.subscribe( arr=>{
+      console.info(`HomePage ${mListId} mgs, count=`, arr.length, arr);
+    });
+
+    // detectChanges if in `edit` mode
+    const layout = this.route.snapshot.queryParams.layout;
+    if ( layout=='edit' ) {
+      setTimeout( ()=>{
+        this.toggleEditMode('edit');
+        this.cd.detectChanges();
+      },100
+      )
+    };
+
   }
 
   viewWillLeave(){

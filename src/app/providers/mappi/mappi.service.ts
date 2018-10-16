@@ -39,7 +39,7 @@ export class MappiMarker {
         // const remove:google.maps.Marker = MappiMarker.markers.splice(found,1);
         const remove:mappi.IUuidMarker = MappiMarker.markers.splice(found,1)[0];
         remove.setMap(null);
-        mm.marker = null;
+        mm._marker = null;
         delete mm['marker'];
         removed++;
       }
@@ -49,7 +49,7 @@ export class MappiMarker {
 
   /**
    *  hide(): remove a list of markers from the google.map.Map
-   *  WARNING: does not delete the marker, still referenced by IMappiMarker.marker
+   *  WARNING: does not delete the marker, still referenced by IMappiMarker._marker
    */ 
   static hide (list:mappi.IUuidMarker[]=[]):number {
     let found = 0;

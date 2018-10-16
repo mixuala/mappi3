@@ -290,9 +290,9 @@ export class GoogleMapsComponent implements OnInit {
     const self = this;
     const found = MappiMarker.markers.find( o=>o.uuid==mm.uuid);
     if (found) {
-      mm.marker = found;
-      mm.marker.setMap(self.map);
-      mm.marker.setLabel({
+      mm._marker = found;
+      mm._marker.setMap(self.map);
+      mm._marker.setLabel({
         text:`${mm.seq+1}`,
         color: mm.uuid == self.selected ? 'black' : 'darkred',
         fontWeight: mm.uuid == self.selected ? '900' : '400',
@@ -301,7 +301,7 @@ export class GoogleMapsComponent implements OnInit {
     } 
     else {
       const position = MappiMarker.position(mm);
-      mm.marker = MappiMarker.make(mm.uuid, {        
+      mm._marker = MappiMarker.make(mm.uuid, {        
         map: self.map,
         // animation: google.maps.Animation.BOUNCE,
         draggable: true,
@@ -313,49 +313,49 @@ export class GoogleMapsComponent implements OnInit {
           fontWeight: mm.uuid == self.selected ? '900' : '400',
         }
       });
-      mm.marker._listeners = mm.marker._listeners || {};
-      mm.marker._listeners.dragend = self.listen_DragEnd(mm);
-      mm.marker._listeners.click = self.listen_Click(mm);
+      mm._marker._listeners = mm._marker._listeners || {};
+      mm._marker._listeners.dragend = self.listen_DragEnd(mm);
+      mm._marker._listeners.click = self.listen_Click(mm);
     }
   }
 
   public addMarkers(items:mappi.IMappiMarker[]){
-    // const newItems = MappiMarker.except(items.map(o=>o.marker));
-    items.forEach( (v,i)=>{
-      if (v.marker) {
-        v.marker.setMap(this.map);
-        v.marker.setLabel({
+    // const newItems = MappiMarker.except(items.map(o=>o._marker));
+    items.forEach( (mm,i)=>{
+      if (mm._marker) {
+        mm._marker.setMap(this.map);
+        mm._marker.setLabel({
           text:`${i+1}`,
-          color: v.uuid == this.selected ? 'black' : 'darkred',
-          fontWeight: v.uuid == this.selected ? '900' : '400',
+          color: mm.uuid == this.selected ? 'black' : 'darkred',
+          fontWeight: mm.uuid == this.selected ? '900' : '400',
         })
         return;
       }  
-      this.addOneMarker(v);
+      this.addOneMarker(mm);
     })
   }
  
 
-  public listen_Click(m:mappi.IMappiMarker):mappi.IListenerController{
+  public listen_Click(mm:mappi.IMappiMarker):mappi.IListenerController{
     const click_Marker = ListenerWrapper.make( ()=>{
-      return m.marker.addListener('click',(ev)=>{
+      return mm._marker.addListener('click',(ev)=>{
   
-        this.selectedChange.emit(m.uuid);
+        this.selectedChange.emit(mm.uuid);
         
-        console.log("marker clicked: label=", m.marker.getLabel().text, m.uuid);
+        console.log("marker clicked: label=", mm._marker.getLabel().text, mm.uuid);
   
       })
     })(true);  
     return click_Marker;
   }  
 
-  public listen_DragEnd(m:mappi.IMappiMarker):mappi.IListenerController{
+  public listen_DragEnd(mm:mappi.IMappiMarker):mappi.IListenerController{
     const dragend_Marker = ListenerWrapper.make( ()=>{
-      return m.marker.addListener('dragend',(ev)=>{
-        console.log("marker dragged to", m.marker.getPosition().toJSON());
+      return mm._marker.addListener('dragend',(ev)=>{
+        console.log("marker dragged to", mm._marker.getPosition().toJSON());
   
-        MappiMarker.moveItem(m, m.marker);
-        this.itemChange.emit({data:m, action:'update'}); 
+        MappiMarker.moveItem(mm, mm._marker);
+        this.itemChange.emit({data:mm, action:'update'}); 
         // => handled by HomePageComponent.mappMarkerChange()
   
       })
@@ -426,6 +426,10 @@ export class GoogleMapsComponent implements OnInit {
       return item.position;
   }
   // END helper methods  
+
+
+
+
 
 
   /**

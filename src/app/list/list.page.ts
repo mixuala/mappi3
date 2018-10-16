@@ -49,9 +49,9 @@ export class ListPage implements OnInit {
 
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.layout = "default";
-
+    await this.dataService.ready();
     this.mListCollection$ = this._mListSub.get$();
     this.mListCollection$.subscribe( arr=>{
       console.info(`ListPage mLists, count=`, arr.length);
