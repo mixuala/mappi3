@@ -188,7 +188,7 @@ export class PhotoService {
     })
     .catch( (err)=>{
       if (err=='continue')
-        return this._getPlaceholder(seq);
+        return this._getRandomPhoto(seq);
     }) 
   }
 
@@ -245,27 +245,26 @@ export class PhotoService {
     return p;
   }
 
-  private _getPlaceholder(seq:number):Promise<IPhoto> {
-    const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo');
+  private _getRandomPhoto(seq:number):Promise<IPhoto> {
     return this.dataService.Photos.get()
     .then(photos => {
       // create placeholder mi derived from a random photo
       const random = {
-        num: (Date.now() % 99) + 1,
-        photo: photos[ Date.now() % photos.length ],
+        i: Date.now() % photos.length,
         locOffset: [Math.random(), Math.random()].map(v => (v - 0.5) / 60),
       }
-
-      const data = {
-        uuid: emptyPhoto.uuid,
+      
+      let data = {
         dateTaken: new Date().toISOString(),
         locOffset: random.locOffset,       // randomize location
-      };      
+      };  
+      data = Object.assign({}, photos[random.i], data);
       // create a new photo by modifying attrs of a random clone
-      const p: IPhoto = Object.assign(emptyPhoto, random.photo, data);
-      MockDataService.inflatePhoto(p, seq);
+      const p = RestyTrnHelper.getPlaceholder('Photo', data);
+      p.position = PhotoService.position(p);
       p.loc = [p.position.lat, p.position.lng];
       p.locOffset = [0,0];
+      MockDataService.inflatePhoto(p, seq);
       return p;
     })
   }

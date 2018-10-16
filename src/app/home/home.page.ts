@@ -190,28 +190,34 @@ export class HomePage implements OnInit, IViewNavEvents {
    * @param ev click event
    * 
    */
-  createMarkerGroup(ev:any={}, data:any={}):Promise<IMarkerGroup>{
+  async createMarkerGroup(ev:any={}, data:any={}):Promise<IMarkerGroup>{
     const target = ev.target && ev.target.tagName;
-    const count = data.seq || this._mgSub.value().length;
-    const item:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
-    item.label = `Marker created ${item.created.toISOString()}`
-    item.seq = count;
-    // let p: IPhoto;
+    let item:IMarkerGroup;
+
+    let child:IPhoto;
+    if (target=='ION-BUTTON')
+      child = await this.photoService.choosePhoto(0);
+    else if (data.className == 'Photo')
+      // create markerGroup using photo as location
+      child = data;
+
+    if (child)
+      item = RestyTrnHelper.getPlaceholder('MarkerGroup');
+    else {
+      item = RestyTrnHelper.getPlaceholder('MarkerGroup', data);
+    }
+    item.label = `Marker created ${item.created.toISOString()}`;
+    item.seq = data.seq || this._mgSub.value().length;
+
     return Promise.resolve(true)
-    .then ( ()=>{
-      if (target=='ION-BUTTON') {
-        return this.photoService.choosePhoto(0)
-        .then( (child:IPhoto)=>{
-          RestyTrnHelper.setFKfromChild(item, child);
-          console.warn("createMarkerGroup, selected Photo", child.loc, child);
-          if (child.loc.join() != [0,0].join()) {
-            RestyTrnHelper.setLocFromChild(item, child);
-            return;
-          }
-          // WARN: selected photo does not include GPS loc
-          return Promise.reject('continue');
-        })
+    .then ( async ()=>{
+      if (child && child.loc.join() != [0,0].join()) {
+        RestyTrnHelper.setFKfromChild(item, child);
+        RestyTrnHelper.setLocFromChild(item, child);
+        console.log("createMarkerGroup, selected Photo", child.loc, child);
       }
+      if (item.loc.join() != [0,0].join()) 
+        return Promise.resolve(true)
       return Promise.reject('continue');
     })
     .catch( (err)=>{
@@ -245,7 +251,10 @@ export class HomePage implements OnInit, IViewNavEvents {
     //   RestyTrnHelper.childComponentsChange({data:mg, action:'add'}, this._mgSub)
     //   return mg;
     // })
-    .then( (item:IMarkerGroup)=>this.emitMarkerGroupItem(item) );
+    .then( (item:IMarkerGroup)=>{
+      this.emitMarkerGroupItem(item)
+      return item;
+    });
   }
 
   emitMarkerGroupItem(mg:IMarkerGroup):Promise<IMarkerGroup> {
@@ -279,7 +288,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     this._mgSub.next(RestyTrnHelper.getCachedMarkers(this._mgSub.value()) as IMarkerGroup[]);
   }
 
-  mappiMarkerChange(change:{data:IMarker, action:string}){
+  async mappiMarkerChange(change:{data:IMarker, action:string}){
     const mm = change.data;
     // mm could be either IMarkerGroup or IPhoto
     if (!this.mgFocus) {
@@ -287,21 +296,13 @@ export class HomePage implements OnInit, IViewNavEvents {
       const items = RestyTrnHelper.getCachedMarkers(this._mgSub.value() );
       switch (change.action) {
         case 'add':   // NOTE: ADD IMarkerGroup by clicking on map in layout=edit
-          const options = {
-            position: mm.position,
-            // manually trigger ChangeDetection when click from google.maps
-            _detectChanges: 1,
-          };
-  
           // create MarkerGroup at IMarker location
-          return this.createMarkerGroup(undefined, options)
-          // .then(this.emitMarkerGroupItem)
-          .then((mg) => {
-            if (options._detectChanges) setTimeout(() => this.cd.detectChanges())
-          });
+          await this.createMarkerGroup(undefined, mm)
+          // manually trigger ChangeDetection when click from google.maps
+          setTimeout(() => this.cd.detectChanges(),10);
+          return;
         case 'update':    // NOTE: can update IMarkerGroup or IPhoto
-          this.handle_MarkerGroupMoved(change);
-          break;
+          return this.handle_MarkerGroupMoved(change);
       }
     } else if (this.mgFocus) {
       this.handle_MarkerItemMoved(change);

@@ -65,14 +65,19 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   ngOnInit() {
     this.layout = this.layout || 'gallery';
-    const clientWidth = this.element.nativeElement.closest('ion-content').clientWidth;
-    const thumbsize = clientWidth < 768 ? 56 : 80 * 2;
-    this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
-    console.log("markerItem limit=", this.miLimit)
     // console.log("MarkerGroupComponent.ngOnInit(): mglayout=", this.mgLayout)
     // this.markerGroup$.subscribe( o=>{
     //   console.info("next() markerGroup$", o);
     // })
+  }
+
+  ngAfterViewInit(){
+    if (['gallery', 'share'].includes(this.layout)){
+      const clientWidth = this.element.nativeElement.closest('ion-content').clientWidth;
+      const thumbsize = clientWidth < 768 ? 56 : 80 * 2;
+      this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
+      // console.log("markerItem limit=", this.miLimit)
+    }
   }
 
   ngOnDestroy() {
@@ -189,7 +194,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       return mg;
     })
     .then( mg=>{
-      setTimeout(()=>this.cd.detectChanges())
+      setTimeout(()=>this.cd.detectChanges(),10)
     })
   }
 

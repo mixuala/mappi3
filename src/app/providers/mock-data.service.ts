@@ -306,12 +306,13 @@ export class RestyTrnHelper {
     return items;
   }
 
-  static getPlaceholder ( className:string, data:any = {} ) {
+  static getPlaceholder ( className:string, data:any = {} ) :any {
     const now = new Date();
     const base = {
       uuid: quickUuid(),
-      loc: [0,0], 
-      locOffset:[0,0], 
+      loc: [0,0] as [number,number], 
+      locOffset:[0,0] as [number,number],
+      position: null,
       placeId: null,
       label: '',
       seq: null,
@@ -353,7 +354,17 @@ export class RestyTrnHelper {
         }
         break;
     }
-    return Object.assign(base, extras, data);
+    const {uuid, created, modified} = base;  // force new values
+    Object.assign(base, extras, data, {uuid, created, modified});
+    if (!base.position && base.loc.join() != [0,0].join()) 
+      base.position = MappiMarker.position(base);
+    
+    switch (className){
+      case 'Photo': return base as any as IPhoto
+      case 'MarkerGroup': return base as any as IMarkerGroup
+      case 'MarkerList': return base as any as IMarkerList
+      default: return base as any
+    }
   }
 
   static setFKfromChild (data:any, child:IRestMarker) {
@@ -367,8 +378,10 @@ export class RestyTrnHelper {
     child._rest_action = 'post';
   }
   static setLocFromChild (data:any, child:IRestMarker) {
-      const {loc, locOffset, position, placeId} = child;
-      Object.assign(data, {loc, locOffset, position, placeId});
+    if (child.loc.join() == [0,0].join())
+      return;
+    const {loc, locOffset, position, placeId} = child;
+    Object.assign(data, {loc, locOffset, position, placeId});
   }
   static setLocToDefault (data:IRestMarker, defaultPosition:{lat:number, lng: number} | google.maps.LatLng) {
     if (defaultPosition instanceof google.maps.LatLng)

@@ -47,6 +47,13 @@ export class MappiMarker {
     return removed;
   }  
 
+  static visible():mappi.IUuidMarker[] {
+    const items = MappiMarker.markers;
+    return items.filter(o=>{
+      return o.getMap() && o['_rest_action']!='delete';
+    })
+  }
+
   /**
    *  hide(): remove a list of markers from the google.map.Map
    *  WARNING: does not delete the marker, still referenced by IMappiMarker._marker

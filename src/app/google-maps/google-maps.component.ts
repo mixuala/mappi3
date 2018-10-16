@@ -10,7 +10,7 @@ import { MappiService, ListenerWrapper,
 } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
 
-import  { MockDataService, IMarkerGroup,  IPhoto, IMarker } from '../providers/mock-data.service';
+import  { MockDataService, IMarkerGroup,  IPhoto, IMarker, RestyTrnHelper } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerItemComponent } from '../marker-item/marker-item.component';
 
@@ -207,8 +207,9 @@ export class GoogleMapsComponent implements OnInit {
         case 'mode':
           if (change.firstChange) 
             break;
+          this.click_AddMarker(change.currentValue=='edit');
           const listen = change.currentValue=='edit';
-          this.click_AddMarker(listen);
+          console.info(">>> CLICK to add Marker", listen)
           break;
         case 'selected':
           // see: https://stackoverflow.com/questions/19296323/google-maps-marker-set-background-color?noredirect=1&lq=1
@@ -374,24 +375,16 @@ export class GoogleMapsComponent implements OnInit {
     const self = this;
     const addMarkerOnClick:(e:any)=>void = (ev:any) => {
       const position:google.maps.LatLng = ev["latLng"];
-      const m:IMarkerGroup =  {
-        id: this.markers.length,
-        uuid: quickUuid(),
-        seq: this.markers.length, 
-        label: null, 
+      const m:IMarkerGroup =  Object.assign(RestyTrnHelper.getPlaceholder(null, {
+        seq: this.items.length, 
         loc: [position.lat(), position.lng()],
-        locOffset:[0,0],
-        position: null,
-        placeId: null,
         markerItemIds: [],
-      }
-      m.position = MappiMarker.position(m);
+      }))
 
       // add marker from HomeComponent using mgCollection$ Observable
       // => HomePage.mappiMarkerChange()
       this.itemChange.emit({data:m, action:'add'});
       console.log(Date.now(), 'addMarkerOnClick at', position.toJSON())
-      console.warn(`refactor to use RestyTrnHelper.create<T> with position=${position.toJSON()}`)
 
 
       // const dblclick_RemoveMarker = ListenerWrapper.make( ()=>{
