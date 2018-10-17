@@ -1,4 +1,4 @@
-import { Component, OnInit, Input, Output,
+import { Component, OnInit, Input, Output, ViewChild,
   OnChanges,  SimpleChange,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
@@ -29,8 +29,17 @@ export class ListPage implements OnInit {
   public mListCollection$ : Observable<IMarkerList[]>;
   public toggle:any = {};
 
+  @ViewChild('gmap') map: GoogleMapsComponent;
+
   private _mListSub: SubjectiveService<IMarkerList>;
   
+  private _selectedMarkerList: string;
+  public get selectedMarkerList() { return this._selectedMarkerList }
+  public set selectedMarkerList(value: string) {
+    this._selectedMarkerList = value;
+    // console.warn( "HomePage setter: fire detectChanges() for selected", value);
+    setTimeout(()=>this.cd.detectChanges())
+  }
 
   constructor( 
     public dataService: MockDataService,
@@ -62,13 +71,11 @@ export class ListPage implements OnInit {
 
   viewWillEnter(){
     console.warn("viewWillEnter: ListPage");
-    // setTimeout(()=>this.cd.detectChanges())
-    // called when returning to ListPage, 
   }
 
   viewWillLeave(){
+    this.map && this.map.ngOnDestroy();
     console.warn("viewWill-Leave: ListPage");
-    // called when navigating to HomePage, 
   }
 
   nav(item:IMarkerList, options:any){
@@ -80,7 +87,6 @@ export class ListPage implements OnInit {
       }
     });
   }
-
 
   private _getSubjectForMarkerGroups(mL:IMarkerList):SubjectiveService<IMarker>{
     return MockDataService.getSubjByParentUuid(mL.uuid);

@@ -49,11 +49,14 @@ export class GoogleMapsComponent implements OnInit {
 
   public static map: google.maps.Map;
   public static currentLoc: google.maps.LatLng;
+  
 
   public map: google.maps.Map;
   public markers: any[] = [];
+  public activeView:boolean = false;     
   private _mapSDKReady: Promise<void>;
   private mapReadyResolvers: [(value?:any)=>void, (value?:any)=>void];
+  private _stash:any={};
 
   /**
    * Subjects/Observables/Subscribers
@@ -85,21 +88,23 @@ export class GoogleMapsComponent implements OnInit {
      
   }
 
-  ngOnInit() {
-    new GoogleMapsReady(this.apiKey, this.renderer, this._document).init()
+  async ngOnInit() {
+    const map = await new GoogleMapsReady(this.apiKey, this.renderer, this._document).init()
     .then(() => {
       return this.loadMap(false);
     }, (err) => {
       console.log(err);
       this.mapReadyResolvers[1]("Could not initialize Google Maps");
     })
-    .then( (map:google.maps.Map)=> {
-      console.warn("> GoogleMapsComponent ngOnInit, map.id=", this.map['id']);
-      this.mapReadyResolvers[0](true);
-    });
+
+    console.warn("> GoogleMapsComponent ngOnInit, map.id=", this.map['id']);
+    this.mapReadyResolvers[0](true);
+
   }
 
   ngOnDestroy() {
+    const count = MappiMarker.remove(this.map);
+    console.warn(`>>> destroy Map ${this.map['id']}, remove markers, count=${count}`);
     google.maps.event.clearInstanceListeners(this.map);
     return;
 
@@ -204,7 +209,6 @@ export class GoogleMapsComponent implements OnInit {
 
   public onMapReady():void {
     this.mapReady.emit({map:this.map, key:this.apiKey});
-    // this.mgCollection$ = this._mgSub.get$();
   }
 
   ngOnChanges(o){
@@ -249,8 +253,8 @@ export class GoogleMapsComponent implements OnInit {
         this._mapSDKReady
         .then( ()=>{
             let items:IMarker[] = change.currentValue;
-            const diff = this.diffMarkers(change);
-            this.renderMarkers(diff);
+            // const diff = this.diffMarkers(change);
+            this.renderMarkers(items);
           })
           break;
       }
@@ -267,7 +271,7 @@ export class GoogleMapsComponent implements OnInit {
    */
   diffMarkers(change:SimpleChange):IMarker[] {
     try {
-      const visible = MappiMarker.visible();
+      const visible = MappiMarker.visible(this.map);
       if (visible.length == change.currentValue.length &&
         visible.length == change.previousValue.length)
       {
@@ -289,7 +293,8 @@ export class GoogleMapsComponent implements OnInit {
    * @param items IMarker[], if null, then skip rendering step
    */
   renderMarkers(items:IMarker[]) {
-    if (items===null) return;
+    if (this.activeView==false) return; // pause updates
+
     var gm = this.map;
     items.forEach( (m,i)=>m.seq=i);  // reindex for labels
     // ignore markers that are marked for delete pending commit
@@ -303,8 +308,10 @@ export class GoogleMapsComponent implements OnInit {
     })
     MappiMarker.hide(hidden);
 
-    if (visible.length) this.setMapBoundsWithMinZoom(visible);
-    const check = MappiMarker.visible();
+    if (visible.length) {
+      console.warn(`setMapBoundsWithMinZoom: ${this.map['id']}`)
+      this.setMapBoundsWithMinZoom(visible);
+    }
   }
 
   public setMapBoundsWithMinZoom(markers:IMarker[], minZoom=15){
@@ -338,7 +345,10 @@ export class GoogleMapsComponent implements OnInit {
   public addOneMarker(mm:mappi.IMappiMarker): void {
     const self = this;
     const position = MappiMarker.position(mm);
-    const found = MappiMarker.markers.find( o=>o.uuid==mm.uuid);
+    const mapId = this.map['id'];
+    const found = MappiMarker.markers
+      .filter( o=>o['mapId']==mapId )
+      .find( o=>o.uuid==mm.uuid );
     if (found) {
       mm._marker = found;
       mm._marker.setMap(self.map);
@@ -351,6 +361,7 @@ export class GoogleMapsComponent implements OnInit {
       mm._marker.setDraggable(!!this.mode['dragend']);
       mm._marker._listeners.dragend(!!this.mode['dragend']);
       mm._marker._listeners.click(!!this.mode['click']);
+      mm._marker['mapId'] = mapId;
     } 
     else {
       mm._marker = MappiMarker.make(mm.uuid, {        
@@ -364,10 +375,10 @@ export class GoogleMapsComponent implements OnInit {
           color: mm.uuid == self.selected ? 'black' : 'darkred',
           fontWeight: mm.uuid == self.selected ? '900' : '400',
         }
-      });
+      }, self.map);
       mm._marker._listeners = mm._marker._listeners || {};
       mm._marker._listeners.dragend = self.listen_DragEnd(mm)(!!this.mode['dragend']);
-      mm._marker._listeners.click = self.listen_Click(mm)(!!this.mode['click']);;
+      mm._marker._listeners.click = self.listen_Click(mm)(!!this.mode['click']);
     }
   }
 

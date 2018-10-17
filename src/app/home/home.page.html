@@ -23,7 +23,7 @@
 
 <ion-header class="google-maps-wrap">
   <!-- googleMaps -->
-  <app-google-maps *ngIf="markerCollection$ | async as items"
+  <app-google-maps #gmap *ngIf="markerCollection$ | async as items"
   apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94" 
   [items]="items"
   [mode]="mapSettings"

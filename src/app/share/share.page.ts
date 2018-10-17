@@ -48,6 +48,8 @@ export class SharePage implements OnInit, IViewNavEvents {
 
   private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string, mgUuids?:string[]}
 
+  @ViewChild('gmap') map: GoogleMapsComponent;
+
   private _selectedMarkerGroup: string;
   public get selectedMarkerGroup() { return this._selectedMarkerGroup }
   public set selectedMarkerGroup(value: string) {
@@ -185,13 +187,18 @@ export class SharePage implements OnInit, IViewNavEvents {
   }
 
   viewWillEnter(){
-    // this.mapSettings = Object.assign({}, this.mapSettings);
-    this._mgSub.reload();
-    console.log("viewWillEnter: SharePage")
+    try {
+      this._mgSub.reload();
+      this.map.activeView=true;
+      console.warn(`viewWillEnter: SharePage, map=${this.map.map['id']}`)
+    } catch {}
   }
 
   viewWillLeave(){
-    console.log("viewWillLeave: SharePage")
+    try {
+      this.map.activeView=false;
+      console.warn(`viewWillLeave: SharePage, map=${this.map.map['id']}`);
+    } catch {}
   }
 
   ngOnDestroy() {

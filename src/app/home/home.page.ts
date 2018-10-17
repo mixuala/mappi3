@@ -45,6 +45,7 @@ export class HomePage implements OnInit, IViewNavEvents {
   private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string}
 
   @ViewChild('markerGroupList') slidingList: List;
+  @ViewChild('gmap') map: GoogleMapsComponent;
 
   private _selectedMarkerGroup: string;
   public get selectedMarkerGroup() { return this._selectedMarkerGroup }
@@ -177,13 +178,19 @@ export class HomePage implements OnInit, IViewNavEvents {
   }
 
   viewWillEnter(){
-    // this.mapSettings = Object.assign({}, this.mapSettings);
-    this._mgSub.reload();
-    console.log("viewWillEnter: HomePage")
+    try {
+      // this.mapSettings = Object.assign({}, this.mapSettings);
+      this._mgSub.reload();
+      this.map.activeView=true;
+      console.warn(`viewWillEnter: HOMEPage, map=${this.map.map['id']}`)
+    } catch {}
   }
 
   viewWillLeave(){
-    console.log("viewWillLeave: HomePage")
+    try {
+      this.map.activeView=false;
+      console.warn(`viewWillLeave: HOMEPage, map=${this.map.map['id']}`)
+    } catch {}
   }
 
   ngOnDestroy() {

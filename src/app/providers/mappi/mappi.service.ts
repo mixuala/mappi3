@@ -12,11 +12,12 @@ import { IMarker } from '../mock-data.service';
 export class MappiMarker {
   static markers: mappi.IUuidMarker[] = [];
 
-  static make (uuid:string, o?:google.maps.Marker | google.maps.MarkerOptions): mappi.IUuidMarker {
+  static make (uuid:string, o:google.maps.Marker | google.maps.MarkerOptions, map:google.maps.Map): mappi.IUuidMarker {
     let m = (o instanceof google.maps.Marker) ? o : new google.maps.Marker(o);
     // for DEV only
     if (typeof uuid == 'number') uuid = `${uuid}`;
-    const found = MappiMarker.markers.find( m=>m.uuid == uuid);
+    const mapId = map['id'];
+    const found = MappiMarker.markers.filter( o=>o['mapId']==mapId ).find( m=>m.uuid == uuid);
     if (found){
       console.warn("warning: marker.uuid exists", found, MappiMarker.markers.length);
       return found;
@@ -26,32 +27,48 @@ export class MappiMarker {
       'uuid': uuid,
     });
     const marker = m as mappi.IUuidMarker
-
+    m['mapId'] = mapId;
     MappiMarker.markers.push(marker);
     return marker;
   }
 
-  static remove (list:mappi.IMappiMarker[]=[]):number {
-    let removed = 0;
-    for (const mm of list) {
-      const found = MappiMarker.markers.findIndex( (m)=>m.uuid == mm.uuid );
-      if (~found)  {
-        // const remove:google.maps.Marker = MappiMarker.markers.splice(found,1);
-        const remove:mappi.IUuidMarker = MappiMarker.markers.splice(found,1)[0];
-        remove.setMap(null);
-        mm._marker = null;
-        delete mm['marker'];
-        removed++;
+  static remove (map:google.maps.Map, list?:mappi.IMappiMarker[]):number {
+    const toRemove:number[] = [];
+    MappiMarker.markers.forEach( (o,i)=>{
+      if (o.mapId==map['id']){
+        if (!list)
+          toRemove.push(i);
+        else {
+          const found = list.find( p=>p.uuid==o.uuid );
+          if (found) toRemove.push(i);
+        }
       }
-    }
+    });
+    const safeRemove = toRemove.reverse();
+    let removed = 0;
+    safeRemove.forEach( i=>{
+      // const remove:google.maps.Marker = MappiMarker.markers.splice(found,1);
+      const remove:mappi.IUuidMarker = MappiMarker.markers.splice(i,1)[0];
+      remove.setMap(null);
+      if (list){
+        const mm = list.find( o=>o.uuid==remove.uuid);
+        if (mm){
+          mm._marker = null;
+          delete mm['_marker'];
+        }
+      }
+      removed++;
+    })
     return removed;
   }  
 
-  static visible():mappi.IUuidMarker[] {
+  static visible(map:google.maps.Map):mappi.IUuidMarker[] {
     const items = MappiMarker.markers;
     return items.filter(o=>{
+      // return o.getMap()==map && o['_rest_action']!='delete';
+      // if (o.getMap()!=map) console.log(`${map['id']}: marker rendered on ${o.getMap['id']}`)
       return o.getMap() && o['_rest_action']!='delete';
-    })
+    });
   }
 
   /**
