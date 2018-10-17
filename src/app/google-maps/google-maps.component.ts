@@ -46,11 +46,8 @@ export class GoogleMapsComponent implements OnInit {
   @Output() itemChange: EventEmitter<{data:mappi.IMappiMarker,action:string}> = new EventEmitter<{data:mappi.IMappiMarker,action:string}>();
   @Output() selectedChange: EventEmitter<string> = new EventEmitter<string>();
 
-
-  public static map: google.maps.Map;
   public static currentLoc: google.maps.LatLng;
   
-
   public map: google.maps.Map;
   public markers: any[] = [];
   public activeView:boolean = false;     
@@ -91,7 +88,7 @@ export class GoogleMapsComponent implements OnInit {
   async ngOnInit() {
     const map = await new GoogleMapsReady(this.apiKey, this.renderer, this._document).init()
     .then(() => {
-      return this.loadMap(false);
+      return this.loadMap();
     }, (err) => {
       console.log(err);
       this.mapReadyResolvers[1]("Could not initialize Google Maps");
@@ -107,36 +104,17 @@ export class GoogleMapsComponent implements OnInit {
     console.warn(`>>> destroy Map ${this.map['id']}, remove markers, count=${count}`);
     google.maps.event.clearInstanceListeners(this.map);
     return;
-
-    /**
-     * hide google.maps.Map DOM element offscreen, reuse later
-     * BUG: this doesn't seem to work with ios
-     */
-    this.stash_GoogleMap(this.map);
   }
 
-  private loadMap(force?:boolean): Promise<google.maps.Map> { 
-    const mapOptions:google.maps.MapOptions = {
-      zoom: 15
-    };
+  private loadMap(): Promise<google.maps.Map> { 
     return new Promise((resolve, reject) => {
-      if (!force && GoogleMapsComponent.map) {
-        this.map = this.stash_GoogleMap();  // unstash
-        if (GoogleMapsComponent.currentLoc) {
-          mapOptions.center = GoogleMapsComponent.currentLoc;
-        }
-        
-        setTimeout( ()=>{
-          this.map.setOptions(mapOptions);
-          console.log(">>> TIMEOUT mapZoom", this.map.getZoom());
-        },10)
-        return resolve(this.map);
-      }      
-
       // get map center then resolve
       GoogleMapsComponent.getCurrentPosition()
       .then ( (position)=>{
-        mapOptions.center = position;
+        const mapOptions:google.maps.MapOptions = {
+          zoom: 15,
+          center: position,
+        };
         this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
         this.map['id'] = this.map['id'] || `gmap-${Date.now() % 99}`;
         return resolve(this.map);
@@ -164,47 +142,6 @@ export class GoogleMapsComponent implements OnInit {
         console.error(err);
         Promise.reject('GoogleMapsComponent: Could not initialise map.');
     })
-  }
-
-
-  /**
-   * move google.maps.Map instance/dom offscreen onDestroy, 
-   * reuse in onInit
-   * @param map google.maps.Map, stash map if provided, otherwise restore
-   */
-  private stash_GoogleMap(map?:google.maps.Map):google.maps.Map {
-    let parent = this.element.nativeElement;
-    let stash = document.getElementById('stash-google-maps');
-    if (!stash) {
-      stash = this.renderer.createElement('DIV');
-      stash.id = 'stash-google-maps';
-      // stash.style.display = "none";
-      stash.style.visibility = "hidden";
-      this.renderer.appendChild(this._document.body, stash);
-    }
-
-    if (map) {
-      // stash map
-      GoogleMapsComponent.map = map;
-      while (parent.childNodes.length > 0) {
-        stash.appendChild(parent.childNodes[0]);
-      }
-      // NOTE: clearing listeners here disables map UI components on restore
-      // google.maps.event.clearInstanceListeners(this.map);
-      return null;
-
-    } else {
-
-      // restore stashed map to current GoogleMapComponent.element.nativeElement
-      while (parent.childNodes.length > 0) {
-        // remove loading spinner, etc.
-        parent.removeChild(parent.childNodes[0]);
-      }
-      while (stash.childNodes.length > 0) {
-        parent.appendChild(stash.childNodes[0]);
-      }
-      return GoogleMapsComponent.map;
-    }
   }
 
   public onMapReady():void {
@@ -259,33 +196,6 @@ export class GoogleMapsComponent implements OnInit {
           break;
       }
     });
-  }
-
-  // TODO: debounce this call, it's running about 4x each view transition
-  debounced_renderMarkers:(items:IMarker[])=>void = null;
-
-  /**
-   * Simple diff on change, if the count of visible, current, and previous markers are the same,
-   * then just check uuid and modified are equal to skip additional rendering
-   * @param change SimpleChange
-   */
-  diffMarkers(change:SimpleChange):IMarker[] {
-    try {
-      const visible = MappiMarker.visible(this.map['id']);
-      if (visible.length == change.currentValue.length &&
-        visible.length == change.previousValue.length)
-      {
-        const diff = change.currentValue.filter( (o,i) => {
-          const prev = change.previousValue[i];
-          return !(o.uuid == prev.uuid && o.modified == prev.modified);
-        })
-        if (diff.length == 0){
-          console.warn("*** diffMarkers: SKIP", change.currentValue, change.previousValue)
-          return null;
-        }
-      }
-    } catch (err) {}
-    return change.currentValue;
   }
 
   /**

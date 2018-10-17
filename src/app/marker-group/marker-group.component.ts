@@ -1,5 +1,5 @@
 import { Component, ElementRef, EventEmitter, OnInit, OnChanges, Input, Output, ViewChild,
-  Host, Optional, SimpleChange, 
+  Host, HostListener, Optional, SimpleChange, 
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { List } from '@ionic/angular';
@@ -27,7 +27,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   // layout of MarkerGroup = [gallery, list, edit, focus-marker-group]  
   public layout: string;
   // set thumbnail overflow break. 
-  public miLimit:number = 3;  
+  public miLimit:number = 3;
+  public static miLimit: number;
   private stash:any = {};
   
   // PARENT Subject/Observable
@@ -49,6 +50,12 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   @Output() mgChange: EventEmitter<{data:IMarkerGroup, action:string}> = new EventEmitter<{data:IMarkerGroup, action:string}>();
   @Output() thumbClick: EventEmitter<{mg:IMarkerGroup, mi:IPhoto}> = new EventEmitter<{mg:IMarkerGroup, mi:IPhoto}>();
 
+  @HostListener('window:resize', ['$event'])
+  onResize(event?, reset=true) {
+    if (reset) MarkerGroupComponent.miLimit=null;
+    this.miLimit = MarkerGroupComponent.getGalleryLimit(window.innerWidth, window.innerHeight);
+  }
+
   constructor(
     @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
     public dataService: MockDataService,
@@ -56,6 +63,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     private element: ElementRef, 
     private cd: ChangeDetectorRef,
   ) {
+    this.onResize(undefined, false);
     this.dataService.ready()
     .then( ()=>{
       // this.miCollection$ = this.dataService.markerCollSubjectDict;
@@ -69,18 +77,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     // this.markerGroup$.subscribe( o=>{
     //   console.info("next() markerGroup$", o);
     // })
-  }
-
-  async ngAfterViewInit(){
-    if (['gallery', 'share'].includes(this.layout)){
-      let clientWidth = Math.min(AppComponent.screenHeight, AppComponent.screenWidth);
-      if (clientWidth < AppComponent.screenWidth){
-        clientWidth = AppComponent.screenWidth * 0.5;
-      }
-      const thumbsize = AppComponent.screenWidth < 768 ? 56 : 80;
-      this.miLimit = Math.floor( (clientWidth - (50+16)) / thumbsize);
-      console.log("markerItem limit=", this.miLimit)
-    }
   }
 
   ngOnDestroy() {
@@ -126,6 +122,20 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           break;
       }
     });
+  }
+
+  static getGalleryLimit(screenWidth:number, screenHeight:number):number{
+    if (!MarkerGroupComponent.miLimit) {
+      let clientWidth = Math.min(screenHeight, screenWidth);
+      if (clientWidth < screenWidth){
+        clientWidth = screenWidth * 0.5;
+      }
+      const thumbsize = screenWidth < 768 ? 56 : 80;
+      const limit = Math.floor( (clientWidth - (50+16)) / thumbsize);
+      MarkerGroupComponent.miLimit = limit;
+      console.log("gallery thumbnail limit=", limit);
+    }
+    return MarkerGroupComponent.miLimit;
   }
 
   parentLayoutChanged(){
