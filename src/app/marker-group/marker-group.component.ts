@@ -243,7 +243,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             mg.locOffset = [0,0];
             mg.position = newMi.position;
             delete mg["_loc_was_map_center"];
-            this.mgChange.emit( {data:mg, action:'update_marker'} );
+            this.mgChange.emit( {data:mg, action:'update'} );
             console.info("MarkerGroupComponent: reset position of markerGroup to photo.loc=", newMi.loc, mg );
           }
         }
@@ -334,7 +334,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     .then( res=>{
       this.mgSubject.next(mg);
       // Propagate changes to ParentView
-      this.mgChange.emit( {data:mg, action:'update_marker'} );
+      // TODO: not sure why this is action=update_marker
+      // this.mgChange.emit( {data:mg, action:'update_marker'} );
     })
   }
 

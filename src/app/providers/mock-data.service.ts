@@ -426,9 +426,12 @@ export class RestyTrnHelper {
         return;
       case 'update_marker':
 
-        // update google.map.Marker position directly
-        const m = MappiMarker.findByUuid([marker.uuid]).shift();
-        m.setPosition(marker.position);
+        console.warn("What does update_marker do here?");
+        // ???:update markerGroup.position from markerItem.position, DEPRECATE?
+
+        // // update google.map.Marker position directly
+        // const m = MappiMarker.findByUuid([marker.uuid]).shift();
+        // m.setPosition(marker.position);
 
 
         subj.next(this.getCachedMarkers(markers));

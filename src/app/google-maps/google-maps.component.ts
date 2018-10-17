@@ -211,13 +211,14 @@ export class GoogleMapsComponent implements OnInit {
     this.mapReady.emit({map:this.map, key:this.apiKey});
   }
 
-  ngOnChanges(o){
-    Object.entries(o).forEach( (en:[string,SimpleChange])=>{
+  async ngOnChanges(o){
+    Object.entries(o).forEach( async (en:[string,SimpleChange])=>{
       let [k,change] = en;
       switch(k){
         case 'mode':
+          if (!this.map) return;
           for (const [k,v] of Object.entries(change.currentValue)){
-            MappiMarker.markers.forEach( m=>{
+            MappiMarker.find(null, this.map['id']).forEach( m=>{
               // toggle listeners for each key
               if (m._listeners && m._listeners[k]){ 
                 m._listeners[k](!!v);
@@ -226,20 +227,20 @@ export class GoogleMapsComponent implements OnInit {
             });
             if (k=='clickadd') {
               this.click_AddMarker(!!v);
-              // console.info(">>> CLICK to add Marker", !!v)
             }
           } 
           break;
         case 'selected':
+          if (!this.map) return;
           // see: https://stackoverflow.com/questions/19296323/google-maps-marker-set-background-color?noredirect=1&lq=1
           // see: maps.google.com/mapfiles/marker" + letter + ".png 
           //      e.g. http://maps.google.com/mapfiles/markerB.png
-          const visible = MappiMarker.markers.filter(o=>o['_rest_action']!='delete');
-          visible.forEach( (m)=>{
-            m.setLabel({
-              text: m.getLabel().text,
-              color: m.uuid == this.selected ? 'black' : 'darkred',
-              fontWeight: m.uuid == this.selected ? '900' : '400',
+          const visible = MappiMarker.visible(this.map['id']);
+          visible.forEach( (mm)=>{
+            mm._marker.setLabel({
+              text: mm._marker.getLabel().text,
+              color: mm.uuid == this.selected ? 'black' : 'darkred',
+              fontWeight: mm.uuid == this.selected ? '900' : '400',
             });
             // if (m.uuid == this.selected) {
             //   // BUG: animation does NOT include labels
@@ -250,12 +251,11 @@ export class GoogleMapsComponent implements OnInit {
           });
           break;
         case 'items':
-        this._mapSDKReady
-        .then( ()=>{
-            let items:IMarker[] = change.currentValue;
-            // const diff = this.diffMarkers(change);
-            this.renderMarkers(items);
-          })
+          await this._mapSDKReady
+
+          let items:IMarker[] = change.currentValue;
+          // const diff = this.diffMarkers(change);
+          this.renderMarkers(items);
           break;
       }
     });
@@ -271,7 +271,7 @@ export class GoogleMapsComponent implements OnInit {
    */
   diffMarkers(change:SimpleChange):IMarker[] {
     try {
-      const visible = MappiMarker.visible(this.map);
+      const visible = MappiMarker.visible(this.map['id']);
       if (visible.length == change.currentValue.length &&
         visible.length == change.previousValue.length)
       {
@@ -299,14 +299,11 @@ export class GoogleMapsComponent implements OnInit {
     items.forEach( (m,i)=>m.seq=i);  // reindex for labels
     // ignore markers that are marked for delete pending commit
     const visible = items.filter(o=>o['_rest_action']!='delete');
-    const visibleUuids = visible.map(o=>o.uuid);
-    // const markerUuids = MappiMarker.markers.map(o=>o.uuid);
-    const hidden = MappiMarker.markers.filter(o=>!visibleUuids.includes(o.uuid));
-    visible.forEach( (marker,i)=>{
-      const mm:mappi.IMappiMarker = marker;
-      this.addOneMarker(marker);
-    })
+    const hidden = MappiMarker.except(visible, this.map['id']);
     MappiMarker.hide(hidden);
+    visible.forEach( (marker,i)=>{
+      this.addOneMarker(marker as mappi.IMappiMarker);
+    })
 
     if (visible.length) {
       console.warn(`setMapBoundsWithMinZoom: ${this.map['id']}`)
@@ -346,11 +343,9 @@ export class GoogleMapsComponent implements OnInit {
     const self = this;
     const position = MappiMarker.position(mm);
     const mapId = this.map['id'];
-    const found = MappiMarker.markers
-      .filter( o=>o['mapId']==mapId )
-      .find( o=>o.uuid==mm.uuid );
-    if (found) {
-      mm._marker = found;
+    const found = MappiMarker.findByUuid([mm.uuid], mapId);
+    if (found.length) {
+      mm._marker = found[0];
       mm._marker.setMap(self.map);
       mm._marker.setLabel({
         text:`${mm.seq+1}`,
@@ -364,7 +359,7 @@ export class GoogleMapsComponent implements OnInit {
       mm._marker['mapId'] = mapId;
     } 
     else {
-      mm._marker = MappiMarker.make(mm.uuid, {        
+      MappiMarker.make(mm, {        
         map: self.map,
         // animation: google.maps.Animation.BOUNCE,
         draggable: (!!this.mode['dragend']),

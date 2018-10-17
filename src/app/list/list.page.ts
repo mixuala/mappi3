@@ -74,8 +74,10 @@ export class ListPage implements OnInit {
   }
 
   viewWillLeave(){
-    this.map && this.map.ngOnDestroy();
-    console.warn("viewWill-Leave: ListPage");
+    try {
+      this.map && this.map.ngOnDestroy();
+      console.warn("viewWill-Leave: ListPage");
+    } catch {}
   }
 
   nav(item:IMarkerList, options:any){
@@ -168,7 +170,7 @@ export class ListPage implements OnInit {
         // no IPhoto returned, get a placeholder
         return Promise.resolve(true)
         .then( ()=>{
-          let position = GoogleMapsComponent.map && GoogleMapsComponent.map.getCenter();
+          let position = this.map.map && this.map.map.getCenter();
           if (position) 
             return position;
           else 

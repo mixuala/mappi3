@@ -270,7 +270,7 @@ export class HomePage implements OnInit, IViewNavEvents {
         // no IPhoto returned, get a placeholder
         return Promise.resolve(true)
         .then( ()=>{
-          let position = GoogleMapsComponent.map && GoogleMapsComponent.map.getCenter();
+          let position = this.map.map && this.map.map.getCenter();
           if (position) 
             return position;
           else
