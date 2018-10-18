@@ -36,11 +36,20 @@ ion-item.gallery {
   --inner-border-width: 0;
 }
 
-ion-item ion-badge.thumbnail-overlay {
-  position: absolute;
-  top: 1px;
-  margin: 2px;
-  opacity: .7;
+.layout-edit {
+  ion-badge.thumbnail-overlay {
+    position: absolute;
+    top: 1px;
+    margin: 2px;
+    opacity: .7;
+  }
+  ion-label {
+    margin:0 8px;
+  }
+}
+
+ion-item-sliding ion-label {
+  margin: 0 8px 0 0;
 }
 
 

@@ -4,3 +4,15 @@ ion-thumbnail {
   height: var(--thumbnail-size);
   margin: 1px 1px 1px 0;
 }
+
+.layout-edit {
+  ion-badge.thumbnail-overlay {
+    position: absolute;
+    top: 1px;
+    margin: 2px;
+    opacity: .7;
+  }
+  ion-label {
+    margin:0 8px;
+  }
+}

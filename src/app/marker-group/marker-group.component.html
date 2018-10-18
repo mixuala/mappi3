@@ -138,7 +138,7 @@
     </ion-card>
 
   <!-- mode='edit': support ion-reorder and ion-item-sliding -->
-  <ion-item-sliding *ngSwitchCase="'edit'">
+  <ion-item-sliding class="layout-edit" *ngSwitchCase="'edit'">
     <ion-item>
       <ng-container *ngIf="marker?.markerItemIds?.length; else edit_pinIcon">
         <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async | slice:0:1">
@@ -157,7 +157,6 @@
         <h3>{{ marker.label || marker.seq +1 }}</h3>
         <p>{{marker.uuid}}</p>
         <p>{{ asPositionLabel(marker) | json }}</p>
-        <p>offset: [{{ marker.locOffset }}]</p>
       </ion-label>
       <ion-reorder slot="end"></ion-reorder>
     </ion-item>  
