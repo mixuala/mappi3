@@ -4,7 +4,7 @@ import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
 import { Observable, BehaviorSubject } from 'rxjs';
 
-import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
+import { MappiMarker, } from '../providers/mappi/mappi.service';
 
 const { Storage } = Plugins;
 
@@ -29,8 +29,9 @@ export interface IMarker {
 export interface IRestMarker extends IMarker {
   className?: string;
   _rest_action?: string;
-  _commit_child_item?: IMarker;
+  _commit_child_items?: IMarker[];
   _loc_was_map_center?: boolean;
+  _detectChanges?:boolean;
 }
 
 export interface IMarkerGroup extends IMarker {
@@ -105,8 +106,9 @@ export class MockDataService {
   }
   static getSubjByParentUuid(uuid:string, subj?:SubjectiveService<IMarker>){
     MockDataService.subjectCache[uuid] = MockDataService.subjectCache[uuid] || {self: null, child:null};
-    if (subj)
-      MockDataService.subjectCache[uuid].child = subj;   
+    if (subj){
+      MockDataService.subjectCache[uuid].child = subj;
+    }   
     return MockDataService.subjectCache[uuid].child || null;
   }
 
@@ -368,7 +370,7 @@ export class RestyTrnHelper {
     }
     const {uuid, created, modified} = base;  // force new values
     Object.assign(base, extras, data, {uuid, created, modified});
-    if (!base.position && base.loc.join() != [0,0].join()) 
+    if (!base.position && MappiMarker.hasLoc(base)) 
       base.position = MappiMarker.position(base);
     
     switch (className){
@@ -379,18 +381,24 @@ export class RestyTrnHelper {
     }
   }
 
-  static setFKfromChild (data:any, child:IRestMarker) {
+  static setFKfromChild (parent:any, child:IRestMarker) {
     const hasMany_Keys = RestyTrnHelper.objectHierarchy.hasMany;
-    const found = Object.keys(data).filter( k=>hasMany_Keys.includes(k))
+    const found = Object.keys(parent).filter( k=>hasMany_Keys.includes(k))
     switch (found[0]) {
-      case 'markerItemIds': data['markerItemIds'] = [child.uuid]; break;
-      case 'markerGroupIds': data['markerGroupIds'] = [child.uuid]; break;
+      case 'markerItemIds': parent['markerItemIds'] = [child.uuid]; break;
+      case 'markerGroupIds': parent['markerGroupIds'] = [child.uuid]; break;
     }
-    data._commit_child_item = child;
-    child._rest_action = 'post';
+    parent._commit_child_items = parent._commit_child_items || [];
+    parent._commit_child_items.push(child);
+    const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
+
+    child['_rest_action'] = 'post';
+    // BUG: somehow calling childSubj.next([child]) stops code execution;
+    // RestyTrnHelper.childComponentsChange({data:child, action:'add'}, childSubj);
+    return;
   }
   static setLocFromChild (data:any, child:IRestMarker) {
-    if (child.loc.join() == [0,0].join())
+    if (!MappiMarker.hasLoc(child))
       return;
     const {loc, locOffset, position, placeId} = child;
     Object.assign(data, {loc, locOffset, position, placeId});
@@ -420,7 +428,7 @@ export class RestyTrnHelper {
       case 'add':
         const newMarker = change.data;
         newMarker['_rest_action'] = 'post';
-        const items = this.getCachedMarkers(markers);
+        const items = this.getCachedMarkers(markers); // just sort
         items.push(newMarker);
         subj.next(items);
         return;
@@ -449,34 +457,44 @@ export class RestyTrnHelper {
     }
   }
 
-  static applyChanges(action:string, subj: SubjectiveService<IMarker>, dataSvc:MockDataService):Promise<IMarker[]> {
-    return Promise.resolve(true)
-    .then( res=>{
-      const items = subj.value();
-      switch(action){
-        case "commit":
-          const remainingItems = RestyTrnHelper.getCachedMarkers(items, 'visible')
-          .sort( (a,b)=>a.seq-b.seq )
-          .map((o,i)=>{
-            o.seq = i;    // re-index remaining/visible items
-            if (!o._rest_action) o._rest_action = 'seq';
-            return o;
-          });
-          const allItems = remainingItems.concat(RestyTrnHelper.getCachedMarkers(items, 'removed'))
-          return RestyTrnHelper._childComponents_CommitChanges(allItems, subj, dataSvc)
-          .catch( err=>{
-            console.error(`ERROR: problem saving '${subj.className}' nodes.`, allItems);
-            Promise.reject(err);
-          })
-          .then( res=>{
-            return subj.reload( remainingItems.map(o=>o.uuid) );
-          })
-        case "rollback":
-          const uuids = RestyTrnHelper.getCachedMarkers(items, 'rollback')
-          .map( o=>o.uuid );
-          return subj.reload( uuids );
-      }
-    })
+  static async applyChanges(
+    action:string, 
+    subj: SubjectiveService<IRestMarker>, 
+    dataSvc?:MockDataService, 
+  ):Promise<IMarker[]> {
+    const items = subj.value();
+    const changed:IMarker[]=[];
+    switch(action){
+      case "commit":
+        const commitItems = items.filter(o=>o._rest_action);
+        const remainingItems = RestyTrnHelper.getCachedMarkers(items, 'visible')
+        .sort( (a,b)=>a.seq-b.seq )
+        .map((o,i)=>{
+          o.seq = i;    // re-index remaining/visible items
+          if (!o._rest_action) o._rest_action = 'seq';
+          return o;
+        });
+        const allItems = remainingItems.concat(RestyTrnHelper.getCachedMarkers(items, 'removed'));
+
+        const check = commitItems.filter( o=>!allItems.includes(o));
+        if (check.length)
+          console.error("applyChanges(): some commitItems were NOT included", check);
+
+        const res = await RestyTrnHelper._childComponents_CommitChanges(allItems, subj, dataSvc)
+        .catch( err=>{
+          console.error(`ERROR: problem saving '${subj.className}' nodes.`, allItems);
+          return Promise.reject(err);
+        })
+        subj.reload( remainingItems.map(o=>o.uuid) );
+        console.warn( "> RestyTrn.applyChanges, reload from", subj.className )
+        return changed.concat(res);
+
+      case "rollback":
+        // TODO: need to rollback recursively
+        const uuids = RestyTrnHelper.getCachedMarkers(items, 'rollback')
+        .map( o=>o.uuid );
+        return subj.reload( uuids );
+    }
   }
 
   private static _schemaLookup(subj:SubjectiveService<any>, dataSvc:MockDataService, generation?:string):RestyService<IMarker>{
@@ -494,45 +512,68 @@ export class RestyTrnHelper {
     }
   }
 
-  private static 
-  _childComponents_CommitChanges(changes:IRestMarker[], subj: SubjectiveService<IMarker>, dataSvc:MockDataService):Promise<any>{  
+  private static async _childComponents_CommitChanges(
+    changes:IRestMarker[], 
+    subj: SubjectiveService<IMarker>, 
+    dataSvc:MockDataService,
+    
+  ):Promise<IMarker[]>{  
     const resty:RestyService<IMarker> = RestyTrnHelper._schemaLookup(subj, dataSvc);
-    const done:Promise<IRestMarker|boolean>[] = changes.map( o=>{
-      const restAction = o._rest_action;
-      delete o._rest_action;
-      switch(restAction) {
-        case "post":
-          const restyChild:RestyService<IMarker> = RestyTrnHelper._schemaLookup(subj, dataSvc, 'child');
-          return Promise.resolve()
-          .then( ()=>{
-            if (o.hasOwnProperty('_commit_child_item')){
-              // console.warn( " >>>> commit child of" , o);
-              // recursively commit child
-              const child = o['_commit_child_item'];
-              const childSubj = MockDataService.getSubjByParentUuid(o.uuid)
-              return RestyTrnHelper._childComponents_CommitChanges([child], childSubj, dataSvc);
-              // return restyChild.post( o['_commit_child_item'] );
+    const pr:Promise<any>[] = [];
+    changes.forEach( async (o)=>{
+      // recursively commit child
+      const restyChild:RestyService<IMarker> = RestyTrnHelper._schemaLookup(subj, dataSvc, 'child');
+      if (o.hasOwnProperty('_commit_child_items')){
+        const items = o['_commit_child_items'];
+        const childSubj = MockDataService.getSubjByParentUuid(o.uuid);
+        // recursive call
+        pr.push( RestyTrnHelper._childComponents_CommitChanges(items, childSubj, dataSvc)
+          .then (
+            res=>{
+              delete o['_commit_child_items'];
+              return res;
             }
-            return o;
-          })
-          .then( 
-            (res)=>delete o['_commit_child_item']
-            ,(err)=>console.error(`Error saving child element: ${restyChild.className} of ${subj.className}`)  
-          )
-          .then( ()=>{
-            return resty.post(o);
-          })
+            ,(err)=>{
+            console.error(`Error saving child element: ${restyChild.className} of ${subj.className}`, err);
+            return Promise.reject(err);
+          }));
+        // then continue below
+      }
+
+      switch(o._rest_action) {
+        case "post":
+          pr.push( resty.post(o).then( o=>{delete o['_rest_action']; return o;}) );     
+          break;
         case "put":
-          return resty.put(o.uuid, o);
+          pr.push( resty.put(o.uuid, o).then( o=>{delete o['_rest_action']; return o;}) );     
+          break;
         case "seq":
-          // return true;
-          return resty.put(o.uuid, o, ['seq']);  
+          console.warn("confirm _rest_action=seq is working properly");
+          // do not report sequence updates
+          resty.put(o.uuid, o, ['seq']).then( o=>{delete o['_rest_action'];})    
+          break;
         case "delete":
-          return resty.delete(o.uuid)
+          pr.push( resty.delete(o.uuid).then( o=>{delete o['_rest_action']; return o;}) );     
+          break;
       }
     });
-    return Promise.all(done);
-  }
+
+    return Promise.all(pr)
+    .then( 
+      (res)=>{
+        let changed = [];
+        res.forEach( o=>{
+          if (o instanceof Array) 
+            changed = changed.concat(o);
+          else changed.push(o);
+        })
+        return changed as IMarker[];
+      }
+      ,(err)=>{
+        console.error(err);
+        return Promise.reject(err);
+      } )
+  } 
 
 
  

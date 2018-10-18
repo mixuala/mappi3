@@ -150,6 +150,11 @@ export class MappiMarker {
    * ImappiMarker (item) methods
    */
 
+  // true if item.loc!=[0,0]
+  static hasLoc(item:IMarker):boolean {
+    return item && item.loc.join()!=[0,0].join();
+  }
+
   static position(item: IMarker): {lat, lng} {
     const offset = item.locOffset || [0,0];
     return {

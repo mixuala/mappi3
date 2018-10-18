@@ -3,8 +3,8 @@ import { Component, OnInit, Input, Output, ViewChild,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
-import { Observable, BehaviorSubject } from 'rxjs';
-import { filter, takeUntil } from 'rxjs/operators';
+import { Observable, BehaviorSubject, Subject } from 'rxjs';
+import { filter, skipWhile, takeUntil } from 'rxjs/operators';
 
 import { IViewNavEvents } from "../app-routing.module";
 import  { 
@@ -15,6 +15,7 @@ import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { MarkerGroupComponent } from '../marker-group/marker-group.component';
 import { GoogleMapsComponent } from '../google-maps/google-maps.component';
+import { MappiMarker } from '../providers/mappi/mappi.service';
 
 
 
@@ -27,7 +28,8 @@ export class ListPage implements OnInit {
   
   public layout: string;
   public mListCollection$ : Observable<IMarkerList[]>;
-  public toggle:any = {};
+  public unsubscribe$ : Subject<boolean> = new Subject<boolean>();
+  public stash:any = {};
 
   @ViewChild('gmap') map: GoogleMapsComponent;
 
@@ -53,7 +55,10 @@ export class ListPage implements OnInit {
     });
 
     this.router.events
-    .pipe( filter( (e:Event)=>e instanceof NavigationStart) )
+    .pipe( 
+      takeUntil(this.unsubscribe$),
+      filter( (e:Event)=>e instanceof NavigationStart) 
+    )
     .subscribe( (e: NavigationStart)=>console.log("routingDestination", e.url) );
 
   }
@@ -61,23 +66,40 @@ export class ListPage implements OnInit {
   async ngOnInit() {
     this.layout = "default";
     await this.dataService.ready();
-    this.mListCollection$ = this._mListSub.get$();
-    this.mListCollection$.subscribe( arr=>{
-      console.info(`ListPage mLists, count=`, arr.length);
-    });
-    
+    // for async binding in view
+    this.mListCollection$ = this._mListSub.watch$().pipe( skipWhile( ()=>!this.stash.activeView) );
+    // initializers
+    const done = this.mListCollection$.subscribe( res=>{
+        // cache MarkerList Subject back-references
+        res.forEach( mL=> MockDataService.getSubjByUuid(mL.uuid, this._mListSub) );
+        console.info(`ListPage mLists, count=`, res.length);
+        done.unsubscribe();
+      });
+    this.stash.activeView = true;
+    this._mListSub.get$();  // get all MarkerLists, or query
   }
 
 
   viewWillEnter(){
-    console.warn("viewWillEnter: ListPage");
+    try {
+      this.stash.activeView = true;
+      this._mListSub.repeat();
+      console.warn("viewWillEnter: ListPage");
+    } catch (err) {console.warn(err)}    
   }
 
   viewWillLeave(){
     try {
+      this.stash.activeView==false;
       this.map && this.map.ngOnDestroy();
       console.warn("viewWill-Leave: ListPage");
-    } catch {}
+    } catch (err) {console.warn(err)}
+  }
+
+  ngOnDestroy() {
+    // console.warn("ngOnDestroy: unsubscribe to all subscriptions.")
+    this.unsubscribe$.next(true);
+    this.unsubscribe$.complete();
   }
 
   nav(item:IMarkerList, options:any){
@@ -96,7 +118,7 @@ export class ListPage implements OnInit {
 
   toggleEditMode(action:string) {
     if (this.layout != "edit") {
-      this.toggle.layout = this.layout;
+      this.stash.layout = this.layout;
       this.layout = "edit";
       console.log("list.page.ts: layout=", this.layout)
     }
@@ -104,7 +126,7 @@ export class ListPage implements OnInit {
       return this.applyChanges(action)
       .then( 
         res=>{
-          this.layout = this.toggle.layout;
+          this.layout = this.stash.layout;
           console.log("list.page.ts: layout=", this.layout)
         },
         err=>console.log('ERROR saving changes')
@@ -115,14 +137,7 @@ export class ListPage implements OnInit {
 
   createOpenMarkerList(ev:any={}){
     return this.createMarkerList(undefined)
-    .then( mL=>{
-      const mLists = this._mListSub.value()
-      mLists.push(mL);
-      this._mListSub.next(mLists);
-      
-      // need to commit changes before nav?
-      console.log("new markerList", mL)
-      
+    .then( mL=>{ 
       this.nav(mL, {layout:'edit'});
     })
   }
@@ -142,10 +157,10 @@ export class ListPage implements OnInit {
     const target = ev.target && ev.target.tagName;
     const count = data.seq || this._mListSub.value().length;
     const item:IMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
-    item.label = `Map created ${item.created.toISOString()}`
+    item.label = `Map created ${item.created.toISOString()}`;
     item.seq = count;
     const child:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
-    child.label = `Marker created ${child.created.toISOString()}`
+    child.label = `Marker created ${child.created.toISOString()}`;
     child.seq = 0;
     return Promise.resolve(true)
     .then ( ()=>{
@@ -154,7 +169,7 @@ export class ListPage implements OnInit {
         .then( (p:IPhoto)=>{
           RestyTrnHelper.setFKfromChild(child, p);
           RestyTrnHelper.setFKfromChild(item, child);
-          if (p.loc.join() != [0,0].join()) {
+          if (MappiMarker.hasLoc(p)) {
             RestyTrnHelper.setLocFromChild(child, p);
             RestyTrnHelper.setLocFromChild(item, child);
             return;
@@ -183,25 +198,25 @@ export class ListPage implements OnInit {
           return item;
         })
       }
-      console.warn(`ListPage.createMarkerGroup() `,err);
+      console.warn('ListPage.createMarkerGroup()',err);
     }) 
     .then( ()=>{
-      // RestyTrnHelper.childComponentsChange({data:child, action:'add'}, this._mListSub);
       RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
+      MockDataService.getSubjByUuid(item.uuid, this._mListSub); // back reference to mListSubj
+
+      this.publishMarkerListGroups(item);
+
       return item;
-    })
-    .then( (item:IMarkerList)=>this.emitMarkerGroup(item) );
+    });
   }
 
-  emitMarkerGroup(mL:IMarkerList):Promise<IMarkerList> {
+  publishMarkerListGroups(mL:IMarkerList):Promise<IMarkerList> {
     if (mL.markerGroupIds.length) {
-      // NOTE: this subject is NOT created until the MarkerGroup is rendered
       setTimeout( ()=>{
-        const subject = this._getSubjectForMarkerGroups(mL);
-        if (!subject) console.warn("ERROR: possible race condition when creating MarkerList from IPhoto")
-        const mg = mL['_commit_child_item'];
-        subject.next([mg])
-      },100)
+        const childSubj = MockDataService.getSubjByParentUuid(mL.uuid);
+        const mGroups = (mL as IRestMarker)._commit_child_items || [];
+        childSubj.next(mGroups);
+      },200);
     }
     return Promise.resolve( mL);
   }

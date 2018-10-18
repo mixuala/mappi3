@@ -50,9 +50,9 @@ export class GoogleMapsComponent implements OnInit {
   
   public map: google.maps.Map;
   public markers: any[] = [];
-  public activeView:boolean = false;     
+  public activeView:boolean = false;   
   private _mapSDKReady: Promise<void>;
-  private mapReadyResolvers: [(value?:any)=>void, (value?:any)=>void];
+  private _mapReadyResolvers: [(value?:any)=>void, (value?:any)=>void];
   private _stash:any={};
 
   /**
@@ -77,11 +77,13 @@ export class GoogleMapsComponent implements OnInit {
     )
     loading.push(
       this._mapSDKReady = new Promise( (resolve, reject)=> {
-        this.mapReadyResolvers = [resolve, reject];
+        this._mapReadyResolvers = [resolve, reject];
       })
     )
     Promise.all(loading)
-    .then( ()=>this.onMapReady() );
+    .then( ()=>{
+      this.onMapReady();
+    });
      
   }
 
@@ -91,17 +93,17 @@ export class GoogleMapsComponent implements OnInit {
       return this.loadMap();
     }, (err) => {
       console.log(err);
-      this.mapReadyResolvers[1]("Could not initialize Google Maps");
+      this._mapReadyResolvers[1]("Could not initialize Google Maps");
     })
 
-    console.warn("> GoogleMapsComponent ngOnInit, map.id=", this.map['id']);
-    this.mapReadyResolvers[0](true);
+    // console.warn("> GoogleMapsComponent ngOnInit, map.id=", this.map['id']);
+    this._mapReadyResolvers[0](true);
 
   }
 
   ngOnDestroy() {
     const count = MappiMarker.remove(this.map);
-    console.warn(`>>> destroy Map ${this.map['id']}, remove markers, count=${count}`);
+    // console.warn(`>>> destroy Map ${this.map['id']}, remove markers, count=${count}`);
     google.maps.event.clearInstanceListeners(this.map);
     return;
   }

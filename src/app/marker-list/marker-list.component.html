@@ -34,7 +34,7 @@
 
       <ion-item class="gallery">
         <ng-container *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
-          <ng-container *ngIf="mg?.markerItemIds.length; else gallery_pinIcon">
+          <ng-container *ngIf="mg?.markerItemIds?.length; else gallery_pinIcon">
             <ng-container *ngIf="getSubjByParentUuid_Watch$(mg.uuid) | async as items">
               <app-marker-item *ngIf="items[0] as mi" [mi]="mi" [parentLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
             </ng-container>

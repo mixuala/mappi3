@@ -57,6 +57,10 @@ export class SubjectiveService<T> {
     return this.subject$.value.slice();  // return a copy
   }
   
+  repeat() {
+    this.subject$.next(this.value());
+  }
+  
   reload(ids?:any[]):Promise<T[]>{
     if (!ids) {
       ids = this.subject$.value.map( o=>o['uuid'] );

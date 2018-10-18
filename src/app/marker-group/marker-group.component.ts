@@ -7,11 +7,12 @@ import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 import { Plugins } from '@capacitor/core';
 
 import { AppComponent } from '../app.component';
-import { MockDataService, quickUuid, IMarkerGroup, IPhoto,IMarker } from '../providers/mock-data.service';
+import { MockDataService, RestyTrnHelper, IMarkerGroup, IPhoto, IMarker, IRestMarker } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { MappiMarker } from '../providers/mappi/mappi.service';
+import { GoogleMapsComponent } from '../google-maps/google-maps.component';
 
 const { Device } = Plugins;
 
@@ -31,11 +32,12 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   public static miLimit: number;
   private stash:any = {};
   
-  // PARENT Subject/Observable
+  // PARENT Subject/Observable, single MarkerGroup
+  // subject+observable work together to send MarkerGroup to view via async pipe
   public mgSubject: BehaviorSubject<IMarkerGroup> = new BehaviorSubject<IMarkerGroup>(null);
   public markerGroup$: Observable<IMarkerGroup> = this.mgSubject.asObservable();
 
-  // CHILDREN
+  // CHILDREN, deprecate???, use MockDataService.getSubjByParentUuid()
   private _miSub: {[uuid:string]: SubjectiveService<IPhoto>} = {};
   public miCollection$: {[uuid:string]:  Observable<IPhoto[]>} = {};
 
@@ -64,19 +66,12 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     private cd: ChangeDetectorRef,
   ) {
     this.onResize(undefined, false);
-    this.dataService.ready()
-    .then( ()=>{
-      // this.miCollection$ = this.dataService.markerCollSubjectDict;
-    })
+    this.dataService.ready();
     // this.dataService.Photos.debug = true;
    }
 
   ngOnInit() {
     this.layout = this.layout || 'gallery';
-    // console.log("MarkerGroupComponent.ngOnInit(): mglayout=", this.mgLayout)
-    // this.markerGroup$.subscribe( o=>{
-    //   console.info("next() markerGroup$", o);
-    // })
   }
 
   ngOnDestroy() {
@@ -95,12 +90,20 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           delete mg._detectChanges;
           // console.info("MG.ngOnChanges():",mg.uuid);
 
+          // configure subjects and cache
+          const mgSubj = MockDataService.getSubjByUuid(mg.uuid) ||
+            MockDataService.getSubjByUuid(mg.uuid, new SubjectiveService(this.dataService.MarkerGroups));
+          console.warn("*** MarkerGroup.ngOnChanges: mgSubj", mgSubj.value());
+          const childSubj = MockDataService.getSubjByParentUuid(mg.uuid) || 
+            MockDataService.getSubjByParentUuid(mg.uuid, new SubjectiveService(this.dataService.Photos));  
+
           this.dataService.ready()
           .then( ()=>{
-            const subject = new SubjectiveService(this.dataService.Photos);
-            this._miSub[mg.uuid] = MockDataService.getSubjByParentUuid(mg.uuid, subject) as SubjectiveService<IPhoto>;
-            this.miCollection$[mg.uuid] = subject.get$(mg.markerItemIds);
-            this.mgSubject.next(mg);
+            // this._miSub[mg.uuid] = childSubj as SubjectiveService<IPhoto>;
+            this.miCollection$[mg.uuid] = (childSubj as SubjectiveService<IPhoto>).get$(mg.markerItemIds);
+            this.mgSubject.next(this.mg); // set value for view
+
+            // const check = MockDataService.subjectCache;
 
             // init owner data
             mg.favorite = mg.favorite || false;  
@@ -117,7 +120,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         case 'mgFocus':
           if (!this.mgFocusBlur) break;
           const focus = change.currentValue;
-          const hide = focus && this.mgSubject.value.uuid != focus.uuid || false
+          const hide = focus && this.mg.uuid != focus.uuid || false
           this.mgFocusBlur.blur(hide)
           break;
       }
@@ -155,7 +158,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       this.stash.layout = this.layout;
       this.layout = "focus-marker-group";
       // hide all MarkerGroupComponents that are not in layout="focus-marker-group" mode
-      this.mgFocusChange.emit( this.mgSubject.value )      
+      this.mgFocusChange.emit( this.mg )      
     }
     else {
       this.applyChanges(action)
@@ -167,7 +170,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         err=>console.log('ERROR saving changes')
       )
     }
-    console.log(`MarkerGroupComponent: ${this.mgSubject.value.label},  mgLayout=${this.layout} `)
+    console.log(`MarkerGroupComponent: ${this.mg.label},  mgLayout=${this.layout} `)
   }
 
   selectMarkerGroup(o:IMarkerGroup){
@@ -180,7 +183,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   }
 
   toggleFavorite(value?:boolean, mg?:IMarkerGroup){
-    mg = mg || this.mgSubject.value;
+    mg = mg || this.mg;
     if (!mg) return
 
     if (!this.stash.hasOwnProperty('favorite')) {
@@ -190,19 +193,29 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     }
     this.stash.favorite = value != null ? value : !this.stash.favorite;
     mg.favorite = this.stash.favorite;
-    this.mgChange.emit( {data:mg, action:'favorite'} );
+    this.mgChange.emit( {data:mg, action:'favorite'} );  // => SharePage.childComponentsChange()
     this.mgSubject.next(mg);
   }
 
 
   createMarkerItem(ev:any){
-    const mg = this.mgSubject.value;
+    const mg = this.mg;
     return this.photoService.choosePhoto(mg.markerItemIds.length)
-    .then( p=>{
-      this.childComponentsChange({data:p, action:'add'})
-      return mg;
-    })
-    .then( mg=>{
+    .then( photo=>{
+      this.childComponentsChange({data:photo, action:'add'});
+      if (MappiMarker.hasLoc(photo)) 
+        return photo;
+
+      // no IPhoto returned, get a placeholder
+      return GoogleMapsComponent.getCurrentPosition()
+      .then( (latlng:google.maps.LatLng)=>{
+        const position = latlng.toJSON();
+        console.warn("create Photo with default position", position);
+        RestyTrnHelper.setLocToDefault(photo, position);
+        return photo;
+      });
+    })    
+    .then( photo=>{
       setTimeout(()=>this.cd.detectChanges(),10)
     })
   }
@@ -214,7 +227,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   // BUG: after reorder, <ion-item-options> is missing from dropped item
   reorderMarkerItem(ev){
-    const mg = this.mgSubject.value;
+    const mg = this.mg;
     const {from, to} = ev.detail;
     // make changes to local copy, not resty/DB
     // localCopy includes o._rest_action='delete' items because from,to index includes the same
@@ -228,7 +241,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       o.seq=i;
       this.childComponentsChange({data:o, action:'move'})
     }
-    this._miSub[mg.uuid].next(this._getCachedMarkerItems(mg));
+    MockDataService.getSubjByParentUuid(this.mg.uuid).next(this._getCachedMarkerItems(mg));
   }
 
 
@@ -237,128 +250,73 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
    */ 
   childComponentsChange( change: {data:IPhoto, action:string}){
     if (!change.data) return;
-    // let mi = this._markerItems[change.data.uuid];
-    const mi = change.data;
-    const mg = this.mgSubject.value;
+    const parent = this.mg;
+    const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
     switch(change.action){
-      case 'add':  
-        const newMi = change.data;      
-        newMi['_rest_action'] = 'post';
-        
-        let items = this._getCachedMarkerItems(mg);
-        items.push(newMi);
-        if (mg.markerItemIds.length==0) {
-          if (mg["_loc_was_map_center"]){
-            mg.loc = [newMi.position.lat, newMi.position.lng];
-            mg.locOffset = [0,0];
-            mg.position = newMi.position;
-            delete mg["_loc_was_map_center"];
-            this.mgChange.emit( {data:mg, action:'update'} );
-            console.info("MarkerGroupComponent: reset position of markerGroup to photo.loc=", newMi.loc, mg );
-          }
-        }
-        mg.markerItemIds = items.map(o=>o.uuid);
-
-        this._miSub[mg.uuid].next(items);
-        break;
-      case 'update':
-        mi['_rest_action'] = mi['_rest_action'] || 'put';
-        break;
-      case 'move':
-        mi['_rest_action'] = mi['_rest_action'] || 'put';
-        break;
       case 'remove':
-        mi['_rest_action'] = 'delete';
-        items = this._getCachedMarkerItems(mg); 
-        this._miSub[mg.uuid].next(items);
+        RestyTrnHelper.childComponentsChange(change, childSubj);
 
         // BUG: ion-item-sliding
         // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
-        this.slidingList.closeSlidingItems();
-        break;
+        return this.slidingList.closeSlidingItems();
+      default:
+        return RestyTrnHelper.childComponentsChange(change, childSubj);
     }
   }
 
-  childComponents_CommitChanges(items:IPhoto[]):Promise<any>{
-    const children:Promise<any>[] = items.map( o=>{
-      const restAction = o._rest_action;
-      delete o._rest_action;
-      switch(restAction) {
-        case "post":
-          return this.dataService.Photos.post(o);
-        case "put":
-          return this.dataService.Photos.put(o.uuid, o);
-        case "delete":
-          return this.dataService.Photos.delete(o.uuid)
-          .catch(err=>{
-            // will return `false` if we try to delete an item 
-            // that was not yet committed to dB
-            if (err===false) return Promise.resolve(true)
-            return Promise.reject(err);
-          });
-      }
-    });
-    return Promise.all(children);    
-  }
 
-  applyChanges(action:string):Promise<any>{
-    const mg = this.mgSubject.value;
-    return Promise.resolve(mg)
-    .then( mg=>{
-      switch(action){
-        case "commit":
-          const allItems = this._getCachedMarkerItems(mg, 'commit')
-          const remainingItems = this._getCachedMarkerItems(mg, 'visible')
-          remainingItems.forEach( (o,i)=>{
-            o.seq=i;
-            o._rest_action = o._rest_action || 'put'; 
-          })  // reindex before commit
-          return this.childComponents_CommitChanges(allItems)
-          .catch( err=>{
-            console.error("ERROR: problem saving child nodes", err);
-            Promise.reject(err);
-          })
-          .then( res=>{
-            const markerItemIds = remainingItems.map(o=>o.uuid);
-            mg.markerItemIds = markerItemIds;
-            // update Parent directly, mg.markerItemIds
-            return this.dataService.MarkerGroups.put(mg.uuid, mg)
-            .then(
-              res=>{
-                this.mgSubject.next(mg);
-                this._miSub[mg.uuid].reload(mg.markerItemIds);
-                return mg
-              },
-              err=>{
-                console.error("ERROR: problem updating Parent node");
-                Promise.reject(err);
-            })
-          });
-        case "rollback":
-          const uuids = this._getCachedMarkerItems(mg, 'rollback')
-          .map( o=>o.uuid );
-          this._miSub[mg.uuid].reload( uuids );
-          return mg;
-      }
-    })
-    .then( res=>{
-      this.mgSubject.next(mg);
-      // Propagate changes to ParentView
-      // TODO: not sure why this is action=update_marker
-      // this.mgChange.emit( {data:mg, action:'update_marker'} );
-    })
+  /**
+   * commit markerItem/IPhoto changes
+   * called by MarkerGroupComponent.toggleEditMode(), commit/rollback from focus-marker-group
+   * @param action 
+   */
+  async applyChanges(action:string):Promise<IMarker[]>{
+    const mg = this.mg;
+
+    const parent = this.mg;
+    const parentSubj = MockDataService.getSubjByUuid(parent.uuid);
+    const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
+    // begin commit from MarkerGroup
+    switch (action) {
+      case "commit":
+        // propagate changes to MarkerGroup
+        let commitSubj:SubjectiveService<IRestMarker>;
+        const childSubjUuids = childSubj.value().map(o => o.uuid);
+        try {
+          if ( 
+            // check if MarkerGroup stale, if markerItemIds are not equal
+            parent._rest_action ||
+            childSubjUuids.length != parent.markerItemIds.length ||
+            childSubjUuids.filter(v => !parent.markerItemIds.includes(v)).length > 0
+          ) {
+            parent.markerItemIds = childSubjUuids;
+            parent._rest_action = parent._rest_action || 'put';
+            parent._commit_child_items = childSubj.value().filter(o=>!!o['_rest_action']);
+            commitSubj = parentSubj;
+            console.warn( "MarkerGroup.applyChanges, commit from", commitSubj.className )
+          }
+          else {
+            // markerGroup not changed, just update markerItems
+            commitSubj = childSubj;
+          }
+          const committed = await RestyTrnHelper.applyChanges(action, commitSubj, this.dataService);
+          console.warn("MarkerGroup: committed", committed);
+          // subject.reload() called in RestyTrnHelper.applyChanges()
+          return Promise.resolve(committed);
+        } catch (err) {
+          console.warn("Error: cannot save to DEV MarkerGroup, parent is null");
+          return Promise.reject(err);
+        }
+        break;
+      case "rollback":
+        childSubj.reload();
+        return parentSubj.reload( );
+    }  
   }
 
   private _getCachedMarkerItems(mg: IMarkerGroup, option?:string):IPhoto[] {
-    let items = this._miSub[mg.uuid].value();
-    
-    if (option=='rollback') 
-      items = items.filter( o=>o._rest_action!= 'post') // skip added items
-    else if (option=='visible')
-      items = items.filter( o=>o._rest_action!= 'delete') // skip removed items
-
-    items.sort( (a,b)=>a.seq-b.seq );
-    return items;
+    let items:IRestMarker[] = MockDataService.getSubjByParentUuid(mg.uuid).value();
+    return RestyTrnHelper.getCachedMarkers(items, option) as IPhoto[];
   }  
 
   // DEV Helpers

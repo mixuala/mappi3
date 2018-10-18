@@ -122,9 +122,15 @@ export class MarkerListComponent implements OnInit {
     if (parent.hasOwnProperty('markerGroupIds')) {
       subject = new SubjectiveService(this.dataService.MarkerGroups);
       subject.get$(parent.markerGroupIds);
+      parent.markerGroupIds.forEach( uuid=>{
+        MockDataService.getSubjByUuid(uuid, subject);
+      });
     } else if (parent.hasOwnProperty('markerItemIds')) {
       subject = new SubjectiveService(this.dataService.Photos);
       subject.get$(parent.markerItemIds);
+      parent.markerItemIds.forEach( uuid=>{
+        MockDataService.getSubjByUuid(uuid, subject);
+      });
     } else 
       return null;
 

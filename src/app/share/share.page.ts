@@ -44,7 +44,7 @@ export class SharePage implements OnInit, IViewNavEvents {
   public markerCollection$ : Observable<IMarker[]>;
   public unsubscribe$ : Subject<boolean> = new Subject<boolean>();
   public qrcodeData: string = null;
-  public toggle:any = {};
+  public stash:any = {};
 
   private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string, mgUuids?:string[]}
 
@@ -113,7 +113,8 @@ export class SharePage implements OnInit, IViewNavEvents {
   public gmap:any;
   setMap(o:{map:google.maps.Map,key:string}){
     this.gmap=o;
-    // console.log("google.maps.Map", this.gmap.map)
+    this.map.activeView = true;
+    console.warn("GoogleMapComponent for SharePage is active map=", this.map.map['id']);
   }
 
   getStaticMap(){
@@ -157,30 +158,37 @@ export class SharePage implements OnInit, IViewNavEvents {
   async ngOnInit() {
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
-    const mListSub = MockDataService.getSubjByUuid(mListId) || 
-    MockDataService.getSubjByUuid(mListId, new SubjectiveService(this.dataService.MarkerLists));
+
+    // configure subjects and cache
+    const mListSubj = MockDataService.getSubjByUuid(mListId) || 
+      MockDataService.getSubjByUuid(mListId, new SubjectiveService(this.dataService.MarkerLists));
     const mgSubj = MockDataService.getSubjByParentUuid(mListId) || 
-    MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
+      MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
     this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
-    this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$(); 
-    // this.mgCollection$.subscribe( mgs=>{
-    //   console.log("mgCollection$", mgs)
-    // });
-    
+
+    // for async binding in view
+    this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
+                                                  .pipe( skipWhile( ()=>!this.stash.activeView) );
+                                                  // NOTE: causes a delay before map loads
+
+    // initialize subjects
     await this.dataService.ready();
-    mListSub.get$([mListId])
-    .pipe(
-      takeUntil(this.unsubscribe$),
-      skipWhile( v=>v.length==0),
-      switchMap( (mLists:IMarkerList[])=>{
-        this.parent = mLists[0];
-        if (!this.parent) return Promise.resolve([]);
-        return mgSubj.get$( this.parent.markerGroupIds )
-      })
-    )
-    .subscribe( res=>{
-      // console.log("SharePage.ngOnInit()",res)
-    })
+    this.parent = mListSubj.value().find( o=>o.uuid==mListId) as IMarkerList;
+    if (!this.parent){
+      // initializers for deep-linking
+      const done = mListSubj.get$([mListId]).pipe(
+        switchMap( (o)=>{
+          if (o.length) {
+            this.parent = o[0] as IMarkerList;
+            this.stash.activeView = true;
+            return mgSubj.get$(this.parent.markerGroupIds);
+          } 
+          return Observable.create();
+        })).subscribe( ()=>{
+          if (this.parent)
+            done.unsubscribe();
+        })
+    }
 
     // window['check'] = MockDataService.subjectCache;
 
@@ -189,6 +197,8 @@ export class SharePage implements OnInit, IViewNavEvents {
   viewWillEnter(){
     try {
       this._mgSub.reload();
+      this.stash.activeView = true;
+      if (!this.map) return;
       this.map.activeView=true;
       console.warn(`viewWillEnter: SharePage, map=${this.map.map['id']}`)
     } catch {}
@@ -196,13 +206,15 @@ export class SharePage implements OnInit, IViewNavEvents {
 
   viewWillLeave(){
     try {
+      this.stash.activeView = false;
+      if (!this.map) return;
       this.map.activeView=false;
       console.warn(`viewWillLeave: SharePage, map=${this.map.map['id']}`);
     } catch {}
   }
 
   ngOnDestroy() {
-    console.warn("ngOnDestroy: unsubscribe to all subscriptions.")
+    // console.warn("ngOnDestroy: unsubscribe to all subscriptions.")
     this.unsubscribe$.next(true);
     this.unsubscribe$.complete();
   }

@@ -90,10 +90,11 @@ export class RestyService<T> {
     this._data[uuid] = cleaned as T;
     this.debug && console.log( `${this.className}: POST`, cleaned);
     if (Storage){
-      await Storage.set({key:o['uuid'], value:JSON.stringify(cleaned)});
+      Storage.set({key:o['uuid'], value:JSON.stringify(cleaned)});
     }
-    return Promise.resolve( o );
+    return Promise.resolve( this._data[uuid] );
   }
+
   post$(o:T):Observable<T>{
     return from( this.post(o) );
   }
@@ -107,7 +108,7 @@ export class RestyService<T> {
       o['modified'] = new Date();
       Object.assign(this._data[uuid], cleaned);
       if (Storage){
-        await Storage.set({key:o['uuid'], value:JSON.stringify(this._data[uuid])});
+        Storage.set({key:o['uuid'], value:JSON.stringify(this._data[uuid])});
       }
       this.debug && console.log( `${this.className}: PUT`, o);
       return Promise.resolve( o );
@@ -121,10 +122,9 @@ export class RestyService<T> {
     this.debug && console.log( `${this.className}: DELETE`, this._data[uuid]);  
     delete this._data[uuid];
     if (Storage){
-      await Storage.remove({key:uuid});
+      Storage.remove({key:uuid});
     }
     return Promise.resolve(true);
-
   }
 
 

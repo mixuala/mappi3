@@ -6,6 +6,7 @@ import { Plugins, CameraSource } from '@capacitor/core';
 
 import { AppComponent } from '../../app.component';
 import { MockDataService, RestyTrnHelper, IMarker, IPhoto, quickUuid } from '../mock-data.service';
+import { MappiMarker } from '../mappi/mappi.service';
 
 const { Device } = Plugins;
 
@@ -59,13 +60,6 @@ export class PhotoService {
     } catch (err) {
       console.warn("BUG: localTimeAsDate is not working properly")
       throw new Error(`Invalid localTime string, value=${localTime}`);
-    }
-  }
-  static position(item: IMarker): {lat, lng} {
-    const offset = item.locOffset || [0,0];
-    return {
-      lat: item.loc[0] + offset[0],
-      lng: item.loc[1] + offset[1],
     }
   }
 
@@ -257,7 +251,7 @@ export class PhotoService {
     // # final adjustments
     p.image = _calcImgSrcDim(resp);
     _rotateDim(p);
-    if (p.loc.join() === [0,0].join()) p["_loc_was_map_center"] = true;
+    if (!MappiMarker.hasLoc(p)) p["_loc_was_map_center"] = true;
     return p;
   }
 
@@ -277,7 +271,7 @@ export class PhotoService {
       data = Object.assign({}, photos[random.i], data);
       // create a new photo by modifying attrs of a random clone
       const p = RestyTrnHelper.getPlaceholder('Photo', data);
-      p.position = PhotoService.position(p);
+      p.position = MappiMarker.position(p);
       p.loc = [p.position.lat, p.position.lng];
       p.locOffset = [0,0];
       MockDataService.inflatePhoto(p, seq);
