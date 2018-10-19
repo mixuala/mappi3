@@ -142,13 +142,43 @@ export class MappiMarker {
     return bounds;
   }
 
+  
+  /**
+   *   latlng bounds of the central portion of map at current zoom 
+   * @param map google.map.Maps
+   * @param coverage integer percent coverage of map. 50=50% or half the current map
+   */
+  static mapCentral(map:google.maps.Map, coverage:number=50):google.maps.LatLngBounds {
+    const {lat, lng} = map.getCenter().toJSON();
+    const bounds = map.getBounds();
+    const central = new google.maps.LatLngBounds(null);
+    const delta_h = (lng-bounds.getSouthWest().lng()) * (coverage/100);
+    const delta_w = (lat-bounds.getSouthWest().lat()) * (coverage/100);
+    central.extend( {lat: lat-delta_w, lng: lng-delta_h} );  // sw
+    central.extend( {lat: lat+delta_w, lng: lng+delta_h} );  // ne
+    return central;
+  }
 
+  static panToBounds(map:google.maps.Map, point?:google.maps.LatLng|google.maps.LatLngLiteral, coverage:number=50): google.maps.LatLngBounds {
+    let {lat, lng} = map.getCenter().toJSON();
+    const bounds = map.getBounds();
+    const delta_h = (lng-bounds.getSouthWest().lng()) * (coverage/100);
+    const delta_w = (lat-bounds.getSouthWest().lat()) * (coverage/100);
+    
+    let target = point instanceof google.maps.LatLng ? point.toJSON() : point;
+    if (!target) target = {lat,lng};
+    const newBounds = new google.maps.LatLngBounds(null);
+    newBounds.extend( {lat: target.lat-delta_w, lng: target.lng-delta_h} );  // sw
+    newBounds.extend( {lat: target.lat+delta_w, lng: target.lng+delta_h} );  // ne
+    return newBounds;
+  }
 
 
 
   /**
    * ImappiMarker (item) methods
    */
+
 
   // true if item.loc!=[0,0]
   static hasLoc(item:IMarker):boolean {

@@ -12,7 +12,6 @@ import * as mappi from '../providers/mappi/mappi.types';
 
 import  { MockDataService, IMarkerGroup,  IPhoto, IMarker, RestyTrnHelper } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { MarkerItemComponent } from '../marker-item/marker-item.component';
 
 
 const { Geolocation } = Plugins;
@@ -181,6 +180,19 @@ export class GoogleMapsComponent implements OnInit {
               color: mm.uuid == this.selected ? 'black' : 'darkred',
               fontWeight: mm.uuid == this.selected ? '900' : '400',
             });
+            if (mm.uuid == this.selected) {
+              // the the SelectedMarker is not clearly visible, one over another, then zoom
+              // check distance from Center, then pan if necessary
+              const central = MappiMarker.mapCentral(this.map);
+              const panToMarker = (MappiMarker.mapCentral(this.map).contains(mm.position) == false);
+              let target;
+              if (panToMarker) 
+                target = MappiMarker.panToBounds(this.map, mm.position);
+              setTimeout( ()=>{
+                this.map.setZoom(15);
+                if (panToMarker) this.map.panToBounds( target );
+              },100);
+            }
             // if (m.uuid == this.selected) {
             //   // BUG: animation does NOT include labels
             //   // see: https://stackoverflow.com/questions/32725387/google-maps-api-why-dont-labels-animate-along-with-markers
@@ -218,7 +230,7 @@ export class GoogleMapsComponent implements OnInit {
     })
 
     if (visible.length) {
-      console.warn(`setMapBoundsWithMinZoom: ${this.map['id']}`)
+      // console.warn(`setMapBoundsWithMinZoom: ${this.map['id']}`)
       this.setMapBoundsWithMinZoom(visible);
     }
   }
@@ -242,7 +254,7 @@ export class GoogleMapsComponent implements OnInit {
             // Change max/min zoom here
             this.map.setZoom(minZoom);
             initialZoom = false;
-            console.warn("**** MapBounds minZoom fired, count=", markers.length)
+            // console.warn("**** MapBounds minZoom fired, count=", markers.length)
         }
       });
     });
