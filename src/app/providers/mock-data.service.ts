@@ -116,6 +116,7 @@ export class MockDataService {
   constructor() { 
     this._ready = this.loadDatasources()
     .then( ()=>console.log("TESTDATA READY"));
+    window['_mockDataService'] = this;
     return;
   }
 
@@ -123,24 +124,63 @@ export class MockDataService {
     return this._ready;
   }
 
-  async loadStorage():Promise<any> {
-    const result = await Storage.keys();
-    const data = {'Photo': [], 'MarkerGroup': [], 'MarkerList': [], 'unknown':{}};
-    if (result.keys.length==0) 
-      return Promise.resolve(false);
+  /**
+   * Storage helpers
+   * to load data into storage from DevTools console
+   * 
+   window._mockDataService.dumpStorage()
+   _raw
+   window._mockDataService.loadStorage(_raw)
+   */
+  async dumpStorage() {
+      const result = await Storage.keys();
+      const data:any[] = [];
+      
+      await Promise.all(result.keys.map( async (uuid)=> {
+        const resp:object = await Storage.get({key:uuid});
+        const o:IRestMarker = JSON.parse(resp['value']);
+        data.push(o);
+      }));
+      window['_raw'] = JSON.stringify(data);
+      console.log( window['_raw']  );
+      // call _mockDataService.
+  }
 
-    await Promise.all(result.keys.map( async (uuid)=> {
-      const resp:object = await Storage.get({key:uuid});
-      const o:IRestMarker = JSON.parse(resp['value']);
+  async loadStorage(raw?:string):Promise<any> {
+    let data = {'Photo': [], 'MarkerGroup': [], 'MarkerList': [], 'unknown':{}};
+    if (!raw) {
+      const result = await Storage.keys();
+      if (result.keys.length==0) 
+      return Promise.resolve(false);
+      
+      await Promise.all(result.keys.map( async (uuid)=> {
+        const resp:object = await Storage.get({key:uuid});
+        const o:IRestMarker = JSON.parse(resp['value']);
+        switch (o.className) {
+          case 'Photo':
+          case 'MarkerGroup':
+          case 'MarkerList':
+            data[o.className].push(o); break;
+          default:
+            data.unknown[uuid] = o; break;
+        }
+      }));
+      return Promise.resolve(data);
+    }
+    // restore raw data
+    await Storage.clear();
+    const parsed = JSON.parse(raw);
+    parsed.map( (o)=> {
       switch (o.className) {
         case 'Photo':
         case 'MarkerGroup':
         case 'MarkerList':
           data[o.className].push(o); break;
         default:
-          data.unknown[uuid] = o;
+          data.unknown[o.uuid] = o; break;
       }
-    }));
+    })
+    console.log("Loading data to Storage", data);
     return Promise.resolve(data);
   }
 
@@ -184,11 +224,11 @@ export class MockDataService {
     return data;
   }
 
-  loadDatasources() {
+  loadDatasources(raw?:string) {
     return Promise.resolve() // return promise immediately for this.ready()
     .then ( async ()=>{
       // Storage.clear();
-      let data = await this.loadStorage();
+      let data = await this.loadStorage(raw);
       if (data){
         this.Photos = new RestyService(data.Photo, "Photo");
         this.MarkerGroups = new RestyService(data.MarkerGroup, "MarkerGroup");

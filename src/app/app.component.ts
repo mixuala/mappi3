@@ -46,9 +46,9 @@ export class AppComponent {
     this.onResize();
   }
 
-  async reset(){
+  async reset(raw:string){
     Storage.clear();
-    await this.dataService.loadDatasources();
+    await this.dataService.loadDatasources(raw);
     const menu = document.querySelector('ion-menu-controller');
     menu.close();
   }
