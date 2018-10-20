@@ -80,3 +80,37 @@ npx cap update
 npm run build; ionic capacitor copy ios
 
 ```
+
+## Add Native LaunchNavigator
+> remember to rename Capacitor `ios` folder when adding Cordova plugin
+```
+ionic cordova plugin add uk.co.workingedge.phonegap.plugin.launchnavigator
+npm install --save @ionic-native/launch-navigator@beta
+npm uninstall --save cordova-plugin-splashscreen
+```
+
+> MANUALLY add to ./mappi3/ios/App/App/Info.plist
+```
+  
+  <key>LSApplicationQueriesSchemes</key>
+  <array>
+    <string>citymapper</string>
+    <string>comgooglemaps</string>
+    <string>navigon</string>
+    <string>transit</string>
+    <string>waze</string>
+    <string>yandexnavi</string>
+    <string>uber</string>
+    <string>tomtomhome</string>
+    <string>com.sygic.aura</string>
+    <string>here-route</string>
+    <string>moovit</string>
+    <string>lyft</string>
+    <string>mapsme</string>
+    <string>cabify</string>
+    <string>baidumap</string>
+    <string>taxis99</string>
+    <string>iosamap</string>
+  </array>
+
+```

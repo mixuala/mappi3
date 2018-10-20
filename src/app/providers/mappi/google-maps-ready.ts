@@ -97,7 +97,7 @@ export class GoogleMapsReady {
       let script = this.renderer.createElement('script');
       script.id = 'googleMaps';
       if (this.apiKey) {
-        script.src = 'https://maps.googleapis.com/maps/api/js?key=' + this.apiKey + '&callback=mapInit';
+        script.src = 'https://maps.googleapis.com/maps/api/js?key=' + this.apiKey + '&callback=mapInit&libraries=geometry';
       } else {
         script.src = 'https://maps.googleapis.com/maps/api/js?callback=mapInit';
       }

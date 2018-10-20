@@ -7,6 +7,7 @@ import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil, switchMap, skipWhile } from 'rxjs/operators';
 import { AlertController, ActionSheetController } from '@ionic/angular';
 import { Plugins } from '@capacitor/core';
+import { LaunchNavigator, LaunchNavigatorOptions } from '@ionic-native/launch-navigator/ngx';
 
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, } from '../providers/mappi/mappi.service';
@@ -19,7 +20,8 @@ import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
 
 
-const { Browser, Device } = Plugins;
+const { App, Browser, Device } = Plugins;
+declare const launchnavigator:any;
 
 @Component({
   selector: 'app-share',
@@ -34,7 +36,7 @@ export class SharePage implements OnInit, IViewNavEvents {
   public layout: string;
   public mapSettings: IMapActions = {
     dragend: false,
-    click: false,
+    click: true,
   }
   public parent: IMarkerList;
 
@@ -53,7 +55,13 @@ export class SharePage implements OnInit, IViewNavEvents {
   private _selectedMarkerGroup: string;
   public get selectedMarkerGroup() { return this._selectedMarkerGroup }
   public set selectedMarkerGroup(value: string) {
+    if (this._selectedMarkerGroup == value){
+      console.warn("Testing Native.LaunchNavigator on repeated select")
+      this.launchApp('Map', value);
+    }
+    else
     this._selectedMarkerGroup = value;
+
     // console.warn( "SharePage setter: fire detectChanges() for selected", value);
     setTimeout(()=>this.cd.detectChanges())
   }
@@ -93,6 +101,7 @@ export class SharePage implements OnInit, IViewNavEvents {
     private router: Router,
     private route: ActivatedRoute,
     private cd: ChangeDetectorRef,
+    private launchNavigator: LaunchNavigator,
   ){
     this.dataService.ready()
     .then( ()=>{
@@ -124,7 +133,63 @@ export class SharePage implements OnInit, IViewNavEvents {
     return
   }
 
+  /**
+   * launch Apps for more detailed info
+   * @param type 
+   * @param uuid 
+   */
+  async launchApp(type:string, uuid:string){
+    const _launchMapWithNavigation = async (marker:IMarker)=>{
+      // open map with navigation
+      // const isAvailable = await this.launchNavigator.isAppAvailable(launchnavigator.APP.GOOGLE_MAPS);
+      // const app = isAvailable ? launchnavigator.APP.GOOGLE_MAPS : launchnavigator.APP.USER_SELECT;
+      const options:LaunchNavigatorOptions = {
+        app: launchnavigator.APP.USER_SELECT,
+        appSelection:{
+          callback: (app)=>console.log("launchApp(): User prefers map app=", app),
+          rememberChoice: {enabled:"prompt"},
+        }
+      }
+      const result = await this.launchNavigator.navigate(marker.loc, options);
+      // console.log(result);
+    }
+    const _launchMapOnly = async (marker:IMarker)=>{
+      let URI;
+      const device = await Device.getInfo();
+      const {lat, lng} = marker.position;
+      switch (device.platform){
+        case 'web':
+        case 'android':
+          URI = `https://maps.google.com/?q=@${lat},${lng}`;
+          this.browserOpen(URI);
+          break;
+        case 'ios':
+          // URI = `comgooglemapsurl://maps.google.com/?q=@${lat},${lng}`;
+          URI = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&zoom=15`;
+          const ret = await App.openUrl({ url: URI });
+          // console.log('APP: Open url response: ', ret, URI);
+          break;
+      }
+    }
 
+    switch (type){
+      case 'Map':
+        const marker = this._mgSub.value().find(o=>o.uuid==uuid);
+        console.log( "Launch Google Maps to marker.loc=", marker.loc)
+        const calcDistanceBetween = google.maps.geometry.spherical.computeDistanceBetween;
+        const {lat, lng} = marker.position;
+        const dist = calcDistanceBetween(GoogleMapsComponent.currentLoc, new google.maps.LatLng(lat,lng));
+        // console.log("distance from marker=", dist, marker.position, GoogleMapsComponent.currentLoc.toJSON());
+        const MAX_NAVIGATION_DISTANCE = 500000;  // meters
+        if (dist < MAX_NAVIGATION_DISTANCE){
+          _launchMapWithNavigation(marker);
+        }
+        else {
+          // just show a pin on a map
+          _launchMapOnly(marker);
+        }
+    }
+  }
 
   async presentActionSheet_ShowMap(url) {
     const actionSheet = await this.actionSheetController.create({

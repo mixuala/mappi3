@@ -8,6 +8,7 @@ import { QRCodeModule } from 'angularx-qrcode';
 
 import { SharePage } from './share.page';
 import { SharedComponentModule } from '../app.module';
+import { LaunchNavigator, LaunchNavigatorOptions } from '@ionic-native/launch-navigator/ngx';
 
 const routes: Routes = [
   {
@@ -25,6 +26,7 @@ const routes: Routes = [
     QRCodeModule,
     SharedComponentModule,
   ],
-  declarations: [SharePage]
+  declarations: [SharePage],
+  providers: [ LaunchNavigator, ]
 })
 export class SharePageModule {}
