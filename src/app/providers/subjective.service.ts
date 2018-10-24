@@ -13,13 +13,14 @@ export class SubjectiveService<T> {
   public subject$: BehaviorSubject<T[]>;
   public resty: RestyService<T>;
   private _observable$: Observable<T[]>;
+  public sortBy:string = 'seq';
 
   constructor(resty:RestyService<T>) {
     this.className = resty.className;
     this.resty = resty;
     this.subject$ = new BehaviorSubject<T[]>([]);
     this._observable$ = this.subject$.pipe( SubjectiveService.sortBySeq );
-   }
+  }
 
   static sortBySeq = map( (v:any[],j)=>{
     if (!v) return v;
@@ -36,9 +37,13 @@ export class SubjectiveService<T> {
       this.resty.get(uuid)
       .then(arr=>{
         if (['MarkerList', 'MarkerGroup'].includes(this.resty.className)){
-          arr.sort( (a,b)=>a['label']>b['label'] ? 1:-1 );
-          arr.forEach( (o,i)=>o['seq']=i);
+          this.sortBy = 'label';
+        } else {
+          this.sortBy = 'seq';
         }
+        // reindex for Subject only, NOT DB
+        arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>o['seq']=i);
+
         // arr.map( (o,i,l)=>{
         //   // HACK: persist alpha sort/.seq to original data
         //   this.resty["_data"][o['uuid']]=Object.assign({},o);
@@ -67,7 +72,8 @@ export class SubjectiveService<T> {
     } 
     return this.resty.get(ids)
     .then( arr=>{
-      arr.sort( (a,b)=>a['seq']-b['seq'] ).forEach((o,i)=>o['seq']=i);
+      // reindex for Subject only, NOT DB
+      arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>o['seq']=i);
       this.next(arr);
       return arr
     });

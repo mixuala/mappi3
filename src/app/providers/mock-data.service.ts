@@ -114,6 +114,7 @@ export class MockDataService {
     this._ready = this.loadDatasources()
     .then( ()=>console.log("TESTDATA READY"));
     window['_mockDataService'] = this;
+    window['_MockDataService'] = MockDataService;
     return;
   }
 
