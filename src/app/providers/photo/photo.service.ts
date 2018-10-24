@@ -28,6 +28,7 @@ export class DataURLPipe implements PipeTransform {
 
 export interface IExifPhoto {
   src: string,
+  orientation: number,
   exif?: {
     DateTimeOriginal: string,
     PixelXDimension: number,
@@ -37,6 +38,7 @@ export interface IExifPhoto {
   gps?: {
     lat: number,
     lng: number,
+    speed?: number
     [propName:string]: any,
   },
   tiff?: {
@@ -64,6 +66,23 @@ export interface IMappiGetThumbnailOptions extends GetThumbnailOptions {
 
 export interface IMappiLibraryItem extends LibraryItem {
   // e.g. "/Users/[...]/Devices/A11DA2A5-D033-40AA-BEE1-E2AA8281B774/data/Media/DCIM/100APPLE/IMG_0004.JPG"
+  orientation?:number,
+  '{Exif}'?:{
+    DateTimeOriginal:string,
+    PixelXDimension:number,
+    PixelYDimension:number,
+  },
+  '{GPS}'?:{
+    Altitude: number,
+    Latitude: number,
+    Longitude: number,
+    Speed: number,
+  },
+  '{TIFF}'?:{
+    Artist:string,
+    Copyright:string,
+    Orientation:number,
+  }
   filePath?: string;        
   imgCache?: {[dim:string]:string};
   thumbSrc?: IThumbSrc;
@@ -301,9 +320,6 @@ export class PhotoService {
         .then( exifData=>{
           return this._exif2Photo(exifData, item, seq+i);
         })
-        .then( exifData=>{
-          return this._exif2Photo(exifData, item, seq+i);
-        })
       });
       seq += chunk.length;
       const waitingFor = waitForLimit.value.slice();
@@ -384,25 +400,31 @@ export class PhotoService {
     function _getNativeURI(uri:string):string{
       return self.getImgSrc_Camera( uri, {destinationType: Camera.DestinationType.NATIVE_URI});
     }
-    function _getExifFromJpeg(nativeURI:string):any {
+    function _getExifFromJpeg(item:IMappiLibraryItem):any {
       return {  
         
-        
-        /* TODO:  get metadata */
-        src: nativeURI,
+        src: _getNativeURI( 'file://'+item.filePath ),
+        orientation:item['{TIFF}'].Orientation,
         exif: {
+          DateTimeOriginal: item['{Exif}'] && item['{Exif}'].DateTimeOriginal,
           PixelXDimension: item.width, 
           PixelYDimension: item.height,
+        },       
+        gps: {
+          Altitude: item['{GPS}'] && item['{GPS}'].Altitude,
+          Latitude: item['{GPS}'] && item['{GPS}'].Latitude,
+          Longitude: item['{GPS}'] && item['{GPS}'].Longitude,
+          Speed: item['{GPS}'] && item['{GPS}'].Speed,
         },
-        gps: {},
-        tiff: {}
-      
-      
+        tiff: {
+          Artist:item['{TIFF}'] && item['{TIFF}'].Artist,
+          Copyright:item['{TIFF}'] && item['{TIFF}'].Copyright,
+          Orientation:item['{TIFF}'] && item['{TIFF}'].Orientation,
+        }
       
       };
     }
-    const nativeURI = _getNativeURI( 'file://'+item.filePath );
-    const metaData = _getExifFromJpeg(nativeURI);
+    const metaData = _getExifFromJpeg(item);
     // metaData.src = item.photoURL;  // `cdvphotolibrary://`
     
     return Promise.resolve(metaData as IExifPhoto);
@@ -434,6 +456,7 @@ export class PhotoService {
       }
       const response = {
         src: this.getImgSrc_Camera(imageData, options),
+        orientation:metadata['{TIFF}'] && metadata['{TIFF}'].Orientation || 1,
         exif: metadata.Exif || {},
         gps: metadata.GPS || {},
         tiff: metadata['{TIFF}'] || {},
