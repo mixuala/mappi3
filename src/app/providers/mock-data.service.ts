@@ -2,9 +2,10 @@ import { Injectable } from '@angular/core';
 import { Plugins } from '@capacitor/core';
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
-import { Observable, BehaviorSubject } from 'rxjs';
+
 
 import { MappiMarker, } from '../providers/mappi/mappi.service';
+import { IExifPhoto, IThumbSrc } from './photo/photo.service';
 
 const { Storage } = Plugins;
 
@@ -45,10 +46,11 @@ export interface IPhoto  extends IMarker {
   dateTaken: string,
   orientation: number,
   src: string,
-  thumbnail?: string,
+  thumbSrc?: IThumbSrc
+  thumbnail?: string,  //deprecate
   width?: number,
   height?: number,
-  image?: {
+  image?: {             //deprecate
     width:number,
     height:number,
   }
@@ -280,7 +282,13 @@ export class MockDataService {
     o.seq = seq;
     o.position = MappiMarker.position(o);
     o.src = MockDataService.photo_baseurl + random;
-    o.thumbnail = o.src.trim();
+    o.thumbSrc = {
+      width: 80,
+      height: 80,
+      src: o.src.trim(),
+      style: {'width.px':'80', 'height.px':'80'},
+    }
+    o.thumbnail = o.src.trim();  // deprecate
     let size = MockDataService.sizes[ random % MockDataService.sizes.length];
     o.src = o.src.replace("80", size.join('/'));
     o.width = size[0];
@@ -381,10 +389,11 @@ export class RestyTrnHelper {
           dateTaken: null,
           orientation: 1,
           src: null,
-          thumbnail: null,
+          thumbnail: null, // deprecate
+          thumbSrc: {},
           width: null,
           height: null,
-          image: {
+          image: {          // deprecate
             width:null,
             height:null,
           }

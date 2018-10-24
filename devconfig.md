@@ -82,6 +82,8 @@ npm run build; ionic capacitor copy ios
 ```
 
 ## Add Native LaunchNavigator
+see: https://github.com/dpa99c/phonegap-launch-navigator
+
 > remember to rename Capacitor `ios` folder when adding Cordova plugin
 ```
 ionic cordova plugin add uk.co.workingedge.phonegap.plugin.launchnavigator
@@ -114,3 +116,33 @@ npm uninstall --save cordova-plugin-splashscreen
   </array>
 
 ```
+
+
+## ionic native photo library
+> NOTE: PhotoLibraryProtocol.swift is NOT supported with Capacitor. Just remove from project
+and all references
+
+```
+mv ios ios.0
+cordova platform remove ios
+# update swift support to 1.7
+cordova plugin rm cordova-plugin-add-swift-support --force
+cordova plugin add cordova-plugin-add-swift-support
+# use forked lib at https://github.com/mixuala/cordova-plugin-photo-library.git
+ionic cordova plugin add https://github.com/mixuala/cordova-plugin-photo-library.git --variable PHOTO_LIBRARY_USAGE_DESCRIPTION="To choose photos"
+npm install --save @ionic-native/photo-library@beta
+ionic cordova prepare ios
+
+# restore capacitor
+mv ios.0 ios
+npx cap sync
+npx cap open ios
+
+```
+
+
+```
+# TODO: look at ionic-webview to see if it solves the 'cdvphotolibrary://' protocol issue with WKWebView  
+ionic cordova plugin add cordova-plugin-ionic-webview
+npm install --save @ionic-native/ionic-webview@beta
+``

@@ -2,7 +2,7 @@
     <!-- layout={{layout}} -->
   <ng-container *ngSwitchCase="'gallery'">
     <ion-thumbnail class="gallery"  slot="start">
-      <ion-img [src]="photo.thumbnail" [title]="asLocalTime(photo).toLocaleString()"></ion-img>
+      <ion-img [src]="photo.thumbSrc?.src" [title]="asLocalTime(photo).toLocaleString()"></ion-img>
     </ion-thumbnail>
   </ng-container>
 
@@ -11,7 +11,7 @@
     <ion-item>
       <ion-thumbnail slot="start">
         <ion-badge class="thumbnail-overlay" color="primary"> {{photo.seq+1}} </ion-badge>
-        <ion-img [src]="photo.thumbnail"></ion-img>
+        <ion-img [src]="photo.thumbSrc?.src"></ion-img>
       </ion-thumbnail>
       <ion-label>
         <h3>dateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>
@@ -32,7 +32,7 @@
 
   <!-- (UNUSED) mode='list': show markerItem details -->
   <ion-item *ngSwitchCase="'list'">
-    <ng-container *ngIf="photo.thumbnail as src; else list_pinIcon">
+    <ng-container *ngIf="photo.thumbSrc?.src as src; else list_pinIcon">
       <ion-thumbnail slot="start">
         <ion-img [src]="src"></ion-img>
       </ion-thumbnail>

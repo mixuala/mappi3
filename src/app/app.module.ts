@@ -8,6 +8,7 @@ import { QRCodeModule } from 'angularx-qrcode';
 import { IonicModule, IonicRouteStrategy } from '@ionic/angular';
 import { SplashScreen } from '@ionic-native/splash-screen/ngx';
 import { StatusBar } from '@ionic-native/status-bar/ngx';
+import { PhotoLibrary } from '@ionic-native/photo-library/ngx';
 
 import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
@@ -22,7 +23,7 @@ import { GoogleMapsComponent } from './google-maps/google-maps.component';
 import { MockDataService } from './providers/mock-data.service';
 import { RestyService } from './providers/resty.service';
 import { SubjectiveService } from './providers/subjective.service';
-import { PhotoService } from './providers/photo/photo.service';
+import { PhotoService, DataURLPipe } from './providers/photo/photo.service';
 import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
 
 
@@ -35,14 +36,15 @@ import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
   ],
   entryComponents: [],
   imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,
-    QRCodeModule],
+    QRCodeModule, 
+  ],
   providers: [
     StatusBar,
     SplashScreen,
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     MappiService,
     MockDataService, RestyService, SubjectiveService,
-    PhotoService
+    PhotoService, PhotoLibrary,
   ],
   bootstrap: [AppComponent]
 })
@@ -62,6 +64,7 @@ export class AppModule {}
     MarkerItemComponent,
     GoogleMapsComponent,
     PhotoswipeComponent,
+    DataURLPipe,
   ],
   exports: [
     MarkerListComponent,
