@@ -46,14 +46,9 @@ export interface IPhoto  extends IMarker {
   dateTaken: string,
   orientation: number,
   src: string,
-  thumbSrc?: IThumbSrc
-  thumbnail?: string,  //deprecate
+  thumbSrc?: IThumbSrc,
   width?: number,
   height?: number,
-  image?: {             //deprecate
-    width:number,
-    height:number,
-  }
   [propName: string]: any;
 }
 
@@ -288,7 +283,8 @@ export class MockDataService {
       src: o.src.trim(),
       style: {'width.px':'80', 'height.px':'80'},
     }
-    o.thumbnail = o.src.trim();  // deprecate
+    // TODO: check if we should use PhotoLibraryHelper.getThumbSrc$ with observables
+    // may not be able to trigger changeDetection for all cases
     let size = MockDataService.sizes[ random % MockDataService.sizes.length];
     o.src = o.src.replace("80", size.join('/'));
     o.width = size[0];
@@ -389,14 +385,9 @@ export class RestyTrnHelper {
           dateTaken: null,
           orientation: 1,
           src: null,
-          thumbnail: null, // deprecate
           thumbSrc: {},
           width: null,
           height: null,
-          image: {          // deprecate
-            width:null,
-            height:null,
-          }
         }
         break;
       case 'MarkerGroup':

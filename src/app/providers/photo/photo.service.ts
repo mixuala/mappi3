@@ -44,7 +44,8 @@ export interface IExifPhoto {
     [propName:string]: any,
   },
   thumbSrc?: IThumbSrc,
-  thumbnail?: string,
+
+  // TODO: move to _calcImgSrcDim(options)
   targetWidth?: number,
   targetHeight?: number,
 }
@@ -523,7 +524,6 @@ export class PhotoService {
       width: exif.PixelXDimension,
       height: exif.PixelYDimension,
       seq: seq,
-      thumbnail: exifData.src,    // TODO: deprecate
     }
     const pickFromItem = !itemData ? {} : {
       loc: [itemData.latitude, itemData.longitude],
@@ -541,7 +541,10 @@ export class PhotoService {
     Array.from([null, 'image', 'thumbSrc']).forEach(o=>{
       this._rotateDim(p, o);
     })
+    // p.thumbSrc$ = PhotoLibraryHelper.getThumbSrc$(itemData, '80x80');
     if (!MappiMarker.hasLoc(p)) p["_loc_was_map_center"] = true;
+
+
     return p;
   }
 
