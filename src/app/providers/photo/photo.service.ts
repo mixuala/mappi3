@@ -10,6 +10,7 @@ import { WebView } from '@ionic-native/ionic-webview/ngx';
 
 import { AppComponent } from '../../app.component';
 import { MockDataService, RestyTrnHelper, IMarker, IPhoto, quickUuid } from '../mock-data.service';
+import { SubjectiveService } from '../subjective.service';
 import { MappiMarker } from '../mappi/mappi.service';
 
 const { Device } = Plugins;
@@ -59,10 +60,19 @@ export interface IThumbSrc {
   style?: {'width.px':string, 'height.px':string}; 
 }
 
+// update/extend interface definition
+export interface IMappiGetLibraryOptions extends GetLibraryOptions {
+  includeImages?: boolean;
+  includeCloudData?: boolean;
+  maxItems?: number;
+}
+
 export interface IMappiGetThumbnailOptions extends GetThumbnailOptions {
   dataURL: boolean;
   maxItems?: number;
 }
+
+
 
 export interface IMappiLibraryItem extends LibraryItem {
   // e.g. "/Users/[...]/Devices/A11DA2A5-D033-40AA-BEE1-E2AA8281B774/data/Media/DCIM/100APPLE/IMG_0004.JPG"
@@ -84,11 +94,12 @@ export interface IMappiLibraryItem extends LibraryItem {
     Orientation:number,
   }
   filePath?: string;        
-  imgCache?: {[dim:string]:string};
-  thumbSrc?: IThumbSrc;
+  // imgCache?: {[dim:string]:string};
+  // thumbSrc?: IThumbSrc;
   // TODO: determine if Subj/Observer with Async Pipe is performant
-  subj?: ReplaySubject<IThumbSrc>;
-  thumbSrc$?: Observable<IThumbSrc>;
+  // subj?: ReplaySubject<IThumbSrc>;
+  // thumbSrc$?: Observable<IThumbSrc>;
+  _photo?: IPhoto;
 }
 
 const PHOTO_LIBRARY_WAIT_LIMIT = 20;   // PhotoLibrary elements to load before returning
@@ -102,9 +113,14 @@ export class PhotoService {
     private platform: Platform,
     private photoLibrary: PhotoLibrary,
   ) { 
+    // reset caches, currently not put in Storage
+    SubjectiveService.photoCache = {};
+    PhotoLibraryHelper.reset();
+    
     this.platform.ready().then( ()=>{
       if (typeof cordova != 'undefined')
         PhotoLibraryCordova = cordova.plugins['photoLibrary']; // ['photoLibrary'];
+        window['_PhotoLibraryHelper'] = PhotoLibraryHelper;
     })    
   }
 
@@ -166,12 +182,12 @@ export class PhotoService {
       switch (device.platform){
         case 'ios':
           // use cordova-plugin-photo-library(mappi) with ios moments
-          return this.load_PhotoLibrary()
+          return this.load_PhotoLibraryByChunk()
           .then( (items)=>{
             const random = Date.now() % items.length;
             const photo = items[random]
             photo.seq = seq;
-            console.log("Choosing random photo from PhotoLibrary, index=", random, photo);
+            console.log("Choosing random photo from PhotoLibrary, index=", random, photo.uuid);
             return photo;
           });
         case 'android':
@@ -180,7 +196,7 @@ export class PhotoService {
             targetWidth: Math.min(AppComponent.screenWidth, AppComponent.screenHeight)
           };
           const data = await this.getImage_Camera(options)
-          return Promise.resolve(this._exif2Photo(data, null, seq))
+          return Promise.resolve(this._exif2Photo(data, null))
         case 'web':
           return this._getRandomPhoto(seq);
         default:
@@ -191,28 +207,6 @@ export class PhotoService {
           return this._getRandomPhoto(seq);
         return Promise.reject('continue');
     }
-  }
-
-
-
-  getImage_Library(items: IMappiLibraryItem[], seq:number, options:any={}):Promise<IExifPhoto>{
-    // const items = await this.scan_PhotoLibrary_Cordova();
-    const key = '80x80';
-    const item = items[seq];
-    const pr_exifData = this._libraryResp2Exif(item);
-    const pr_thumbSrc = new Promise<IThumbSrc>( (resolve, reject)=>{
-      const done = PhotoLibraryHelper.getThumbSrc$(item, key)
-      .subscribe( (thumbSrc)=>{
-        done.unsubscribe();
-        // TODO: mutates item, change obj reference if you don't use Observer
-        resolve(thumbSrc);
-      })
-    })
-    return Promise.all([pr_exifData, pr_thumbSrc])
-    .then ( resp=>{
-      console.log("getImage_Library()", item)
-      return Promise.resolve(resp[0]);
-    })
   }
 
   /**
@@ -268,8 +262,16 @@ export class PhotoService {
       thumbnailHeight: 80,
       dataURL: true,
     };
-    const lib_options:GetLibraryOptions = {
-      maxItems: 100
+    const lib_options:IMappiGetLibraryOptions = {
+      thumbnailWidth: 80, 
+      thumbnailHeight: 80,
+      includeAlbumData: false,
+      includeVideos: false,
+      includeCloudData: false,
+      itemsInChunk: 10, // Loading large library takes time, so output can be chunked so that result callback will be called on
+      maxItems: 80,
+      chunkTimeSec: 0.5,
+      useOriginalFileNames: false,
     }
     Object.assign(lib_options, options);
     Object.assign(photolib_options, options);
@@ -277,9 +279,14 @@ export class PhotoService {
     const items = await new Promise<LibraryItem[]>( (resolve,reject)=>{
       PhotoLibraryCordova.getLibrary( 
         async (chunk)=>{
-          await PhotoLibraryHelper.loadChunk(chunk.library, photolib_options);
+          // await PhotoLibraryHelper.loadChunk(chunk.library, photolib_options);
           if (callback instanceof Function){
-            callback(chunk.library)
+            // callback() uses Observer to monitor load, returns when enough are complete
+            callback(chunk.library);
+          } else {
+            chunk.library.forEach( item=>{
+              this.load_PhotoLibraryItem(item);
+            })
           }
           if (chunk.isLastChunk){
             resolve(PhotoLibraryHelper.items());
@@ -291,12 +298,14 @@ export class PhotoService {
         },
         lib_options
         );
-    })
+    });
+
+    return Promise.resolve(items);
 
     const moments = await new Promise<any[]>( (resolve,reject)=>{
       PhotoLibraryCordova.getMoments( 
         (moments)=>{
-          console.log("PhotoLibraryCordova.getMoments():", moments);
+          console.log(">>> PhotoLibraryCordova.getMoments():", moments.slice(-5));
           resolve(moments);
         },    
         (err)=>{
@@ -310,45 +319,72 @@ export class PhotoService {
       
   }
 
-  load_PhotoLibrary():Promise<IPhoto[]>{
-    let seq = 0;
-    const waitForLimit = new BehaviorSubject<Promise<IPhoto>[]>([]);
-    const scan_callback = (chunk:LibraryItem[]) =>{
-      // 'inflate' IPhoto here
-      const pr = chunk.map( (item, i)=>{
-        return this.getImage_Library(chunk, seq+i)
-        .then( exifData=>{
-          return this._exif2Photo(exifData, item, seq+i);
-        })
-      });
-      seq += chunk.length;
-      const waitingFor = waitForLimit.value.slice();
-      pr.forEach( o=>waitingFor.push(o) );
-      waitForLimit.next(waitingFor);
+  /**
+   * LibraryItem => IPhoto pipeline:
+   * - check if cached, IPhoto (from SubjectiveService.photoCache[uuid])
+   * - check if cached, PhotoLibraryHelper.get() (from CameraRoll)
+   * - _libraryResp2Exif)
+   * - _exif2Photo()
+   * - PhotoLibraryHelper.getThumbSrc$(itemData, thumbDim)
+   * @param item 
+   */
+  load_PhotoLibraryItem(item:IMappiLibraryItem): IPhoto {
+    const cachedItem = PhotoLibraryHelper.get(item.id);
+    if (cachedItem && cachedItem._photo){
+      // NOTE: when == Date.now() when loaded from CameraRoll into cache.
+      const photo = SubjectiveService.photoCache[cachedItem._photo.uuid]; 
+      // TODO: expire?, user may have edited?
+      return photo;
     }
-    return new Promise<IPhoto[]>( (resolve, reject)=>{
-      const _haveEnough = ( waitFor:Promise<IPhoto>[])=>{
-        Promise.all(  waitFor )
-        .then( items=>{
-          console.log("*** ChoosePhoto from PhotoLibrary, items=", items)
 
-          // HACK: just choose the last item
-          resolve(items);
-        });
-      }
-      const done = waitForLimit.subscribe( waitFor=>{
-        if (waitFor.length>PHOTO_LIBRARY_WAIT_LIMIT){
+    const thumbDim = '80x80';
+    const exifData = this._libraryResp2Exif(item);
+    item._photo = this._exif2Photo(exifData, item, thumbDim);
+    PhotoLibraryHelper.set(item);
+    // NOTE: photo._thumbSrc$ set explicitly to test lazy loading
+    // prepare to fetch DataURL for thumbnail, but lazyload. wait until async pipe subscription in view
+    if (!item._photo._thumbSrc$)
+      item._photo._thumbSrc$ = PhotoLibraryHelper.getThumbSrc$(item._photo, thumbDim);
+    
+    SubjectiveService.photoCache[item._photo.uuid] = item._photo;
+
+    /**
+     * TODO: use a BehaviorSubject to page LibraryItems for display. Do this in Component???
+     */
+
+    return item._photo;
+  }
+
+  load_PhotoLibraryByChunk():Promise<IPhoto[]>{
+    let seq = 0;
+    const waitForLimit = new BehaviorSubject<IPhoto[]>([]);
+    const loaded:IPhoto[] = [];
+
+    const scan_callback = (chunk:IMappiLibraryItem[]) =>{
+      chunk.forEach( item=>{
+        loaded.push( this.load_PhotoLibraryItem(item) );
+      })
+      seq += chunk.length;
+      waitForLimit.next(loaded);
+    }
+
+    return new Promise<IPhoto[]>( (resolve, reject)=>{
+      const done = waitForLimit.subscribe( loaded=>{
+        if (loaded.length>PHOTO_LIBRARY_WAIT_LIMIT){
           done.unsubscribe();
-          _haveEnough(waitFor)
+          resolve( loaded );
         }
       })
       try {
-        // all set up, now start scanning
+        /**
+         *  all set up, now start scanning
+         * */        
         this.scan_PhotoLibrary_Cordova(scan_callback)
         .then ( (items)=>{
           if (items.length<=PHOTO_LIBRARY_WAIT_LIMIT){
             done.unsubscribe();
-            _haveEnough(waitForLimit.value);
+            const loaded = waitForLimit.value.slice();
+            resolve( loaded );
           }
         })
       } catch (err){
@@ -394,40 +430,42 @@ export class PhotoService {
    * @param item 
    * @param options 
    */
-  private async _libraryResp2Exif( item:IMappiLibraryItem, options?:any ):Promise<IExifPhoto> {
-    console.warn("_libraryResp2Exif NOT implemented yet" );
+  private _libraryResp2Exif( item:IMappiLibraryItem, options?:any ): IExifPhoto {
     const self = this;
     function _getNativeURI(uri:string):string{
       return self.getImgSrc_Camera( uri, {destinationType: Camera.DestinationType.NATIVE_URI});
     }
-    function _getExifFromJpeg(item:IMappiLibraryItem):any {
-      return {  
-        
-        src: _getNativeURI( 'file://'+item.filePath ),
-        orientation:item['{TIFF}'].Orientation,
-        exif: {
-          DateTimeOriginal: item['{Exif}'] && item['{Exif}'].DateTimeOriginal,
-          PixelXDimension: item.width, 
-          PixelYDimension: item.height,
-        },       
-        gps: {
-          Altitude: item['{GPS}'] && item['{GPS}'].Altitude,
-          Latitude: item['{GPS}'] && item['{GPS}'].Latitude,
-          Longitude: item['{GPS}'] && item['{GPS}'].Longitude,
-          Speed: item['{GPS}'] && item['{GPS}'].Speed,
-        },
-        tiff: {
-          Artist:item['{TIFF}'] && item['{TIFF}'].Artist,
-          Copyright:item['{TIFF}'] && item['{TIFF}'].Copyright,
-          Orientation:item['{TIFF}'] && item['{TIFF}'].Orientation,
-        }
+    const exif = item['{Exif}'] || {};
+    const gps = item['{GPS}'] || {};
+    const tiff = item['{TIFF}'] || {};
+
+    const exifData:IExifPhoto = {  
       
-      };
+
+      // TODO: this src doesn't work
+      src: _getNativeURI( 'file://'+item.filePath ),
+
+
+      orientation: tiff['Orientation'] || item.orientation,
+      exif: {
+        DateTimeOriginal: exif['DateTimeOriginal'],
+        PixelXDimension: item.width, 
+        PixelYDimension: item.height,
+      },       
+      gps: {
+        Altitude: gps['Altitude'],
+        lat: gps['Latitude'],
+        lng: gps['Longitude'],
+        speed: gps['Speed'],
+      },
+      tiff: {
+        Artist: tiff['Artist'],
+        Copyright: tiff['Copyright'],
+        Orientation: tiff['Orientation'],
+      }
     }
-    const metaData = _getExifFromJpeg(item);
-    // metaData.src = item.photoURL;  // `cdvphotolibrary://`
     
-    return Promise.resolve(metaData as IExifPhoto);
+    return exifData;
   }
 
   /**
@@ -472,32 +510,16 @@ export class PhotoService {
     }
   }
 
-  /**
-   * WARNING: this method mutates p
-   * @param p 
-   * @param key 
-   * @returns true if object p was changed
-   */
-  private _rotateDim(p:IPhoto, key?:string):boolean{
-    const target = p[key];
-    if (target && p.orientation > 4){
-      const {width, height} = target;
-      target.width = height;
-      target.height = width;
-      return true;
-    }
-    return false;
-  }
 
   /**
-   * NOTE: call AFTER exif and thumbSrc are valid so _rotateDim() can 
-   * work on thumbSrc using tiff.Orientation value
+   * convert cameraroll LibraryItem to IPhoto for rendering in <app-marker-item>, do NOT save to Rest API
    * @param exifData 
    * @param itemData 
-   * @param seq 
+   * @param thumbDim   optionally configure thumbSrc$ observer for thumbnails, e.g. 80x80 thumbnails 
    */
-  private _exif2Photo(exifData:IExifPhoto, itemData?:IMappiLibraryItem, seq?:number):IPhoto{
-    const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo');
+  private _exif2Photo(exifData:IExifPhoto, itemData?:IMappiLibraryItem, thumbDim:string='80x80'):IPhoto {
+    const [imgW, imgH] = thumbDim.split('x');
+    const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo', {seq:Date.now()});
     function _exifDate2ISO(s) {
       let parts = s.split(' ');
       return `${parts[0].replace(/\:/g,"-")}T${parts[1]}`;
@@ -540,35 +562,42 @@ export class PhotoService {
       localTime = null;
     }
     const pickFromExif = {
+      src: exifData.src,                    // is this the correct IMG.src for the fullsize photo?
       dateTaken: localTime,
       orientation: tiff.Orientation || 1,
-      src: exifData.src,
       loc: gpsLoc,
       width: exif.PixelXDimension,
       height: exif.PixelYDimension,
-      seq: seq,
     }
+    
     const pickFromItem = !itemData ? {} : {
+      camerarollId: itemData.id,
+      src: itemData.photoURL,               // override exifData.src
       loc: [itemData.latitude, itemData.longitude],
       label: itemData.fileName,
       dateTaken: itemData.creationDate,
-      // src: itemData.photoURL,
       width: itemData.width,
       height: itemData.height,
-      thumbSrc: itemData.thumbSrc,
+      // cached values, do NOT save to Resty
+      _thumbSrc: {
+        width: parseInt(imgW),
+        height: parseInt(imgH),
+        style:  {'width.px':imgW, 'height.px':imgH},
+        src:  null,
+      },          
+      _thumbSrc$: null,
     }
-    const p:IPhoto = Object.assign(emptyPhoto, pickFromExif, pickFromItem);
-    p.position = MappiMarker.position(p);
-
+    const photo:IPhoto = Object.assign(emptyPhoto, pickFromExif, pickFromItem);
     // # final adjustments
-    Array.from([null, 'image', 'thumbSrc']).forEach(o=>{
-      this._rotateDim(p, o);
+    // photo._thumbSrc$ = thumbDim ? PhotoLibraryHelper.getThumbSrc$(photo, thumbDim) : null,
+    photo.position = MappiMarker.position(photo);
+    Array.from([null, 'thumbSrc']).forEach(o=>{
+      PhotoLibraryHelper.rotateDimByOrientation(photo, o);
     })
-    // p.thumbSrc$ = PhotoLibraryHelper.getThumbSrc$(itemData, '80x80');
-    if (!MappiMarker.hasLoc(p)) p["_loc_was_map_center"] = true;
+    if (MappiMarker.hasLoc(photo)==false) photo["_loc_was_map_center"] = true;
 
-
-    return p;
+    console.log(`>>> PhotoLibraryHelper:IPhoto, id=${photo.camerarollId} `, photo.src, itemData.fileName);
+    return photo;
   }
 
   private _getRandomPhoto(seq:number):Promise<IPhoto> {
@@ -605,82 +634,122 @@ export class PhotoService {
 
 
 
+
+
+
+
+
+
+
 /**
  * cache dataURLs from cordova-plugin-photo-library (mappi)
  */
 export class PhotoLibraryHelper {
-  // cache dataURLs, e.g. PLH.library = { [uuid]:{ '80x80':[dataURL] } }
-  static cache:{[uuid:string]:LibraryItem} = {};
-  static libraryItems:LibraryItem[] = [];
-  static loadChunk(library:LibraryItem[], options:GetLibraryOptions):void {
+  // private static _cache:{[uuid:string]:IMappiLibraryItem | Promise<IMappiLibraryItem>} = {};
+  private static _cache:{ [uuid:string]:IMappiLibraryItem } = {};
+  static reset(){ PhotoLibraryHelper._cache = {} }
+  static get(uuid:string):IMappiLibraryItem { return PhotoLibraryHelper._cache[uuid] }
+  static set(item:IMappiLibraryItem):IMappiLibraryItem { return PhotoLibraryHelper._cache[item.id] = item }
+  static items():IMappiLibraryItem[] {
+    return Object.values(PhotoLibraryHelper._cache);
+  }
+
+  
+
+  /**
+   * WARNING: this method mutates p
+   * @param p 
+   * @param key 
+   * @returns true if object p was changed
+   */
+  static rotateDimByOrientation(p:IPhoto, key?:string):boolean{
+    const target = key ? p[key] : p;
+    if (target && p.orientation > 4){
+      const {width, height} = target;
+      target.width = height;
+      target.height = width;
+      return true;
+    }
+    return false;
+  }
+
+  static loadChunk(library:IMappiLibraryItem[], options:GetLibraryOptions):void {
     library.forEach( (libraryItem)=> {
-      PhotoLibraryHelper.cache[libraryItem.id] = libraryItem;
-      console.log(libraryItem.id, libraryItem);
+      if (PhotoLibraryHelper._cache[libraryItem.id]) return;
+      console.log(`>>> PhotoLibraryHelper.loadChunk(${library.length})`,libraryItem.id, libraryItem.photoURL);
     });
   };
-  static items():LibraryItem[] {
-    return Object.values(PhotoLibraryHelper.cache);
-  }
+
 
   /**
    * 
    * @param libraryItem 
-   * @param key 
+   * @param thumbDim 
    * @returns {} or valid IThumbSrc
    */
-  static getThumbSrc$(libraryItem:IMappiLibraryItem, key:string):Observable<IThumbSrc> {
-    // const dim = [photolib_options.thumbnailWidth, photolib_options.thumbnailHeight];
-    const [imgW, imgH] = key.split('x');
-    const subj = libraryItem.subj ? libraryItem.subj : new ReplaySubject(1);
-
-    // initialize
-    if (!libraryItem.subj){
-      libraryItem.subj = subj;
-      libraryItem.thumbSrc$ = subj as Observable<IThumbSrc>;
-      libraryItem.imgCache = {};
-    }
-
-    // return cached value
-    if (libraryItem.imgCache[key])
-      return libraryItem.thumbSrc$
+  static getThumbSrc$(photo:IPhoto, thumbDim:string='80x80'):Observable<IThumbSrc> {
     
+    if (photo._thumbSrc$ instanceof ReplaySubject) 
+      return photo._thumbSrc$; 
+      
+    // return cached value
+    const cached = SubjectiveService.photoCache[photo.uuid];
+    if (cached && cached._thumbSrc$)
+      return cached._thumbSrc$;
+
+
+    const [imgW, imgH] = thumbDim.split('x');
+    // initialize
+    photo._subj = new ReplaySubject<IThumbSrc>(1);;
+    photo._thumbSrc$ = photo._subj as Observable<IThumbSrc>;
+    photo._imgCache = {};
+
+    if (!cached)
+      SubjectiveService.photoCache[photo.uuid] = photo;
+
     // cache value and return
     const options = { 
       thumbnailWidth: parseInt(imgW), 
       thumbnailHeight: parseInt(imgH),
       dataURL: true,
     }
-    PhotoLibraryHelper._assignDataURL(libraryItem, options)
-    .then( ()=>{
-      const thumbSrc:IThumbSrc = {
-        width:parseInt(imgW),
-        height:parseInt(imgH),
-        src: libraryItem.imgCache[key],
-        style: {'width.px':imgW, 'height.px':imgH},  
-      }
-      libraryItem.thumbSrc = thumbSrc
-      libraryItem.subj.next( libraryItem.thumbSrc );
-    })
-    return libraryItem.thumbSrc$
+    const lazyLoad = ()=>{
+      photo._thumbSrc = photo._thumbSrc || {};
+      const src = photo._thumbSrc.src || "(none)";
+      console.warn( "getThumbSrc$(): Confirm LazyLoad, id=", photo.uuid, src.slice(0,50));
+      if (photo.camerarollId){
+        // cameraroll photo, use PhotoLibrary.getThumbnail( {dataURL:true})
+        PhotoLibraryHelper._assignDataURL(photo, options)
+        .then( imgSrc=>{  
+          // used by view with throught async pipe. 
+          // mutate 'photo._thumbSrc' directly to pass results
+          photo._thumbSrc.width = parseInt(imgW);
+          photo._thumbSrc.height = parseInt(imgH);
+          photo._thumbSrc.src =  photo._imgCache[thumbDim] = imgSrc;
+          photo._thumbSrc.style =  {'width.px':imgW, 'height.px':imgH};
+          console.warn(`@@@ cameraroll src.length=${imgSrc.length}, `, photo.camerarollId, photo._thumbSrc.src.slice(0,25));
+          photo._subj.next( photo._thumbSrc );
+        });
+      }      
+      return photo._thumbSrc;
+    }
+
+    // wait until async pipe before loading dataURL
+    photo._subj.next( lazyLoad() );
+    return photo._thumbSrc$
   }
 
-  private static _assignDataURL(libraryItem:IMappiLibraryItem, options:IMappiGetThumbnailOptions):Promise<IMappiLibraryItem> {
-    const self = this;
-    libraryItem.imgCache = libraryItem.imgCache || {};
+  private static _assignDataURL(photo:IPhoto, options:IMappiGetThumbnailOptions):Promise<string> {
     return new Promise( (resolve, reject)=>{
       PhotoLibraryCordova.getThumbnail(
-        libraryItem, // or libraryItem.id
+        photo.camerarollId || photo.uuid,
         (data:Blob|string, mimeType:string) => {
-          const dim = [options.thumbnailWidth, options.thumbnailHeight];
-          const key = dim.join('x');
-          if (options.dataURL){
-            libraryItem.imgCache[key] = data as string;
-          }
-          else {
-            console.error("PhotoLibraryHelper._assignDataURL() not configured for Blob data yet");
-            // libraryItem.thumbnailSrc[key] = data; // btoa()
-          }
-          resolve(libraryItem);
+          if (data instanceof Blob){
+            const errMsg = "PhotoLibraryHelper._assignDataURL() not configured for Blob data yet";
+            console.error(errMsg);
+            reject(errMsg);
+          } else 
+            resolve(data);
         },
         function (err) {
           console.log('PhotoLibraryHelper._assignDataURL(): Error occured', err);

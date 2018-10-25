@@ -3,11 +3,14 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import { takeUntil,  map } from 'rxjs/operators';
 
 import { RestyService } from './resty.service';
+import { IPhoto } from './mock-data.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SubjectiveService<T> {
+
+  public static photoCache:{[uuid:string]:IPhoto} = {};
 
   public readonly className:string;
   public subject$: BehaviorSubject<T[]>;
@@ -30,6 +33,7 @@ export class SubjectiveService<T> {
 
   // see: https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else
   get$( uuid?:string | string[]): Observable<T[]> {
+    const now = Date.now();
     if (uuid=="current") {
       return this._observable$;
     }
@@ -42,12 +46,9 @@ export class SubjectiveService<T> {
           this.sortBy = 'seq';
         }
         // reindex for Subject only, NOT DB
-        arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>o['seq']=i);
-
-        // arr.map( (o,i,l)=>{
-        //   // HACK: persist alpha sort/.seq to original data
-        //   this.resty["_data"][o['uuid']]=Object.assign({},o);
-        // });
+        arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>{
+          o['seq']=i;
+        });
         this.subject$.next(arr);
       })
     }

@@ -99,8 +99,10 @@ export class MarkerListComponent implements OnInit {
     });
   }
 
-  loadMarkerGroups(mList:IMarkerList):SubjectiveService<IMarkerGroup> {
 
+  loadMarkerGroups(mList:IMarkerList):SubjectiveService<IMarkerGroup> {
+    // TODO: make this lazyloading
+    console.warn("loadMarkerGroups() should be lazyloading, by chunk");
     const subject = this.cacheDescendents(mList) as SubjectiveService<IMarkerGroup>;
     this._mgSub[mList.uuid] = subject;
     this.mgCollection$[mList.uuid] = subject.watch$();
@@ -114,6 +116,7 @@ export class MarkerListComponent implements OnInit {
   }
 
   cacheDescendents(parent:any):SubjectiveService<IMarker> {
+    console.warn("cacheDescendents() should be lazyloading, by chunk");
     const found = MockDataService.getSubjByParentUuid(parent.uuid);
     if (found)
       return found;  

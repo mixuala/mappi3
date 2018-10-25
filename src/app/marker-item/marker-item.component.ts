@@ -3,6 +3,7 @@ import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { MockDataService, IPhoto, IMarker } from '../providers/mock-data.service';
+import { PhotoLibraryHelper } from '../providers/photo/photo.service';
 
 
 
@@ -39,6 +40,7 @@ export class MarkerItemComponent implements OnInit , OnChanges {
         case 'mi':
           if (!change.currentValue) return;
           const mi = change.currentValue;
+          this.setThumbSrc(mi); 
           this.miSubject.next(mi);
           break;
         case 'parentLayout':
@@ -47,7 +49,32 @@ export class MarkerItemComponent implements OnInit , OnChanges {
           break;
       }
     });
-  }  
+  }
+
+  /**
+   * // used by view with safe navigation operator, (?) so mutation ok
+   * @param mi 
+   * @param thumbDim 
+   */
+  setThumbSrc(mi:IPhoto, thumbDim:string='80x80'){
+    const [imgW, imgH] = thumbDim.split('x');
+    if (mi._thumbSrc && mi._imgCache && mi._imgCache[thumbDim] ){
+      mi._thumbSrc.src = mi._imgCache[thumbDim];
+      return;
+    }
+    mi._imgCache = mi._imgCache || {};
+    if (!mi._imgCache[thumbDim] ) {
+      // demo data only, src = "https://picsum.photos/80?image=24"
+      mi._imgCache[thumbDim] = mi.src.replace(/\d+\/\d+/,'80');
+    }
+    mi._thumbSrc = {
+      width: parseInt(imgW),
+      height: parseInt(imgH),
+      src: mi._imgCache[thumbDim],
+      style:  {'width.px':imgW, 'height.px':imgH},
+    }
+    mi._thumbSrc$ = PhotoLibraryHelper.getThumbSrc$(mi, thumbDim);
+  }
   
   mgLayoutChanged(){
     // propagate layout change to MarkerItemComponent (child)

@@ -55,11 +55,7 @@ export class SharePage implements OnInit, IViewNavEvents {
   private _selectedMarkerGroup: string;
   public get selectedMarkerGroup() { return this._selectedMarkerGroup }
   public set selectedMarkerGroup(value: string) {
-    if (this._selectedMarkerGroup == value){
-      console.warn("Testing Native.LaunchNavigator on repeated select")
-      this.launchApp('Map', value);
-    }
-    else
+
     this._selectedMarkerGroup = value;
 
     // console.warn( "SharePage setter: fire detectChanges() for selected", value);
@@ -87,6 +83,10 @@ export class SharePage implements OnInit, IViewNavEvents {
         break;
       case "groups":
         // MappiMarker.reset();
+        if ( this.selectedMarkerGroup == value.uuid ) {
+          console.warn("Testing Native.LaunchNavigator on repeated select")
+          this.launchApp('Map', value.uuid);          
+        }
         this.selectedMarkerGroup = value ? value.uuid : null;
         this.markerCollection$ = this.mgCollection$;
         break;
@@ -314,6 +314,7 @@ export class SharePage implements OnInit, IViewNavEvents {
     const uuid = this.parent.uuid;
     this.gallery = {items, index, uuid, mgUuids};
   }
+
 
   focusMarker(ev:{index:number, items:any[], uuid:string}){
     this.selectedMarkerGroup = this.gallery.mgUuids[ev.index];

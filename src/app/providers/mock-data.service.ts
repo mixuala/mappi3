@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
 import { Plugins } from '@capacitor/core';
+import { Observable } from 'rxjs';
+
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
-
-
 import { MappiMarker, } from '../providers/mappi/mappi.service';
 import { IExifPhoto, IThumbSrc } from './photo/photo.service';
 
@@ -42,13 +42,15 @@ export interface IMarkerGroup extends IMarker {
   [propName: string]: any;
 }
 
-export interface IPhoto  extends IMarker {
+export interface IPhoto extends IMarker {
   dateTaken: string,
   orientation: number,
   src: string,
-  thumbSrc?: IThumbSrc,
   width?: number,
   height?: number,
+  camerarollId?: string,          // LibraryItem.id
+  _thumbSrc?: IThumbSrc,
+  _thumbSrc$?: Observable<IThumbSrc>,
   [propName: string]: any;
 }
 
@@ -115,6 +117,8 @@ export class MockDataService {
     .then( ()=>console.log("TESTDATA READY"));
     window['_mockDataService'] = this;
     window['_MockDataService'] = MockDataService;
+    window['_SubjectiveService'] = SubjectiveService;
+
     return;
   }
 
@@ -275,19 +279,15 @@ export class MockDataService {
 
   static inflatePhoto(o:IPhoto, seq?:number){
     const random = Math.min( Math.floor(Math.random() *  99))
+    const thumbSrc = MockDataService.photo_baseurl + random;
     o.seq = seq;
     o.position = MappiMarker.position(o);
-    o.src = MockDataService.photo_baseurl + random;
-    o.thumbSrc = {
-      width: 80,
-      height: 80,
-      src: o.src.trim(),
-      style: {'width.px':'80', 'height.px':'80'},
-    }
-    // TODO: check if we should use PhotoLibraryHelper.getThumbSrc$ with observables
-    // may not be able to trigger changeDetection for all cases
+    o._imgCache = {
+      // demo data only, inflate o._thumbSrc in MarkerItemComponent
+      '80x80': thumbSrc
+    };
     let size = MockDataService.sizes[ random % MockDataService.sizes.length];
-    o.src = o.src.replace("80", size.join('/'));
+    o.src = thumbSrc.replace("80", size.join('/'));
     o.width = size[0];
     o.height = size[1];
     return o;
@@ -386,9 +386,10 @@ export class RestyTrnHelper {
           dateTaken: null,
           orientation: 1,
           src: null,
-          thumbSrc: {},
           width: null,
           height: null,
+          camerarollId: null,   
+          _thumbSrc: {},    // do NOT save to Resty
         }
         break;
       case 'MarkerGroup':
