@@ -1,17 +1,19 @@
 <ng-container [ngSwitch]="layout" *ngIf="(photo$ | async) as photo">
     <!-- layout={{layout}} -->
   <ng-container *ngSwitchCase="'gallery'">
-    <ion-thumbnail class="gallery"  slot="start" *ngIf="(photo._thumbSrc$ | async) as img">
-      <ion-img [src]="img.src" [title]="asLocalTime(photo).toLocaleString()"></ion-img>
+    <ion-thumbnail class="gallery"  slot="start">
+      <!-- <app-mappi-image [photo]="photo"></app-mappi-image> -->
+      <app-mappi-image [thumbSrc]="photo._thumbSrc$ | async"></app-mappi-image>
     </ion-thumbnail>
   </ng-container>
 
   <!-- mode='edit': support ion-reorder and ion-item-sliding -->
   <ion-item-sliding class="layout-edit" *ngSwitchCase="'edit'">
     <ion-item>
-      <ion-thumbnail slot="start" *ngIf="(photo._thumbSrc$ | async) as img">
+      <ion-thumbnail slot="start">
         <ion-badge class="thumbnail-overlay" color="primary"> {{photo.seq+1}} </ion-badge>
-        <ion-img [src]="img.src"></ion-img>
+        <!-- <app-mappi-image [photo]="photo"></app-mappi-image> -->
+        <app-mappi-image [thumbSrc]="photo._thumbSrc$ | async"></app-mappi-image>
       </ion-thumbnail>
       <ion-label>
         <h3>dateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>

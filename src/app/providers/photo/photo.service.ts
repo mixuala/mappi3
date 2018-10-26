@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Injectable, Pipe, PipeTransform, } from '@angular/co
 import { DomSanitizer } from '@angular/platform-browser';
 import { Platform } from '@ionic/angular';
 import { Observable, ReplaySubject, BehaviorSubject } from 'rxjs';
+import { map, take, skipWhile }  from 'rxjs/operators'
 
 import { Plugins } from '@capacitor/core';
 import * as Camera from '@ionic-native/camera/ngx';
@@ -54,10 +55,13 @@ export interface IExifPhoto {
 }
 
 export interface IThumbSrc {
-  width?:number;
-  height?:number;
+  width?:string;
+  height?:string;
   src?: string;
-  style?: {'width.px':string, 'height.px':string}; 
+  style?: {'width.px':string, 'height.px':string};
+  title?: string;
+  alt?: string;
+  loading?: Promise<string>;
 }
 
 // update/extend interface definition
@@ -269,7 +273,7 @@ export class PhotoService {
       includeVideos: false,
       includeCloudData: false,
       itemsInChunk: 10, // Loading large library takes time, so output can be chunked so that result callback will be called on
-      maxItems: 80,
+      maxItems: 500,
       chunkTimeSec: 0.5,
       useOriginalFileNames: false,
     }
@@ -341,11 +345,7 @@ export class PhotoService {
     const exifData = this._libraryResp2Exif(item);
     item._photo = this._exif2Photo(exifData, item, thumbDim);
     PhotoLibraryHelper.set(item);
-    // NOTE: photo._thumbSrc$ set explicitly to test lazy loading
-    // prepare to fetch DataURL for thumbnail, but lazyload. wait until async pipe subscription in view
-    if (!item._photo._thumbSrc$)
-      item._photo._thumbSrc$ = PhotoLibraryHelper.getThumbSrc$(item._photo, thumbDim);
-    
+
     SubjectiveService.photoCache[item._photo.uuid] = item._photo;
 
     /**
@@ -580,8 +580,8 @@ export class PhotoService {
       height: itemData.height,
       // cached values, do NOT save to Resty
       _thumbSrc: {
-        width: parseInt(imgW),
-        height: parseInt(imgH),
+        width: imgW,
+        height: imgH,
         style:  {'width.px':imgW, 'height.px':imgH},
         src:  null,
       },          
@@ -644,6 +644,7 @@ export class PhotoService {
 /**
  * cache dataURLs from cordova-plugin-photo-library (mappi)
  */
+
 export class PhotoLibraryHelper {
   // private static _cache:{[uuid:string]:IMappiLibraryItem | Promise<IMappiLibraryItem>} = {};
   private static _cache:{ [uuid:string]:IMappiLibraryItem } = {};
@@ -654,7 +655,15 @@ export class PhotoLibraryHelper {
     return Object.values(PhotoLibraryHelper._cache);
   }
 
-  
+  static getEmptyThumbSrc(dim:string='80x80'):IThumbSrc {
+    const [imgW, imgH] = dim.split('x');
+    return {
+      width: imgW,
+      height: imgH,
+      src: null,
+      style: {'width.px':imgW, 'height.px':imgH},
+    }
+  }
 
   /**
    * WARNING: this method mutates p
@@ -683,6 +692,79 @@ export class PhotoLibraryHelper {
 
   /**
    * 
+   * lazyload IMG.src from IPhoto. only fetch dataURLs when called.
+   * 
+   * use with: <app-mappi-image [photo]="photo"></app-mappi-image>
+   * 
+   * @param photo 
+   * @param dim
+   * @returns IThumbSrc, res !== photo._thumbSrc when src CHANGED
+   */
+  static lazySrc( photo:IPhoto, dim:string='80x80'):IThumbSrc{
+    const [imgW, imgH] = dim.split('x');
+    const cached = SubjectiveService.photoCache[photo.uuid];
+    const emptyThumbSrc = PhotoLibraryHelper.getEmptyThumbSrc();
+
+    // init defaults
+    photo._thumbSrc = photo._thumbSrc || emptyThumbSrc;
+    photo._imgCache = photo._imgCache || {};
+
+    emptyThumbSrc['when'] = parseInt((Math.random()+"").slice(-3));
+
+    if (cached && cached._imgCache && cached._imgCache[dim]){
+      // assume all Storage.get() photos are restored && cached
+      if (cached._imgCache[dim] === photo._thumbSrc.src){
+        console.log(" --- 1. no change, same as cached value ---", emptyThumbSrc['when']);
+        return photo._thumbSrc; // return same value, avoid changeDetection
+      }
+
+      // use immutable value for changeDetection
+      emptyThumbSrc.src = cached._imgCache[dim];
+      return emptyThumbSrc;
+    }
+
+    SubjectiveService.photoCache[photo.uuid] = photo;
+
+    if (photo.camerarollId){
+      if (photo._thumbSrc['loading']) {
+        console.log(" --- 3. no change, waiting on Promise ---", emptyThumbSrc['when']);
+        return photo._thumbSrc;
+      }  
+      // load dataURL from cameraroll using use PhotoLibrary.getThumbnail( {dataURL:true})
+      // cache value and return
+      const options = { 
+        thumbnailWidth: parseInt(imgW), 
+        thumbnailHeight: parseInt(imgH),
+        dataURL: true,
+      }
+      photo._thumbSrc['loading'] = PhotoLibraryHelper._getDataURLFromCameraRoll(photo, options)
+      .then( imgSrc=>{
+        // use immutable value for changeDetection
+        emptyThumbSrc.src = photo._imgCache[dim] = imgSrc;
+        console.warn(`@@@ cameraroll CHANGED src.length=${imgSrc.length}, `, photo.uuid,  imgSrc && imgSrc.slice(0,25));
+        return imgSrc; // resolve
+      });
+      // return same value, avoid changeDetection until ready
+      console.log(" --- 2. no change, init Promise ---", emptyThumbSrc['when']);  
+      photo._thumbSrc['when'] = Date.now()
+      return photo._thumbSrc;  
+    } 
+    else {
+      // photo in cloud, but not cached, fetch src with proper size spec
+      const _getSrcUrlBySize = (photo:IPhoto, dim:string='80x80'):string => {
+        // only works for demo data on https://picsum.photos
+        return photo.src.replace(/\d+\/\d+/, dim.replace('x','/'));
+      }
+      emptyThumbSrc.src = photo._imgCache[dim] = _getSrcUrlBySize(photo, dim);
+      // use immutable value for changeDetection
+      return emptyThumbSrc;
+    }
+  }
+
+  /**
+   * 
+   * use with: <app-mappi-image [thumbSrc]="photo._thumbSrc$ | async"></app-mappi-image>
+   * 
    * @param libraryItem 
    * @param thumbDim 
    * @returns {} or valid IThumbSrc
@@ -699,13 +781,6 @@ export class PhotoLibraryHelper {
 
 
     const [imgW, imgH] = thumbDim.split('x');
-    // initialize
-    photo._subj = new ReplaySubject<IThumbSrc>(1);;
-    photo._thumbSrc$ = photo._subj as Observable<IThumbSrc>;
-    photo._imgCache = {};
-
-    if (!cached)
-      SubjectiveService.photoCache[photo.uuid] = photo;
 
     // cache value and return
     const options = { 
@@ -713,43 +788,85 @@ export class PhotoLibraryHelper {
       thumbnailHeight: parseInt(imgH),
       dataURL: true,
     }
+    const emptyThumbSrc = PhotoLibraryHelper.getEmptyThumbSrc(thumbDim);
+    photo._thumbSrc = photo._thumbSrc || {};
     const lazyLoad = ()=>{
-      photo._thumbSrc = photo._thumbSrc || {};
-      const src = photo._thumbSrc.src || "(none)";
-      console.warn( "getThumbSrc$(): Confirm LazyLoad, id=", photo.uuid, src.slice(0,50));
+      const xxxsrc = photo._thumbSrc.src || "(none)";
       if (photo.camerarollId){
+        if (photo._thumbSrc['loading$']) 
+          return photo._thumbSrc;
+        console.warn( "@@@ getThumbSrc$(): Confirm lazyload, id=", photo.uuid, xxxsrc.slice(0,50));
         // cameraroll photo, use PhotoLibrary.getThumbnail( {dataURL:true})
-        PhotoLibraryHelper._assignDataURL(photo, options)
+        photo._thumbSrc['loading$'] = PhotoLibraryHelper._getDataURLFromCameraRoll(photo, options)
         .then( imgSrc=>{  
           // used by view with throught async pipe. 
-          // mutate 'photo._thumbSrc' directly to pass results
-          photo._thumbSrc.width = parseInt(imgW);
-          photo._thumbSrc.height = parseInt(imgH);
-          photo._thumbSrc.src =  photo._imgCache[thumbDim] = imgSrc;
-          photo._thumbSrc.style =  {'width.px':imgW, 'height.px':imgH};
-          console.warn(`@@@ cameraroll src.length=${imgSrc.length}, `, photo.camerarollId, photo._thumbSrc.src.slice(0,25));
-          photo._subj.next( photo._thumbSrc );
+          emptyThumbSrc.src = photo._imgCache[thumbDim] = imgSrc;
+          // use immutable value for changeDetection
+          photo._thumbSrc = emptyThumbSrc;
+          console.warn(`@@@ cameraroll CHANGED src.length=${imgSrc.length}, `, photo.uuid, imgSrc.slice(0,25));
+          photo._subj.next( emptyThumbSrc );
+          return photo._thumbSrc;
         });
-      }      
-      return photo._thumbSrc;
+        return photo._thumbSrc;
+      }
+
+      /**
+       * photo in cloud, but not cached, fetch src with proper size spec
+       *    NOTE: just mangling url for https://picsum.photos
+       * */ 
+      console.warn( "photo in cloud, just mangling url for https://picsum.photos", photo.src)
+      const _getSrcUrlBySize = (photo:IPhoto, dim:string='80x80'):string => {
+        // only works for demo data on https://picsum.photos
+        return photo.src.replace(/\d+\/\d+/, dim.replace('x','/'));
+      }
+      
+      emptyThumbSrc.src = photo._imgCache[thumbDim] = _getSrcUrlBySize(photo, thumbDim);
+
+
+      // use immutable value for changeDetection  
+      return photo._thumbSrc = emptyThumbSrc;
     }
 
-    // wait until async pipe before loading dataURL
-    photo._subj.next( lazyLoad() );
+
+    /**
+     * this is NOT lazyloading. 
+     * ??? maybe try with <app-mappi-image>
+     */
+    // initialize
+    photo._subj = new ReplaySubject<IThumbSrc>(1);
+    photo._imgCache = {};
+    photo._subj.next( photo._thumbSrc );  // no subscribers yet
+    photo._thumbSrc$ = photo._subj.pipe(  
+      // called after first subscriber, async pipe 
+      map( (o)=> lazyLoad() ),
+      skipWhile( (o)=>!o.src ),
+      take(1),
+    );
+    if (!cached)
+      SubjectiveService.photoCache[photo.uuid] = photo;
     return photo._thumbSrc$
   }
 
-  private static _assignDataURL(photo:IPhoto, options:IMappiGetThumbnailOptions):Promise<string> {
+  private static _getDataURLFromCameraRoll(photo:IPhoto, options:IMappiGetThumbnailOptions):Promise<string> {
     return new Promise( (resolve, reject)=>{
+      if (photo.camerarollId=="fake"){
+        setTimeout( ()=>{
+          console.warn(  "@@ >> fake CameraRoll delay for id=", photo.uuid)
+          const src = photo.src.replace(/\d+\/\d+/, '80x80'.replace('x','/'))
+          resolve(  src  );
+        },100)
+        return "fake cameraroll delay"
+      }
+      options.dataURL = true;
       PhotoLibraryCordova.getThumbnail(
-        photo.camerarollId || photo.uuid,
+        photo.camerarollId,
         (data:Blob|string, mimeType:string) => {
           if (data instanceof Blob){
             const errMsg = "PhotoLibraryHelper._assignDataURL() not configured for Blob data yet";
             console.error(errMsg);
             reject(errMsg);
           } else 
-            resolve(data);
+            resolve(  data  );
         },
         function (err) {
           console.log('PhotoLibraryHelper._assignDataURL(): Error occured', err);

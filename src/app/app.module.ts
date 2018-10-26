@@ -25,6 +25,7 @@ import { RestyService } from './providers/resty.service';
 import { SubjectiveService } from './providers/subjective.service';
 import { PhotoService, DataURLPipe } from './providers/photo/photo.service';
 import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
+import { MappiImageComponent } from './mappi-image/mappi-image.component';
 
 
 
@@ -65,6 +66,7 @@ export class AppModule {}
     GoogleMapsComponent,
     PhotoswipeComponent,
     DataURLPipe,
+    MappiImageComponent,
   ],
   exports: [
     MarkerListComponent,
@@ -72,6 +74,7 @@ export class AppModule {}
     MarkerItemComponent,
     GoogleMapsComponent,
     PhotoswipeComponent,  
+    MappiImageComponent,
   ],
 })
 export class SharedComponentModule {}

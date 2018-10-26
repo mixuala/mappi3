@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Plugins } from '@capacitor/core';
-import { Observable } from 'rxjs';
+import { Observable, ReplaySubject } from 'rxjs';
 
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
@@ -49,8 +49,11 @@ export interface IPhoto extends IMarker {
   width?: number,
   height?: number,
   camerarollId?: string,          // LibraryItem.id
+  // extras
+  _imgCache?: {[dim:string]: string},
   _thumbSrc?: IThumbSrc,
   _thumbSrc$?: Observable<IThumbSrc>,
+  _subj?: ReplaySubject<IThumbSrc>,
   [propName: string]: any;
 }
 
