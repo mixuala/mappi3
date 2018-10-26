@@ -766,41 +766,45 @@ export class PhotoLibraryHelper {
    * use with: <app-mappi-image [thumbSrc]="photo._thumbSrc$ | async"></app-mappi-image>
    * 
    * @param libraryItem 
-   * @param thumbDim 
+   * @param dim 
    * @returns {} or valid IThumbSrc
    */
-  static getThumbSrc$(photo:IPhoto, thumbDim:string='80x80'):Observable<IThumbSrc> {
+  static getThumbSrc$(photo:IPhoto, dim:string='80x80'):Observable<IThumbSrc> {
     
     if (photo._thumbSrc$ instanceof ReplaySubject) 
       return photo._thumbSrc$; 
       
     // return cached value
     const cached = SubjectiveService.photoCache[photo.uuid];
-    if (cached && cached._thumbSrc$)
+    if (cached && cached._thumbSrc$ && cached._imgCache[dim])
       return cached._thumbSrc$;
 
 
-    const [imgW, imgH] = thumbDim.split('x');
+    const [imgW, imgH] = dim.split('x');
 
     // cache value and return
     const options = { 
       thumbnailWidth: parseInt(imgW), 
       thumbnailHeight: parseInt(imgH),
+      dim: dim,
       dataURL: true,
     }
-    const emptyThumbSrc = PhotoLibraryHelper.getEmptyThumbSrc(thumbDim);
+    const emptyThumbSrc = PhotoLibraryHelper.getEmptyThumbSrc(dim);
     photo._thumbSrc = photo._thumbSrc || {};
     const lazyLoad = ()=>{
       const xxxsrc = photo._thumbSrc.src || "(none)";
       if (photo.camerarollId){
-        if (photo._thumbSrc['loading$']) 
+        if (photo._thumbSrc['loading$'] && 
+          JSON.stringify(emptyThumbSrc.style) == JSON.stringify(photo._thumbSrc.style)
+        ){ 
           return photo._thumbSrc;
+        }
         console.warn( "@@@ getThumbSrc$(): Confirm lazyload, id=", photo.uuid, xxxsrc.slice(0,50));
         // cameraroll photo, use PhotoLibrary.getThumbnail( {dataURL:true})
         photo._thumbSrc['loading$'] = PhotoLibraryHelper._getDataURLFromCameraRoll(photo, options)
         .then( imgSrc=>{  
           // used by view with throught async pipe. 
-          emptyThumbSrc.src = photo._imgCache[thumbDim] = imgSrc;
+          emptyThumbSrc.src = photo._imgCache[dim] = imgSrc;
           // use immutable value for changeDetection
           photo._thumbSrc = emptyThumbSrc;
           console.warn(`@@@ cameraroll CHANGED src.length=${imgSrc.length}, `, photo.uuid, imgSrc.slice(0,25));
@@ -820,18 +824,13 @@ export class PhotoLibraryHelper {
         return photo.src.replace(/\d+\/\d+/, dim.replace('x','/'));
       }
       
-      emptyThumbSrc.src = photo._imgCache[thumbDim] = _getSrcUrlBySize(photo, thumbDim);
+      emptyThumbSrc.src = photo._imgCache[dim] = _getSrcUrlBySize(photo, dim);
 
 
       // use immutable value for changeDetection  
       return photo._thumbSrc = emptyThumbSrc;
     }
 
-
-    /**
-     * this is NOT lazyloading. 
-     * ??? maybe try with <app-mappi-image>
-     */
     // initialize
     photo._subj = new ReplaySubject<IThumbSrc>(1);
     photo._imgCache = {};

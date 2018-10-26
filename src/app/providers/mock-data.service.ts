@@ -293,6 +293,11 @@ export class MockDataService {
     o.src = thumbSrc.replace("80", size.join('/'));
     o.width = size[0];
     o.height = size[1];
+
+    function patchCameraroll(o){
+      o.camerarollId = "fake";
+    }
+    patchCameraroll(o);
     return o;
   }
 

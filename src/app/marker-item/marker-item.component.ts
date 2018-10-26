@@ -43,17 +43,19 @@ export class MarkerItemComponent implements OnInit , OnChanges {
       switch(k){
         case 'mi':
           if (!change.currentValue) return;
-          const mi = change.currentValue;
 
 
 
           // NOTE: photo._thumbSrc$ set explicitly to test lazy loading
           // prepare to fetch DataURL for thumbnail, but lazyload. wait until async pipe subscription in view
-          if (!mi._thumbSrc$){
-            mi._thumbSrc$ = PhotoLibraryHelper.getThumbSrc$(mi)
+          if (!this.mi._thumbSrc$){
+            this.mi._thumbSrc$ = PhotoLibraryHelper.getThumbSrc$(this.mi, this.dim);
           }
 
-          this.miSubject.next(mi);
+
+
+          this.miSubject.next(this.mi);
+          break;
           break;
         case 'parentLayout':
           // console.log("MarkerGroupComponent.ngOnChanges(): layout=", change["currentValue"])
