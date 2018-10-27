@@ -26,7 +26,9 @@
         (ionItemReorder)="reorderMarkerItem($event)">
         <ion-list *ngFor="let mi of miCollection$[marker.uuid] | async" #markerItemList>
           <app-marker-item *ngIf="mi?._rest_action!='delete'"
-           [mi]="mi" [parentLayout]="layout" (miChange)="childComponentsChange($event)"></app-marker-item>
+            [mi]="mi" [parentLayout]="layout" 
+            [dim]="thumbDim"
+            (miChange)="childComponentsChange($event)"></app-marker-item>
         </ion-list>
         <ion-list>            
           <ion-item class="add-marker-item wrap-btn-as-thumbnail" (click)="createMarkerItem($event)">
@@ -68,7 +70,8 @@
         <ng-container *ngIf="marker?.markerItemIds?.length; else gallery_pinIcon">
           <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async | slice:0:miLimit">
               <app-marker-item *ngIf="mi?._rest_action!='delete'"
-              [mi]="mi" [parentLayout]="layout" 
+              [mi]="mi" [parentLayout]="layout"
+              [dim]="thumbDim"
               (click)="thumbClicked(marker, mi)"
               (miChange)="childComponentsChange($event)"></app-marker-item>
           </ng-container>
@@ -120,7 +123,8 @@
           <ng-container *ngIf="marker?.markerItemIds?.length; else gallery_pinIcon">
             <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async | slice:0:miLimit">
                 <app-marker-item *ngIf="mi?._rest_action!='delete'"
-                [mi]="mi" [parentLayout]="layout" 
+                [mi]="mi" [parentLayout]="layout"
+                [dim]="thumbDim"
                 (click)="thumbClicked(marker, mi)"></app-marker-item>
             </ng-container>
           </ng-container>
@@ -144,6 +148,7 @@
         <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async | slice:0:1">
           <ion-badge class="thumbnail-overlay" color="primary"> {{marker.seq+1}} </ion-badge>
           <app-marker-item [mi]="mi" [parentLayout]="'gallery'" 
+            [dim]="thumbDim"
             (miChange)="childComponentsChange($event)"></app-marker-item>
         </ng-container>
       </ng-container>
@@ -182,6 +187,7 @@
         <ng-container *ngIf="marker?.markerItemIds?.length; else list_pinIcon">
           <ion-list *ngIf="miCollection$[marker.uuid] | async as items">
             <app-marker-item *ngIf="items[0] as mi"
+              [dim]="thumbDim"
               [mi]="mi" [parentLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
           </ion-list>
         </ng-container>

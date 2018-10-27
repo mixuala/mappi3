@@ -27,6 +27,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   // layout of MarkerGroup = [gallery, list, edit, focus-marker-group]  
   public layout: string;
+  public thumbDim: string;
+  public fullscreenDim: string;
+
   // set thumbnail overflow break. 
   public miLimit:number = 3;
   public static miLimit: number;
@@ -38,7 +41,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   public markerGroup$: Observable<IMarkerGroup> = this.mgSubject.asObservable();
 
   // CHILDREN, deprecate???, use MockDataService.getSubjByParentUuid()
-  private _miSub: {[uuid:string]: SubjectiveService<IPhoto>} = {};
+  // private _miSub: {[uuid:string]: SubjectiveService<IPhoto>} = {};
   public miCollection$: {[uuid:string]:  Observable<IPhoto[]>} = {};
 
   @Input() mg: IMarkerGroup;
@@ -56,6 +59,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   onResize(event?, reset=true) {
     if (reset) MarkerGroupComponent.miLimit=null;
     this.miLimit = MarkerGroupComponent.getGalleryLimit(window.innerWidth, window.innerHeight);
+    const thumbsize = window.innerWidth < 768 ? 56 : 80;
+    this.thumbDim = `${thumbsize}x${thumbsize}`;
   }
 
   constructor(
@@ -93,7 +98,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           // configure subjects and cache
           const mgSubj = MockDataService.getSubjByUuid(mg.uuid) ||
             MockDataService.getSubjByUuid(mg.uuid, new SubjectiveService(this.dataService.MarkerGroups));
-          console.warn("*** MarkerGroup.ngOnChanges: mgSubj", mgSubj.value());
+          // console.warn("*** MarkerGroup.ngOnChanges: mgSubj", mgSubj.value());
           const childSubj = MockDataService.getSubjByParentUuid(mg.uuid) || 
             MockDataService.getSubjByParentUuid(mg.uuid, new SubjectiveService(this.dataService.Photos));  
 

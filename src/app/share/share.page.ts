@@ -3,7 +3,7 @@ import { Component, OnInit, ViewChild,
   ChangeDetectionStrategy, ChangeDetectorRef, ViewEncapsulation,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject, BehaviorSubject } from 'rxjs';
+import { Observable, Subject, BehaviorSubject, Subscription } from 'rxjs';
 import { takeUntil, switchMap, skipWhile } from 'rxjs/operators';
 import { AlertController, ActionSheetController } from '@ionic/angular';
 import { Plugins } from '@capacitor/core';
@@ -16,7 +16,8 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
   IMarkerGroup, IPhoto, IMarker, IRestMarker, IMarkerList,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
+import { PhotoService, IExifPhoto, PhotoLibraryHelper, IThumbSrc } from '../providers/photo/photo.service';
+import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
 
 
@@ -107,6 +108,7 @@ export class SharePage implements OnInit, IViewNavEvents {
     .then( ()=>{
       this._mgSub = this.dataService.sjMarkerGroups;
     })
+    this.gallery = null;
   }
 
   private _getSubjectForMarkerItems(mg:IMarkerGroup):SubjectiveService<IMarker>{
@@ -289,30 +291,49 @@ export class SharePage implements OnInit, IViewNavEvents {
    * 
    * @param ev photoswipe gallery
    */
-  openGallery(ev:{mg:IMarkerGroup, mi:IPhoto}) {
-    const {mg, mi} = ev;
+  async openGallery( mg:IMarkerGroup, mi:IPhoto ) {
     const items:PhotoSwipe.Item[] = [];
     const mgUuids:string[] = []; // index lookup to MarkerGroup.uuid
-
-    // get all photos for all markerGroups in this markerList
+    const fsDim = '320x320';
     const mgs = this._mgSub.value();
+    
+    // get all photos for all markerGroups in this markerList
+    const waitFor:Promise<void>[] = [];
     let found:number;
+    const [imgW, imgH] = fsDim.split('x');
     mgs.forEach( mg=>{
       const mgPhotos_subject = this._getSubjectForMarkerItems(mg);
-      mgPhotos_subject.value().map( (p:IPhoto)=>{
-        items.push({
-          src: p.src,
-          w: p.width,
-          h: p.height,
-        });
-        mgUuids.push(mg.uuid);
-        if (p.uuid == mi.uuid)
-          found = items.length-1;
+      mgPhotos_subject.value().forEach( (p:IPhoto)=>{
+        waitFor.push(
+          new Promise( (resolve, reject)=>{
+
+            const done = ImgSrc.getImgSrc$(p, fsDim)
+            .subscribe( (fsSrc:IImgSrc)=>{
+              if (!fsSrc.src) return;
+              items.push({
+                src: fsSrc.src,
+                w: parseInt(imgW),
+                h: parseInt(imgH),
+              });
+              mgUuids.push(mg.uuid);
+              if (p.uuid == mi.uuid) found = items.length-1;
+              done && done.unsubscribe();
+              resolve();
+            });
+
+          })
+        );
       });
-    })
+    });
+    await Promise.all(waitFor);
     const index = found || 0;
     const uuid = this.parent.uuid;
     this.gallery = {items, index, uuid, mgUuids};
+    this.cd.detectChanges();
+  }
+
+  thumbClicked(ev:{mg:IMarkerGroup, mi:IPhoto}){
+    this.openGallery(ev.mg, ev.mi);
   }
 
 

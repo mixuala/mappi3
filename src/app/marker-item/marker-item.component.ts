@@ -6,6 +6,7 @@ import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { MockDataService, IPhoto, IMarker } from '../providers/mock-data.service';
 import { PhotoLibraryHelper, IThumbSrc } from '../providers/photo/photo.service';
+import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 
 
 
@@ -25,6 +26,7 @@ export class MarkerItemComponent implements OnInit , OnChanges {
   private stash:any = {};
 
   @Input() mi: IPhoto;
+  @Input() dim: string;
   @Input() parentLayout: string;  // enum=[gallery, list, edit, focus-marker-group]  
   @Output() miChange: EventEmitter<{data:IPhoto, action:string}> = new EventEmitter<{data:IPhoto, action:string}>();
 
@@ -44,18 +46,17 @@ export class MarkerItemComponent implements OnInit , OnChanges {
         case 'mi':
           if (!change.currentValue) return;
 
-
-
-          // NOTE: photo._thumbSrc$ set explicitly to test lazy loading
-          // prepare to fetch DataURL for thumbnail, but lazyload. wait until async pipe subscription in view
+          // wait for async fetch DataURL, uses async pipe subscription in view
           if (!this.mi._thumbSrc$){
-            this.mi._thumbSrc$ = PhotoLibraryHelper.getThumbSrc$(this.mi, this.dim);
+            this.mi._thumbSrc$ = ImgSrc.getImgSrc$(this.mi, this.dim);
           }
-
-
 
           this.miSubject.next(this.mi);
           break;
+        case 'dim':
+          if (this.dim && this.mi ){
+            this.mi._thumbSrc$ = ImgSrc.getImgSrc$(this.mi, this.dim);
+          }
           break;
         case 'parentLayout':
           // console.log("MarkerGroupComponent.ngOnChanges(): layout=", change["currentValue"])

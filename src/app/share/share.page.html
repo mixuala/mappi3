@@ -90,13 +90,14 @@
             <app-marker-group  *ngIf="item?._rest_action!='delete'"
               [mg]="item" [parentLayout]="'share'"
               (mgChange)="childComponentsChange($event)"
-              (thumbClick)="openGallery($event)"
+              (thumbClick)="thumbClicked($event)"
               [(mgFocus)]="mgFocus" ></app-marker-group>
           </ion-col>
         </ion-row>
         <ion-row>
           <ion-col size="12" size-sm="6" size-xl="4">
-            <app-photoswipe class="content-right-if-mq-landscape" [data]="gallery"
+            <app-photoswipe class="content-right-if-mq-landscape" 
+              [data]="gallery"
               (indexChange)="focusMarker($event)"
             ></app-photoswipe>
           </ion-col>

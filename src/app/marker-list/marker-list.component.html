@@ -36,7 +36,10 @@
         <ng-container *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
           <ng-container *ngIf="mg?.markerItemIds?.length; else gallery_pinIcon">
             <ng-container *ngIf="getSubjByParentUuid_Watch$(mg.uuid) | async as items">
-              <app-marker-item *ngIf="items[0] as mi" [mi]="mi" [parentLayout]="'gallery'" (miChange)="childComponentsChange($event)"></app-marker-item>
+              <app-marker-item *ngIf="items[0] as mi" 
+                [mi]="mi" [parentLayout]="'gallery'" 
+                [dim]="thumbDim"
+                (miChange)="childComponentsChange($event)"></app-marker-item>
             </ng-container>
           </ng-container>
           <ng-template #edit_pinIcon>
@@ -56,7 +59,9 @@
           <ng-container *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async | slice:0:1">
               <ng-container *ngFor="let mi of getSubjByParentUuid_Watch$(mg.uuid) | async | slice:0:1">
                   <ion-badge class="thumbnail-overlay" color="primary"> {{mList.seq+1}} </ion-badge>
-                  <app-marker-item [mi]="mi" [parentLayout]="'gallery'" 
+                  <app-marker-item 
+                    [mi]="mi" [parentLayout]="'gallery'" 
+                    [dim]="thumbDim"
                     (miChange)="childComponentsChange($event)"></app-marker-item>
               </ng-container>
           </ng-container>

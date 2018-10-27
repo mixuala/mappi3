@@ -1,4 +1,5 @@
-import { Component, OnInit, Input, Output,
+import { Component, EventEmitter, OnInit, Input, Output,
+  Host, HostListener, Optional,
   OnChanges,  SimpleChange,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
@@ -24,6 +25,9 @@ export class MarkerListComponent implements OnInit {
 
   // layout of markerList = [gallery, list, edit, focus-marker-list]  
   public layout: string;
+  public thumbDim: string;
+  public fullscreenDim: string;
+
   private stash:any = {};
 
   // PARENT Subject/Observable
@@ -38,12 +42,21 @@ export class MarkerListComponent implements OnInit {
 
   @Input() mList: IMarkerList;
   @Input() parentLayout: string;  
+  @HostListener('window:resize', ['$event'])
+  onResize(event?, reset=true) {
+    // if (reset) MarkerGroupComponent.miLimit=null;
+    // this.miLimit = MarkerGroupComponent.getGalleryLimit(window.innerWidth, window.innerHeight);
+    const thumbsize = window.innerWidth < 768 ? 56 : 80;
+    this.thumbDim = `${thumbsize}x${thumbsize}`;
+  }
 
   constructor(
+    @Host() @Optional() private mListFocusBlur: MarkerGroupFocusDirective,
     public dataService: MockDataService,
     private router: Router,
     private cd: ChangeDetectorRef,
   ) {
+    this.onResize(undefined, false);
     this.dataService.ready()
     .then( ()=>{
     })
@@ -77,7 +90,6 @@ export class MarkerListComponent implements OnInit {
           delete mList._detectChanges;
           this.dataService.ready()
           .then( ()=>{
-            
             const childSubj = this.loadMarkerGroups(mList);
             const done = childSubj.watch$()
               .pipe(takeUntil(this.done$))
