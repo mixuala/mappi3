@@ -6,7 +6,6 @@ import { List } from '@ionic/angular';
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 import { Plugins } from '@capacitor/core';
 
-import { AppComponent } from '../app.component';
 import { MockDataService, RestyTrnHelper, IMarkerGroup, IPhoto, IMarker, IRestMarker } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';

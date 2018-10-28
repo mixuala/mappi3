@@ -5,7 +5,7 @@ import { Observable, ReplaySubject } from 'rxjs';
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
 import { MappiMarker, } from '../providers/mappi/mappi.service';
-import { IExifPhoto, IThumbSrc } from './photo/photo.service';
+import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 
 const { Storage } = Plugins;
 
@@ -48,13 +48,9 @@ export interface IPhoto extends IMarker {
   src: string,
   width?: number,
   height?: number,
+  label?: string
   camerarollId?: string,          // LibraryItem.id
-  // extras
-  _imgCache?: {[dim:string]: string},
-  _thumbSrc?: IThumbSrc,
-  _thumbSrc$?: Observable<IThumbSrc>,
-  _subj?: ReplaySubject<IThumbSrc>,
-  [propName: string]: any;
+  _imgSrc$?: Observable<IImgSrc>;
 }
 
 
@@ -117,11 +113,13 @@ export class MockDataService {
 
   constructor() { 
     this._ready = this.loadDatasources()
-    .then( ()=>console.log("TESTDATA READY"));
+    .then( ()=>{
+      console.log("TESTDATA READY");
+    });
     window['_mockDataService'] = this;
+    // // see: AppComponent.exposeDebug()
     window['_MockDataService'] = MockDataService;
     window['_SubjectiveService'] = SubjectiveService;
-
     return;
   }
 
@@ -285,10 +283,6 @@ export class MockDataService {
     const thumbSrc = MockDataService.photo_baseurl + random;
     o.seq = seq;
     o.position = MappiMarker.position(o);
-    o._imgCache = {
-      // demo data only, inflate o._thumbSrc in MarkerItemComponent
-      '80x80': thumbSrc
-    };
     let size = MockDataService.sizes[ random % MockDataService.sizes.length];
     o.src = thumbSrc.replace("80", size.join('/'));
     o.width = size[0];

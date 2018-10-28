@@ -16,7 +16,7 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
   IMarkerGroup, IPhoto, IMarker, IRestMarker, IMarkerList,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { PhotoService, IExifPhoto, PhotoLibraryHelper, IThumbSrc } from '../providers/photo/photo.service';
+import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
 
@@ -294,19 +294,18 @@ export class SharePage implements OnInit, IViewNavEvents {
   async openGallery( mg:IMarkerGroup, mi:IPhoto ) {
     const items:PhotoSwipe.Item[] = [];
     const mgUuids:string[] = []; // index lookup to MarkerGroup.uuid
-    const fsDim = '320x320';
     const mgs = this._mgSub.value();
     
     // get all photos for all markerGroups in this markerList
     const waitFor:Promise<void>[] = [];
     let found:number;
-    const [imgW, imgH] = fsDim.split('x');
     mgs.forEach( mg=>{
       const mgPhotos_subject = this._getSubjectForMarkerItems(mg);
       mgPhotos_subject.value().forEach( (p:IPhoto)=>{
         waitFor.push(
-          new Promise( (resolve, reject)=>{
-
+          new Promise( async (resolve, reject)=>{
+            const fsDim = await ImgSrc.scaleDimToScreen(p);
+            const [imgW, imgH] = fsDim.split('x');
             const done = ImgSrc.getImgSrc$(p, fsDim)
             .subscribe( (fsSrc:IImgSrc)=>{
               if (!fsSrc.src) return;

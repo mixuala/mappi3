@@ -10,6 +10,10 @@ import { IPhoto } from './mock-data.service';
 })
 export class SubjectiveService<T> {
 
+  /**
+  cacheOnlyPhotos(items:T[]){
+   * NOTE: cache all T.className=='Photo' in this.get$()
+   */
   public static photoCache:{[uuid:string]:IPhoto} = {};
 
   public readonly className:string;
@@ -50,6 +54,8 @@ export class SubjectiveService<T> {
           o['seq']=i;
         });
         this.subject$.next(arr);
+        // extras
+        this.cacheOnlyPhotos(arr);
       })
     }
   
@@ -85,6 +91,14 @@ export class SubjectiveService<T> {
   }
   watch$():Observable<T[]> {
     return this._observable$;
+  }
+
+  cacheOnlyPhotos(items:T[]){
+    if (this.className != 'Photo') return;
+    (items as any as IPhoto[]).forEach( o=>{
+      if (!SubjectiveService.photoCache[o.uuid])
+        SubjectiveService.photoCache[o.uuid] = o;
+    });
   }
 
 

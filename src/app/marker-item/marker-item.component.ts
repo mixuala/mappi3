@@ -5,7 +5,6 @@ import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { MockDataService, IPhoto, IMarker } from '../providers/mock-data.service';
-import { PhotoLibraryHelper, IThumbSrc } from '../providers/photo/photo.service';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 
 
@@ -47,15 +46,14 @@ export class MarkerItemComponent implements OnInit , OnChanges {
           if (!change.currentValue) return;
 
           // wait for async fetch DataURL, uses async pipe subscription in view
-          if (!this.mi._thumbSrc$){
-            this.mi._thumbSrc$ = ImgSrc.getImgSrc$(this.mi, this.dim);
+          if (!this.mi._imgSrc$){
+            this.mi._imgSrc$ = ImgSrc.getImgSrc$(this.mi, this.dim);
           }
-
           this.miSubject.next(this.mi);
           break;
         case 'dim':
           if (this.dim && this.mi ){
-            this.mi._thumbSrc$ = ImgSrc.getImgSrc$(this.mi, this.dim);
+            this.mi._imgSrc$ = ImgSrc.getImgSrc$(this.mi, this.dim);
           }
           break;
         case 'parentLayout':

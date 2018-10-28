@@ -23,9 +23,10 @@ import { GoogleMapsComponent } from './google-maps/google-maps.component';
 import { MockDataService } from './providers/mock-data.service';
 import { RestyService } from './providers/resty.service';
 import { SubjectiveService } from './providers/subjective.service';
-import { PhotoService, DataURLPipe } from './providers/photo/photo.service';
+import { PhotoService } from './providers/photo/photo.service';
 import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
-import { MappiImageComponent } from './mappi-image/mappi-image.component';
+// import { MappiImageComponent } from './mappi-image/mappi-image.component';
+import { ImgSrc, DataURLPipe } from './providers/photo/imgsrc.service';
 
 
 
@@ -45,7 +46,7 @@ import { MappiImageComponent } from './mappi-image/mappi-image.component';
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     MappiService,
     MockDataService, RestyService, SubjectiveService,
-    PhotoService, PhotoLibrary,
+    PhotoService, PhotoLibrary, ImgSrc
   ],
   bootstrap: [AppComponent]
 })
@@ -66,7 +67,7 @@ export class AppModule {}
     GoogleMapsComponent,
     PhotoswipeComponent,
     DataURLPipe,
-    MappiImageComponent,
+    // MappiImageComponent,
   ],
   exports: [
     MarkerListComponent,
@@ -74,7 +75,7 @@ export class AppModule {}
     MarkerItemComponent,
     GoogleMapsComponent,
     PhotoswipeComponent,  
-    MappiImageComponent,
+    // MappiImageComponent,
   ],
 })
 export class SharedComponentModule {}
