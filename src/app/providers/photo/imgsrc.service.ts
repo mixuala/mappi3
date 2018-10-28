@@ -111,18 +111,13 @@ export class ImgSrc {
    * @param pixelRatio 
    * @returns a dim string sized to (device) fullscreen or window size
    */
-  static scaleDimToScreen( photo:IPhoto, pixelRatio:number=1 ):Promise<string>{
-    return new Promise<string>( (resolve, reject)=>{
-      setTimeout( ()=>{
-        const {width , height } = photo;
-        // ScreenDim isn't updating on `ios`
-        // const [fitW, fitH] = [ScreenDim.w, ScreenDim.h ];  
-        const [fitW, fitH] = [window.innerWidth, window.innerHeight];
-        const scale = Math.min( fitW/width, fitH/height ) * pixelRatio;
-        const scaled = [Math.round(width*scale), Math.round(height*scale)].join('x') as string;
-        resolve(scaled);
-      });
-    });
+  static async scaleDimToScreen( photo:IPhoto, screenDim?:string, pixelRatio:number=1 ):Promise<string>{
+    if (!screenDim) screenDim = await ScreenDim.dim;
+    const {width , height } = photo;
+    const [fitW, fitH] = screenDim.split('x').map(v=>parseInt(v));
+    const scale = Math.min( fitW/width, fitH/height ) * pixelRatio;
+    const scaled = [Math.round(width*scale), Math.round(height*scale)].join('x') as string;
+    return Promise.resolve(scaled);
   }
 
 
@@ -136,6 +131,7 @@ export class ImgSrc {
   }
 
   static retryBroken(filter?: string[]) {
+    console.log('calling "retryBroken()')
     const broken = ImgSrc.items().filter(o=>o.imgSrc.src==null);
     broken.forEach( cacheItem=>{
       const [dim, uuid] = cacheItem.key.split(':');
@@ -150,11 +146,6 @@ export class ImgSrc {
         this.getImgSrc$(photo, dim, false);
       }
     })
-  }
-
-  static async rescaleDimToScreen(p: IPhoto):Promise<IImgSrc>{
-    const fsDim = await ImgSrc.scaleDimToScreen(p);
-    return ImgSrc.getImgSrc$(p, fsDim).toPromise();
   }
 
   /**

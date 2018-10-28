@@ -36,7 +36,7 @@ export class AppComponent {
 
   @HostListener('window:resize', ['$event'])
   onResize(ev?:any) {
-    ScreenDim.set( window.innerWidth, window.innerHeight );
+    ScreenDim.set();
   }
 
   constructor(
@@ -48,7 +48,6 @@ export class AppComponent {
     private imgSrc: ImgSrc,
   ) {
     this.initializeApp();
-    this.onResize();
   }
 
   async reset(raw:string){

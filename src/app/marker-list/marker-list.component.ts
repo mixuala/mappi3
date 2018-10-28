@@ -1,5 +1,5 @@
 import { Component, EventEmitter, OnInit, Input, Output,
-  Host, HostListener, Optional,
+  Host, Optional,
   OnChanges,  SimpleChange,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
@@ -9,11 +9,12 @@ import { takeUntil } from 'rxjs/operators';
 
 import { IViewNavEvents } from "../app-routing.module";
 import  { 
-  MockDataService, RestyTrnHelper, quickUuid,
+  MockDataService, RestyTrnHelper,
   IMarker, IMarkerGroup, IPhoto, IMarkerList, IRestMarker,
 } from '../providers/mock-data.service';
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import { SubjectiveService } from '../providers/subjective.service';
+import { ScreenDim } from '../providers/helpers';
 
 @Component({
   selector: 'app-marker-list',
@@ -26,7 +27,6 @@ export class MarkerListComponent implements OnInit {
   // layout of markerList = [gallery, list, edit, focus-marker-list]  
   public layout: string;
   public thumbDim: string;
-  public fullscreenDim: string;
 
   private stash:any = {};
 
@@ -42,13 +42,6 @@ export class MarkerListComponent implements OnInit {
 
   @Input() mList: IMarkerList;
   @Input() parentLayout: string;  
-  @HostListener('window:resize', ['$event'])
-  onResize(event?, reset=true) {
-    // if (reset) MarkerGroupComponent.miLimit=null;
-    // this.miLimit = MarkerGroupComponent.getGalleryLimit(window.innerWidth, window.innerHeight);
-    const thumbsize = window.innerWidth < 768 ? 56 : 80;
-    this.thumbDim = `${thumbsize}x${thumbsize}`;
-  }
 
   constructor(
     @Host() @Optional() private mListFocusBlur: MarkerGroupFocusDirective,
@@ -56,7 +49,6 @@ export class MarkerListComponent implements OnInit {
     private router: Router,
     private cd: ChangeDetectorRef,
   ) {
-    this.onResize(undefined, false);
     this.dataService.ready()
     .then( ()=>{
     })
@@ -70,6 +62,11 @@ export class MarkerListComponent implements OnInit {
 
   ngOnInit() {
     this.layout = this.layout || 'gallery';
+    ScreenDim.dim$.pipe(takeUntil(this.done$)).subscribe( dim=>{
+      const [fitW, fitH] = dim.split('x').map(v=>parseInt(v));
+      // this.miLimit = MarkerGroupComponent.getGalleryLimit(fitW, fitH);
+      this.thumbDim = ScreenDim.getThumbDim([fitW, fitH]) as string;    
+    })
   }
 
   ngOnDestroy(){

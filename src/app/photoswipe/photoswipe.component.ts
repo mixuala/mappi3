@@ -1,7 +1,6 @@
 import { Component, OnDestroy, OnInit, AfterViewInit, 
   ElementRef, EventEmitter, Input, Output, ViewEncapsulation,
   ChangeDetectionStrategy, SimpleChange,
-  Host, HostListener, 
 } from '@angular/core';
 
 import * as PhotoSwipe from 'photoswipe';  
@@ -24,7 +23,7 @@ declare const PhotoSwipeUI_Default: any;
 export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
 
   protected galleryElement: HTMLElement;
-  protected gallery: any;
+  protected gallery: PhotoSwipe<PhotoSwipe.Options>;
   public defaultOptions:PhotoSwipe.Options = {
     index: 0,
     history: false,
@@ -32,6 +31,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   private _fsClosure:{el:Element, type:string, handler:(e:Event)=>void};
 
   @Input() data:{items:PhotoSwipe.Item[], index:number, uuid:string};
+  @Input() screenDim:string;
   @Output() indexChange: EventEmitter<{index:number, items:any[], uuid:string}> = new EventEmitter<{index:number, items:any[], uuid:string}>();
   constructor(
     private elementRef: ElementRef,
@@ -39,10 +39,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   ) { 
   }
 
-  @HostListener('window:resize', ['$event'])
-  onResize(event?) {
-    this.rescaleToScreen()
-  }
+
 
   ngOnInit() {
   }
@@ -61,29 +58,49 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     }
   }
 
-  rescaleToScreen(){
-    if (!this.gallery) return;
+  async rescaleToScreen(screenDim:string){
+    // guard for not active
+    if (!this.data || !this.gallery) return;
+    
+    this.gallery.invalidateCurrItems();
 
-    this.gallery.items.forEach( async (o,i)=>{
+    const waitFor:Promise<string>[] = [];
+    this.gallery.items.forEach( (o,i)=>{
       const p = SubjectiveService.photoCache[ o['uuid'] ];
-      const fsDim = await ImgSrc.scaleDimToScreen(p);
-      const [imgW, imgH] = fsDim.split('x');
-      const done = ImgSrc.getImgSrc$(p, fsDim).subscribe( async (imgSrc)=>{
-        if (imgSrc['loading']) {
-          await imgSrc['loading'];
-        }
-        o.src = imgSrc.src;
-        o.w = parseInt(imgW);
-        o.h = parseInt(imgH);
-        // console.log("Photoswipe.Item=", o)
-        const isStale = Math.abs(this.gallery.getCurrentIndex()-i)<=1;
-        if (isStale){
-          this.gallery.invalidateCurrItems();
-          this.gallery.updateSize(true);
-        }
-        done && done.unsubscribe();
+      const pr = ImgSrc.scaleDimToScreen(p, screenDim)
+      .then( (fsDim)=>{
+        const [imgW, imgH] = fsDim.split('x');
+        return new Promise<string>( (resolve,reject)=>{
+
+          const done = ImgSrc.getImgSrc$(p, fsDim).subscribe( (imgSrc)=>{
+            if (!imgSrc.src) return // skipWhile 
+            Promise.resolve()
+            .then( ()=>{
+              return imgSrc['loading'] || null
+            })
+            .then( ()=>{
+              o.src = imgSrc.src;
+              o.w = parseInt(imgW);
+              o.h = parseInt(imgH);
+              done.unsubscribe();
+              resolve(o.src);
+            });
+          });
+
+        })
+        .catch((err)=>{
+          console.warn("ERROR: PhotoSwipe.rescaleToScreen, msg=", err);
+          return Promise.resolve("ERROR: PhotoSwipe.rescaleToScreen()")
+        });  // new Promise<string>()
+        
       });
+      waitFor.push(pr);
     });
+    const result = await Promise.all(waitFor)
+    setTimeout( ()=>{
+      this.gallery.updateSize(true);
+      console.log("rescaleToScreen", screenDim, result.map( s=>s.slice(0,50)) )
+    },10);
   }
 
   reset():Promise<void> {
@@ -207,6 +224,9 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     Object.entries(o).forEach( (en:[string,SimpleChange])=>{
       let [k, change] = en;    
       switch(k){
+        case 'screenDim':
+          this.rescaleToScreen(this.screenDim); 
+          break;
         case 'data':
           if (change.firstChange) return;
           this.reset()

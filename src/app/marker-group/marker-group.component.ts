@@ -1,10 +1,12 @@
 import { Component, ElementRef, EventEmitter, OnInit, OnChanges, Input, Output, ViewChild,
-  Host, HostListener, Optional, SimpleChange, 
+  Host, Optional, SimpleChange, 
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { List } from '@ionic/angular';
-import { Observable, Subscription, BehaviorSubject } from 'rxjs';
+import { Observable, Subject, BehaviorSubject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { Plugins } from '@capacitor/core';
+
 
 import { MockDataService, RestyTrnHelper, IMarkerGroup, IPhoto, IMarker, IRestMarker } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
@@ -12,6 +14,7 @@ import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsComponent } from '../google-maps/google-maps.component';
+import { ScreenDim } from '../providers/helpers';
 
 const { Device } = Plugins;
 
@@ -27,7 +30,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   // layout of MarkerGroup = [gallery, list, edit, focus-marker-group]  
   public layout: string;
   public thumbDim: string;
-  public fullscreenDim: string;
 
   // set thumbnail overflow break. 
   public miLimit:number = 3;
@@ -42,6 +44,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   // CHILDREN, deprecate???, use MockDataService.getSubjByParentUuid()
   // private _miSub: {[uuid:string]: SubjectiveService<IPhoto>} = {};
   public miCollection$: {[uuid:string]:  Observable<IPhoto[]>} = {};
+  private done$: Subject<boolean> = new Subject<boolean>();
 
   @Input() mg: IMarkerGroup;
   // layout mode of parent, enum=['edit', 'child', 'default']
@@ -54,14 +57,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   @Output() mgChange: EventEmitter<{data:IMarkerGroup, action:string}> = new EventEmitter<{data:IMarkerGroup, action:string}>();
   @Output() thumbClick: EventEmitter<{mg:IMarkerGroup, mi:IPhoto}> = new EventEmitter<{mg:IMarkerGroup, mi:IPhoto}>();
 
-  @HostListener('window:resize', ['$event'])
-  onResize(event?, reset=true) {
-    if (reset) MarkerGroupComponent.miLimit=null;
-    this.miLimit = MarkerGroupComponent.getGalleryLimit(window.innerWidth, window.innerHeight);
-    const thumbsize = window.innerWidth < 768 ? 56 : 80;
-    this.thumbDim = `${thumbsize}x${thumbsize}`;
-  }
-
   constructor(
     @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
     public dataService: MockDataService,
@@ -69,18 +64,23 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     private element: ElementRef, 
     private cd: ChangeDetectorRef,
   ) {
-    this.onResize(undefined, false);
     this.dataService.ready();
     // this.dataService.Photos.debug = true;
    }
 
   ngOnInit() {
     this.layout = this.layout || 'gallery';
+    ScreenDim.dim$.pipe(takeUntil(this.done$)).subscribe( dim=>{
+      const [fitW, fitH] = dim.split('x').map(v=>parseInt(v));
+      this.miLimit = MarkerGroupComponent.getGalleryLimit(fitW, fitH);
+      this.thumbDim = ScreenDim.getThumbDim([fitW, fitH]) as string;      
+    })
   }
 
   ngOnDestroy() {
     // NOTE: async pipe subscriptions in view are automatically unsubscribed
     // console.warn("don't forget to destroy subscriptions")
+    this.done$.next(true);
   }
 
   ngOnChanges(o){

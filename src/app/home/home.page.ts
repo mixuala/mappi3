@@ -16,6 +16,8 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService } from '../providers/photo/photo.service';
 import { GoogleMapsComponent , IMapActions } from '../google-maps/google-maps.component';
+import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
+import { ScreenDim } from '../providers/helpers';
 
 @Component({
   selector: 'app-home',
@@ -36,6 +38,8 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   // Observable for MarkerGroupComponent
   public mgCollection$ : Observable<IMarkerGroup[]>;
+  // Observable for ScreenDim, used by photoswipe to resize on rotate.
+  public screenDim$ = ScreenDim.dim$;
   // Observable for GoogleMapsComponent
   public markerCollection$ : Observable<IMarker[]>;
   public unsubscribe$ : Subject<boolean> = new Subject<boolean>();
@@ -398,22 +402,44 @@ export class HomePage implements OnInit, IViewNavEvents {
    * 
    * @param ev photoswipe gallery
    */
-  openGallery(ev:{mg:IMarkerGroup, mi:IPhoto}) {
+  async openGallery(ev:{mg:IMarkerGroup, mi:IPhoto}) {
     const {mg, mi} = ev;
     const items:PhotoSwipe.Item[] = []; 
-
+    const screenDim = await ScreenDim.dim;
+    // get all photos for this markerGroup
+    const waitFor:Promise<void>[] = [];
+    let found:number;
     const mgPhotos_subject = this._getSubjectForMarkerItems(mg);
     mgPhotos_subject.value().map( (p:IPhoto)=>{
-      items.push({
-        src: p.src,
-        w: p.width,
-        h: p.height,
-      });
+
+      waitFor.push(
+        new Promise( async (resolve, reject)=>{
+          const fsDim = await ImgSrc.scaleDimToScreen(p, screenDim);
+          const [imgW, imgH] = fsDim.split('x');
+          const done = ImgSrc.getImgSrc$(p, fsDim)
+          .subscribe( (fsSrc:IImgSrc)=>{
+            if (!fsSrc.src) return;
+            const item = {
+              src: fsSrc.src,
+              w: parseInt(imgW),
+              h: parseInt(imgH),
+            }; 
+            item['uuid'] = p.uuid;
+            items.push(item);
+            if (p.uuid == mi.uuid) found = items.length-1;
+            done && done.unsubscribe();
+            resolve();
+          });
+
+        })
+      );
+
     });
-    const found = mgPhotos_subject.value().findIndex( p=>p.uuid==mi.uuid );
-    const index = ~found ? found : 0;
+    await Promise.all(waitFor);
+    const index = found || 0;
     const uuid = mg.uuid;
     this.gallery = {items, index, uuid};
+    this.cd.detectChanges();
   }
 
 

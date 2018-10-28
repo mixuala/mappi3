@@ -181,7 +181,7 @@ export class PhotoService {
             else
               return this.load_PhotoLibraryByChunk()
           })
-          .then( (items)=>{
+          .then( async (items)=>{
             /**
              * choose a random photo from cameraroll,
              * pick one with GPS loc
@@ -198,10 +198,11 @@ export class PhotoService {
           });
         case 'android':
           // use Camera
+          const [fitW,fitH] = await ScreenDim.getWxH();
           const options = {
-            targetWidth: Math.min(ScreenDim.w, ScreenDim.h)
+            targetWidth: Math.min(fitW, fitH)
           };
-          const data = await this.getImage_Camera(options)
+          const data = await this.getImage_Camera(options);
           return Promise.resolve(this._exif2Photo(data, null))
         case 'web':
           return this._getRandomPhoto(seq);
