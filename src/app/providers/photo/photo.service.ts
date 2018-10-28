@@ -2,7 +2,7 @@ import { Injectable, } from '@angular/core';
 import { Platform } from '@ionic/angular';
 import { Observable, BehaviorSubject } from 'rxjs';
 
-import { Plugins } from '@capacitor/core';
+import { Plugins, DeviceInfo } from '@capacitor/core';
 import * as Camera from '@ionic-native/camera/ngx';
 import { PhotoLibrary, LibraryItem, GetLibraryOptions, GetThumbnailOptions } from '@ionic-native/photo-library/ngx';
 
@@ -103,12 +103,15 @@ export class PhotoService {
     SubjectiveService.photoCache = {};
     PhotoLibraryHelper.reset();
     
-    this.platform.ready().then( ()=>{
+    this.platform.ready().then( async ()=>{
       if (typeof cordova != 'undefined')
         PhotoLibraryCordova = cordova.plugins['photoLibrary']; // ['photoLibrary'];
       window['_PhotoLibraryHelper'] = PhotoLibraryHelper;
+      PhotoService.device = await Device.getInfo();
     })    
   }
+
+  static device: DeviceInfo;
 
   // BUG: not working with exif time format
   static localTimeAsDate(localTime:string): Date {
@@ -554,9 +557,11 @@ export class PhotoService {
     const photo:IPhoto = Object.assign(emptyPhoto, pickFromExif, pickFromItem);
     // # final adjustments
     photo.position = MappiMarker.position(photo);
-    Array.from([null, 'thumbSrc']).forEach(o=>{
-      PhotoLibraryHelper.rotateDimByOrientation(photo, o);
-    })
+    if (PhotoService.device.platform != "ios"){
+      Array.from([null, 'thumbSrc']).forEach(o=>{
+        PhotoLibraryHelper.rotateDimByOrientation(photo, o);
+      })
+    }
     if (MappiMarker.hasLoc(photo)==false) photo["_loc_was_map_center"] = true;
 
     console.log(`>>> PhotoLibraryHelper:IPhoto, id=${photo.camerarollId} `, photo.src, itemData.fileName);

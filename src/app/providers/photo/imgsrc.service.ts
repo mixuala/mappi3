@@ -152,9 +152,16 @@ export class ImgSrc {
     })
   }
 
+  static async rescaleDimToScreen(p: IPhoto):Promise<IImgSrc>{
+    const fsDim = await ImgSrc.scaleDimToScreen(p);
+    return ImgSrc.getImgSrc$(p, fsDim).toPromise();
+  }
+
   /**
    * 
-   * use with: <app-mappi-image [thumbSrc]="photo._thumbSrc$ | async"></app-mappi-image>
+   * use with:  <ion-thumbnail *ngIf="(photo._imgSrc$ | async) as imgSrc">
+   *              <img [src]="imgSrc.src">
+   *            </ion-thumbnail>
    * 
    * @param libraryItem 
    * @param dim 

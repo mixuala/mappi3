@@ -1,8 +1,13 @@
 import { Component, OnDestroy, OnInit, AfterViewInit, 
   ElementRef, EventEmitter, Input, Output, ViewEncapsulation,
-  ChangeDetectionStrategy, SimpleChange } from '@angular/core';
+  ChangeDetectionStrategy, SimpleChange,
+  Host, HostListener, 
+} from '@angular/core';
 
 import * as PhotoSwipe from 'photoswipe';  
+import { ImgSrc } from '../providers/photo/imgsrc.service';
+import { SubjectiveService } from '../providers/subjective.service';
+
 declare const PhotoSwipeUI_Default: any;
 
 
@@ -34,6 +39,11 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   ) { 
   }
 
+  @HostListener('window:resize', ['$event'])
+  onResize(event?) {
+    this.rescaleToScreen()
+  }
+
   ngOnInit() {
   }
 
@@ -49,6 +59,31 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
       this.toggle_appFullscreen(false);
       this.gallery.destroy();
     }
+  }
+
+  rescaleToScreen(){
+    if (!this.gallery) return;
+
+    this.gallery.items.forEach( async (o,i)=>{
+      const p = SubjectiveService.photoCache[ o['uuid'] ];
+      const fsDim = await ImgSrc.scaleDimToScreen(p);
+      const [imgW, imgH] = fsDim.split('x');
+      const done = ImgSrc.getImgSrc$(p, fsDim).subscribe( async (imgSrc)=>{
+        if (imgSrc['loading']) {
+          await imgSrc['loading'];
+        }
+        o.src = imgSrc.src;
+        o.w = parseInt(imgW);
+        o.h = parseInt(imgH);
+        // console.log("Photoswipe.Item=", o)
+        const isStale = Math.abs(this.gallery.getCurrentIndex()-i)<=1;
+        if (isStale){
+          this.gallery.invalidateCurrItems();
+          this.gallery.updateSize(true);
+        }
+        done && done.unsubscribe();
+      });
+    });
   }
 
   reset():Promise<void> {

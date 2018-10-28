@@ -257,8 +257,6 @@ export class SharePage implements OnInit, IViewNavEvents {
         })
     }
 
-    // window['check'] = MockDataService.subjectCache;
-
   }
 
   viewWillEnter(){
@@ -309,11 +307,13 @@ export class SharePage implements OnInit, IViewNavEvents {
             const done = ImgSrc.getImgSrc$(p, fsDim)
             .subscribe( (fsSrc:IImgSrc)=>{
               if (!fsSrc.src) return;
-              items.push({
+              const item = {
                 src: fsSrc.src,
                 w: parseInt(imgW),
                 h: parseInt(imgH),
-              });
+              }; 
+              item['uuid'] = p.uuid;
+              items.push(item);
               mgUuids.push(mg.uuid);
               if (p.uuid == mi.uuid) found = items.length-1;
               done && done.unsubscribe();
