@@ -107,7 +107,21 @@
   --google-map-lg-left: var(--split-pane-side-max-width);
   
 
-
+  /**
+  * test google maps BEFORE <ion-split-pane>
+  * 
+  */
+  .google-maps-header {
+    --google-map-fixed-height: 20vh;
+    .google-maps-wrap {
+      height: var(--google-map-fixed-height);
+      width: 100vw;
+      background-color: white;
+    }
+    ion-split-pane {
+      top: var(--google-map-fixed-height);
+    }
+  }
 
   // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
   @media only screen 

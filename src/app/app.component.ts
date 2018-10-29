@@ -1,4 +1,4 @@
-import { Component, HostListener } from '@angular/core';
+import { Component, HostListener, ViewChild, } from '@angular/core';
 import { Router } from '@angular/router';
 import { Platform, Img } from '@ionic/angular';
 import { StatusBar } from '@ionic-native/status-bar/ngx';

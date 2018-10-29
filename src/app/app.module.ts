@@ -20,6 +20,7 @@ import { MarkerGroupComponent } from './marker-group/marker-group.component';
 import { MarkerItemComponent } from './marker-item/marker-item.component';
 import { MarkerGroupFocusDirective } from './marker-group/marker-group-focus.directive';
 import { GoogleMapsComponent } from './google-maps/google-maps.component';
+import { GoogleMapsHostComponent } from './google-maps/google-maps-host.component';
 import { MockDataService } from './providers/mock-data.service';
 import { RestyService } from './providers/resty.service';
 import { SubjectiveService } from './providers/subjective.service';
@@ -28,29 +29,6 @@ import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
 // import { MappiImageComponent } from './mappi-image/mappi-image.component';
 import { ImgSrc, DataURLPipe } from './providers/photo/imgsrc.service';
 
-
-
-@NgModule({
-  declarations: [AppComponent, 
-  ],
-  exports: [
-    AppComponent,
-  ],
-  entryComponents: [],
-  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,
-    QRCodeModule, 
-  ],
-  providers: [
-    StatusBar,
-    SplashScreen,
-    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
-    MappiService,
-    MockDataService, RestyService, SubjectiveService,
-    PhotoService, PhotoLibrary, ImgSrc
-  ],
-  bootstrap: [AppComponent]
-})
-export class AppModule {}
 
 
 
@@ -64,7 +42,7 @@ export class AppModule {}
     MarkerListComponent,
     MarkerGroupComponent, MarkerGroupFocusDirective,
     MarkerItemComponent,
-    GoogleMapsComponent,
+    GoogleMapsComponent, GoogleMapsHostComponent,
     PhotoswipeComponent,
     DataURLPipe,
     // MappiImageComponent,
@@ -73,9 +51,31 @@ export class AppModule {}
     MarkerListComponent,
     MarkerGroupComponent, MarkerGroupFocusDirective,
     MarkerItemComponent,
-    GoogleMapsComponent,
+    GoogleMapsComponent, GoogleMapsHostComponent,
     PhotoswipeComponent,  
     // MappiImageComponent,
   ],
 })
 export class SharedComponentModule {}
+
+@NgModule({
+  declarations: [AppComponent,
+  ],
+  exports: [
+    AppComponent,
+  ],
+  entryComponents: [],
+  imports: [BrowserModule, IonicModule.forRoot(), AppRoutingModule,
+    QRCodeModule, SharedComponentModule
+  ],
+  providers: [
+    StatusBar,
+    SplashScreen,
+    { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
+    MappiService,
+    MockDataService, RestyService, SubjectiveService,
+    PhotoService, PhotoLibrary, ImgSrc
+  ],
+  bootstrap: [AppComponent]
+})
+export class AppModule {}

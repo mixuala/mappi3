@@ -9,13 +9,18 @@ export class AppConfig {
   static device:DeviceInfo;
   static devicePixelRatio:number;
   // changes on device rotate, or window dragged to new screen
-  static screenWH:[number,number];        
+  static screenWH:[number,number];
+
+  // googleMap vars initialized in AppComponent
+  static map: google.maps.Map;
+  static mapKey: string;
+  static mapReady: Promise<google.maps.Map>; // set in GoogleMapsHostComponent
 
   // init config "constants"
   static init = setTimeout( () => {
     AppConfig.devicePixelRatio = window.devicePixelRatio;
     ScreenDim.getWxH().then( res=>AppConfig.screenWH=res );
-  }, 10)
+  }, 10);
 }
 
 /**
