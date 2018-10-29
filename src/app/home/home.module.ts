@@ -6,6 +6,7 @@ import { RouterModule } from '@angular/router';
 
 import { SharedComponentModule } from '../app.module';
 import { HomePage } from './home.page';
+import { ConfirmChangesRouteGuard } from './helpers';
 
 @NgModule({
   imports: [
@@ -15,7 +16,8 @@ import { HomePage } from './home.page';
     RouterModule.forChild([
       {
         path: '',
-        component: HomePage
+        component: HomePage,
+        canDeactivate: [ConfirmChangesRouteGuard],
       }
     ]),
     // QRCodeModule,
@@ -23,5 +25,8 @@ import { HomePage } from './home.page';
   ],
   declarations: [HomePage,
   ],
+  providers: [
+    ConfirmChangesRouteGuard
+  ]
 })
 export class HomePageModule {}

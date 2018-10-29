@@ -466,6 +466,37 @@ export class HomePage implements OnInit, IViewNavEvents {
     }
   }
 
+  // checked by ConfirmChangesRouteGuard.canDeactivate()
+  hasChanges():boolean{
+    let found:IRestMarker;
+    // check MarkerGroups for changes or new MarkerItems
+    const mgs:IRestMarker[] = this._mgSub.value();
+    found = mgs.find( mg=>!!mg._rest_action );
+    if (found) return true;
+    
+    // check MarkerList for new MarkerGroups
+    const parent = this.parent as IRestMarker; 
+    const mgSubjUuids = this._mgSub.value().map(o => o.uuid);
+    if ( 
+      // check if MarkerList stale, if markerGroupIds are not equal
+      parent._rest_action ||
+      mgSubjUuids.length != this.parent.markerGroupIds.length ||
+      mgSubjUuids.filter(v => !this.parent.markerGroupIds.includes(v)).length > 0
+    ){
+      return true;
+    }
+
+    // check if MarkerItems have changes
+    found = mgs.find( (mg:IRestMarker)=>{
+      const miSubj = MockDataService.getSubjByParentUuid(mg.uuid);
+      found = miSubj.value().find( (p:IRestMarker)=>{
+        return !!p._rest_action;
+      });
+      return !!found;
+    });
+    if (found) return true;
+  }
+
   /**
    * commit markerList/Group/Item changes
    * called by HomePage.toggleEditMode(), commit/rollback from:
