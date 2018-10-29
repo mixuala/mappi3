@@ -1,19 +1,18 @@
 import { Component, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { Platform, Img } from '@ionic/angular';
-import { SplashScreen } from '@ionic-native/splash-screen/ngx';
 import { StatusBar } from '@ionic-native/status-bar/ngx';
 
 import { Plugins, AppState } from '@capacitor/core';
 
-import { ScreenDim } from './providers/helpers';
+import { ScreenDim, AppConfig } from './providers/helpers';
 import { MockDataService } from './providers/mock-data.service';
 import { SubjectiveService } from './providers/subjective.service';
 import { ImgSrc } from './providers/photo/imgsrc.service';
 import { PhotoLibraryHelper } from './providers/photo/photo.service';
 
 
-const { App, BackgroundTask, Device, Storage } = Plugins;
+const { App, Device, SplashScreen, Storage } = Plugins;
 
 
 @Component({
@@ -41,7 +40,6 @@ export class AppComponent {
 
   constructor(
     private platform: Platform,
-    private splashScreen: SplashScreen,
     private statusBar: StatusBar,
     private router: Router,
     private dataService: MockDataService,
@@ -67,17 +65,19 @@ export class AppComponent {
     window['_SubjectiveService'] = SubjectiveService;
     window['_PhotoLibraryHelper'] = PhotoLibraryHelper;
     window['_ImgSrc'] = ImgSrc;
+    window['_AppConfig'] = AppConfig;
   }
 
   async listenAppState(){
     const device = await Device.getInfo();
+    AppConfig.device = device;
     switch (device.platform){
       case 'ios':
       case 'android':
         // reset caches, currently not put in Storage
         App.addListener('appStateChange', (state: AppState) => {
           // state.isActive contains the active state
-          console.log('&&& App state changed. Is active?', state.isActive);
+          console.log('&&& App state changed. active=', state.isActive);
           ImgSrc.handleAppStateChange(state);
         });
         break;
@@ -87,7 +87,7 @@ export class AppComponent {
   initializeApp() {
     this.platform.ready().then(() => {
       this.statusBar.styleDefault();
-      this.splashScreen.hide();
+      SplashScreen.hide().catch((err)=>{});
       this.listenAppState();
       this.exposeDebug();
     });

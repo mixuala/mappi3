@@ -1,4 +1,22 @@
 import { Observable, ReplaySubject } from 'rxjs';
+import { DeviceInfo } from '@capacitor/core';
+
+/**
+ * stash App (mostly) constants here. 
+ * WARNING: do NOT use when app state is in transition, use Promise/Observer instead.
+ */
+export class AppConfig {
+  static device:DeviceInfo;
+  static devicePixelRatio:number;
+  // changes on device rotate, or window dragged to new screen
+  static screenWH:[number,number];        
+
+  // init config "constants"
+  static init = setTimeout( () => {
+    AppConfig.devicePixelRatio = window.devicePixelRatio;
+    ScreenDim.getWxH().then( res=>AppConfig.screenWH=res );
+  }, 10)
+}
 
 /**
  * returns screen dimensions as ScreenDim.dim = Promise<`${w}x${h}`>

@@ -19,7 +19,7 @@ import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
-import { ScreenDim } from '../providers/helpers';
+import { ScreenDim, AppConfig } from '../providers/helpers';
 
 
 const { App, Browser, Device } = Plugins;
@@ -160,9 +160,8 @@ export class SharePage implements OnInit, IViewNavEvents {
     }
     const _launchMapOnly = async (marker:IMarker)=>{
       let URI;
-      const device = await Device.getInfo();
       const {lat, lng} = marker.position;
-      switch (device.platform){
+      switch (AppConfig.device.platform){
         case 'web':
         case 'android':
           URI = `https://maps.google.com/?q=@${lat},${lng}`;
@@ -293,6 +292,7 @@ export class SharePage implements OnInit, IViewNavEvents {
    * @param ev photoswipe gallery
    */
   async openGallery( mg:IMarkerGroup, mi:IPhoto ) {
+
     const items:PhotoSwipe.Item[] = [];
     const mgUuids:string[] = []; // index lookup to MarkerGroup.uuid
     const mgs = this._mgSub.value();

@@ -16,8 +16,6 @@ import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsComponent } from '../google-maps/google-maps.component';
 import { ScreenDim } from '../providers/helpers';
 
-const { Device } = Plugins;
-
 
 @Component({
   selector: 'app-marker-group',
@@ -61,7 +59,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     @Host() @Optional() private mgFocusBlur: MarkerGroupFocusDirective,
     public dataService: MockDataService,
     public photoService: PhotoService,
-    private element: ElementRef, 
     private cd: ChangeDetectorRef,
   ) {
     this.dataService.ready();

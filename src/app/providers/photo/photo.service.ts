@@ -2,16 +2,14 @@ import { Injectable, } from '@angular/core';
 import { Platform } from '@ionic/angular';
 import { Observable, BehaviorSubject } from 'rxjs';
 
-import { Plugins, DeviceInfo } from '@capacitor/core';
 import * as Camera from '@ionic-native/camera/ngx';
 import { PhotoLibrary, LibraryItem, GetLibraryOptions, GetThumbnailOptions } from '@ionic-native/photo-library/ngx';
 
-import { ScreenDim } from '../helpers';
+import { AppConfig, ScreenDim } from '../helpers';
 import { MockDataService, RestyTrnHelper, IPhoto } from '../mock-data.service';
 import { SubjectiveService } from '../subjective.service';
 import { MappiMarker } from '../mappi/mappi.service';
 
-const { Device } = Plugins;
 let PhotoLibraryCordova:any = null;
 
 export interface IExifPhoto {
@@ -107,11 +105,8 @@ export class PhotoService {
       if (typeof cordova != 'undefined')
         PhotoLibraryCordova = cordova.plugins['photoLibrary']; // ['photoLibrary'];
       window['_PhotoLibraryHelper'] = PhotoLibraryHelper;
-      PhotoService.device = await Device.getInfo();
     })    
   }
-
-  static device: DeviceInfo;
 
   // BUG: not working with exif time format
   static localTimeAsDate(localTime:string): Date {
@@ -169,8 +164,7 @@ export class PhotoService {
    */
   async choosePhoto(seq?:number):Promise<IPhoto>{
     try {
-      const device = await Device.getInfo();
-      switch (device.platform){
+      switch (AppConfig.device.platform){
         case 'ios':
           // use cordova-plugin-photo-library(mappi) with ios moments
           return Promise.resolve(true)
@@ -476,13 +470,12 @@ export class PhotoService {
    */
   private async _cameraResp2Exif( resp:any, options:Camera.CameraOptions ):Promise<IExifPhoto> {
     try {
-      const device = await Device.getInfo();
       resp = JSON.parse(resp);
       const imageData = resp.filename;
       const metadata = JSON.parse(resp.json_metadata);
       
       if (metadata.GPS) {
-        if (device.platform == 'ios') {
+        if (AppConfig.device.platform == 'ios') {
           // notice the difference in the properties below and the format of the result when you run the app.
           // iOS and Android return the exif and gps differently and I am not converting or accounting for the Lat/Lon reference.
           // This is simply the raw data being returned.
@@ -558,7 +551,7 @@ export class PhotoService {
     const photo:IPhoto = Object.assign(emptyPhoto, pickFromExif, pickFromItem);
     // # final adjustments
     photo.position = MappiMarker.position(photo);
-    if (PhotoService.device.platform != "ios"){
+    if (AppConfig.device.platform != "ios"){
       Array.from([null, 'thumbSrc']).forEach(o=>{
         PhotoLibraryHelper.rotateDimByOrientation(photo, o);
       })

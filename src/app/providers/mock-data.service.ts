@@ -7,7 +7,7 @@ import { SubjectiveService } from './subjective.service';
 import { MappiMarker, } from '../providers/mappi/mappi.service';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 
-const { Storage } = Plugins;
+const { SplashScreen, Storage } = Plugins;
 
 export function quickUuid() {
   // re-export
@@ -114,6 +114,7 @@ export class MockDataService {
   constructor() { 
     this._ready = this.loadDatasources()
     .then( ()=>{
+      SplashScreen.hide().catch((err)=>{});
       console.log("TESTDATA READY");
     });
     window['_mockDataService'] = this;

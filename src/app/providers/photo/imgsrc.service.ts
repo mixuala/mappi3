@@ -10,7 +10,7 @@ import { map, take, skipWhile }  from 'rxjs/operators'
 
 import { MockDataService, IPhoto } from '../mock-data.service';
 import { PhotoLibraryHelper } from './photo.service';
-import { ScreenDim } from '../helpers';
+import { AppConfig, ScreenDim } from '../helpers';
 import { SubjectiveService } from '../subjective.service';
 
 const { Storage } = Plugins;
@@ -53,7 +53,7 @@ const CACHE_MAX = 200;
 const DEV_async_getSrc = (photo:IPhoto, dim:string='80x80'):Promise<string> => {
   return new Promise( (resolve, reject)=>{
     setTimeout( ()=>{
-      console.warn( "@@@ fake cameraroll, async delay for id=", photo.uuid)
+      // console.warn( "@@@ fake cameraroll, async delay for id=", photo.uuid)
       const src = photo.src.replace(/\d+\/\d+/, dim.replace('x','/'))
       resolve(  src  );
     },100);
@@ -111,7 +111,8 @@ export class ImgSrc {
    * @param pixelRatio 
    * @returns a dim string sized to (device) fullscreen or window size
    */
-  static async scaleDimToScreen( photo:IPhoto, screenDim?:string, pixelRatio:number=1 ):Promise<string>{
+  static async scaleDimToScreen( photo:IPhoto, screenDim?:string, pixelRatio?:number ):Promise<string>{
+    if (!pixelRatio) pixelRatio = AppConfig.devicePixelRatio;
     if (!screenDim) screenDim = await ScreenDim.dim;
     const {width , height } = photo;
     const [fitW, fitH] = screenDim.split('x').map(v=>parseInt(v));
@@ -226,7 +227,7 @@ export class ImgSrc {
           imgSrc=>{
             cacheItem.imgSrc.src = imgSrc;
             delete cacheItem['loading'];  // wait for promise to complete
-            console.warn(`@@@ cameraroll CHANGED src.length=${imgSrc.length}, `, cacheItem.key, imgSrc.slice(0,50));
+            // console.warn(`@@@ cameraroll CHANGED src.length=${imgSrc.length}, `, cacheItem.key, imgSrc.slice(0,50));
             return;
           }
           ,(err)=>{

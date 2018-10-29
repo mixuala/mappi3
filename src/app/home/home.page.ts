@@ -274,7 +274,7 @@ export class HomePage implements OnInit, IViewNavEvents {
         const parentSubj = MockDataService.getSubjByUuid(mgParent.uuid);
         RestyTrnHelper.setFKfromChild(mgParent, child);
         RestyTrnHelper.setLocFromChild(mgParent, child);
-        console.log("createMarkerGroup, selected Photo", child.loc, child);
+        console.log(`createMarkerGroup: selected Photo`, JSON.stringify(child).slice(0,100));
       }
       if (MappiMarker.hasLoc(mgParent)) 
         return Promise.resolve(true)
