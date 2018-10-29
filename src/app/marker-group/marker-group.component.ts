@@ -221,9 +221,12 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     })
   }
 
+  // called by (click)="removeMarkerGroup(marker)", 
+  // send notification to Parent Component for handling
   removeMarkerGroup(o:IMarkerGroup){
-    this.debug("removeMarkerGroup(): id=", o.label);
-    this.mgChange.emit( {data:o, action:'remove'} );
+    const mg = o;
+    this.debug("removeMarkerGroup(): id=", mg.label);
+    this.mgChange.emit( {data:mg, action:'remove'} );
   }
 
   // BUG: after reorder, <ion-item-options> is missing from dropped item
@@ -236,12 +239,18 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     let move = copy.splice(from,1);
     copy.splice( to, 0, move[0]);
 
-    // re-index after move
+    // re-index each IPhoto after move
     for (let i=Math.min(from,to);i<=Math.max(from,to);i++){
       const o = copy[i];
       o.seq=i;
       this.childComponentsChange({data:o, action:'move'})
     }
+
+    // update MarkerGroup FKs
+    mg.markerItemIds = RestyTrnHelper.getCachedMarkers(copy, 'visible').map(o=>o.uuid);
+    this.mgChange.emit( {data:mg, action:'update'});
+
+    // push changes
     MockDataService.getSubjByParentUuid(this.mg.uuid).next(this._getCachedMarkerItems(mg));
   }
 
@@ -249,19 +258,27 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   /*
    * additional event handlers
    */ 
+
+  // handle childComponent/Photo changes
   childComponentsChange( change: {data:IPhoto, action:string}){
     if (!change.data) return;
-    const parent = this.mg;
+    const parent:IMarkerGroup = this.mg;
     const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
     switch(change.action){
       case 'remove':
+        parent.markerItemIds = parent.markerItemIds.filter(uuid=>uuid!=change.data.uuid);
         RestyTrnHelper.childComponentsChange(change, childSubj);
 
         // BUG: ion-item-sliding
         // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
         return this.slidingList.closeSlidingItems();
+      case 'add':
+        // update MarkerGroup FKs
+        parent.markerItemIds.push(change.data.uuid);
+        this.mgChange.emit( {data:parent, action:'update'});
+        // continue processing Child IPhoto
       default:
-        return RestyTrnHelper.childComponentsChange(change, childSubj);
+        RestyTrnHelper.childComponentsChange(change, childSubj);
     }
   }
 
@@ -276,33 +293,30 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
     const parent = this.mg;
     const parentSubj = MockDataService.getSubjByUuid(parent.uuid);
+
+    // is this a deeplinking problem???
+    const found = parentSubj.value().find(o=>o.uuid == parent.uuid);
+    if (!found) parentSubj.next([parent]);
+
     const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
-    // begin commit from MarkerGroup
+    const commitSubj:SubjectiveService<IRestMarker> = parent._rest_action ? parentSubj : childSubj;
+    // begin commit from MarkerGroup or MarkerList
     switch (action) {
       case "commit":
         // propagate changes to MarkerGroup
-        let commitSubj:SubjectiveService<IRestMarker>;
         const childSubjUuids = childSubj.value().map(o => o.uuid);
         try {
-          if ( 
-            // check if MarkerGroup stale, if markerItemIds are not equal
-            parent._rest_action ||
-            childSubjUuids.length != parent.markerItemIds.length ||
-            childSubjUuids.filter(v => !parent.markerItemIds.includes(v)).length > 0
-          ) {
+          if (parent._rest_action) {
             parent.markerItemIds = childSubjUuids;
             parent._rest_action = parent._rest_action || 'put';
             parent._commit_child_items = childSubj.value().filter(o=>!!o['_rest_action']);
-            commitSubj = parentSubj;
             console.warn( "MarkerGroup.applyChanges, commit from", commitSubj.className )
           }
-          else {
-            // markerGroup not changed, just update markerItems
-            commitSubj = childSubj;
-          }
           const committed = await RestyTrnHelper.applyChanges(action, commitSubj, this.dataService);
-          console.warn("MarkerGroup: committed", committed);
-          // subject.reload() called in RestyTrnHelper.applyChanges()
+          // reload subj in RestyTrnHelper._childComponents_CommitChanges()
+          console.warn("MarkerGroup: COMMIT complete", committed);
+          // commitSubj.reload() called in RestyTrnHelper.applyChanges()
+          // if (commitSubj == parentSubj) childSubj.reload();
           return Promise.resolve(committed);
         } catch (err) {
           console.warn("Error: cannot save to DEV MarkerGroup, parent is null");
@@ -310,8 +324,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         }
         break;
       case "rollback":
-        childSubj.reload();
-        return parentSubj.reload( );
+        // reload tree
+        commitSubj.reload();
+        if (commitSubj == childSubj) parentSubj.reload();
+        return 
     }  
   }
 

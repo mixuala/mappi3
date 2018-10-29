@@ -111,7 +111,6 @@ export class HomePage implements OnInit, IViewNavEvents {
   }
 
   nav(page:string, item:IMarkerList){
-    console.warn('check for commit/rollback before leaving view')
     this.router.navigate([page, item.uuid]);
   }
 
@@ -161,10 +160,13 @@ export class HomePage implements OnInit, IViewNavEvents {
           } 
           return Observable.create();
         })).subscribe( ()=>{
-          if (this.parent)
+          if (this.parent){
+            const check = mListSubj.value().find( o=>o.uuid==this.parent.uuid)
             done.unsubscribe();
+          }
         })
     }
+    const check = mListSubj.value().find( o=>o.uuid==this.parent.uuid)
     
     // detectChanges if in `edit` mode
     const layout = this.route.snapshot.queryParams.layout;
@@ -302,7 +304,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     })
     .then( ()=>{
       // add markerGroup to subject
-      RestyTrnHelper.childComponentsChange({data:mgParent, action:'add'}, this._mgSub);
+      this.childComponentsChange({data:mgParent, action:'add'});
       this.publishMarkerGroupItems(mgParent);
       return mgParent;
     })    
@@ -323,17 +325,25 @@ export class HomePage implements OnInit, IViewNavEvents {
   reorderMarkerGroup(ev){
     // make changes to local copy, not resty/DB
     // localCopy includes o._rest_action='delete' items because from,to index includes the same
-    const localCopy = RestyTrnHelper.getCachedMarkers(this._mgSub.value());
+    const copy = RestyTrnHelper.getCachedMarkers(this._mgSub.value());
     const {from, to} = ev.detail;
-    let move = localCopy.splice(from,1);
-    localCopy.splice( to, 0, move[0]);
+    let move = copy.splice(from,1);
+    copy.splice( to, 0, move[0]);
 
     // re-index after move
     for (let i=Math.min(from,to);i<=Math.max(from,to);i++){
-      const o = localCopy[i];
+      const o = copy[i];
       o.seq=i;
-      this.childComponentsChange({data:o, action:'move'})
+      this.childComponentsChange({data:o as IMarkerGroup, action:'move'})
     }
+
+    // update MarkerList FKs
+    this.parent.markerGroupIds = RestyTrnHelper.getCachedMarkers(copy, 'visible').map(o=>o.uuid);
+    // this.mListChange.emit( {data:this.parent, action:'update'});
+    const mList = this.parent as IRestMarker;
+    mList._rest_action = mList._rest_action || 'put';
+
+    // push changes
     this._mgSub.next(RestyTrnHelper.getCachedMarkers(this._mgSub.value()) as IMarkerGroup[]);
   }
 
@@ -448,19 +458,34 @@ export class HomePage implements OnInit, IViewNavEvents {
   }
 
   /*
-   * additional event handlers, possibly called from @ViewChilds
+   * additional event handlers, 
    */ 
-  childComponentsChange( change: {data:IMarker, action:string}){
+
+  // handle childComponent/MarkerGroup changes
+  childComponentsChange( change: {data:IMarkerGroup, action:string}){
     if (!change.data) return;
+    const parent:IMarkerList = this.parent;
+    const restMarker = parent as IRestMarker;
     switch(change.action){
       case 'selected':
         return this.selectedMarkerGroup = change.data.uuid;
       case 'remove':
+        parent.markerGroupIds = parent.markerGroupIds.filter(uuid=>uuid!=change.data.uuid);
+        // TODO: not yet implemented: 
+        // this.mListChange.emit( {data:parent, action:'update'});
+        restMarker._rest_action = restMarker._rest_action || 'put';
         RestyTrnHelper.childComponentsChange(change, this._mgSub);
 
         // BUG: ion-item-sliding
         // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
         return this.slidingList.closeSlidingItems();
+      case 'add':
+        // update MarkerList FKs (Parent)
+        parent.markerGroupIds.push(change.data.uuid);
+        // TODO: not yet implemented: 
+        // this.mListChange.emit( {data:parent, action:'update'});
+        restMarker._rest_action = restMarker._rest_action || 'put';
+        // continue processing Child IMarkerGroup
       default:
         return RestyTrnHelper.childComponentsChange(change, this._mgSub);
     }
@@ -476,13 +501,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     
     // check MarkerList for new MarkerGroups
     const parent = this.parent as IRestMarker; 
-    const mgSubjUuids = this._mgSub.value().map(o => o.uuid);
-    if ( 
-      // check if MarkerList stale, if markerGroupIds are not equal
-      parent._rest_action ||
-      mgSubjUuids.length != this.parent.markerGroupIds.length ||
-      mgSubjUuids.filter(v => !this.parent.markerGroupIds.includes(v)).length > 0
-    ){
+    if (parent && parent._rest_action){
       return true;
     }
 
@@ -509,45 +528,55 @@ export class HomePage implements OnInit, IViewNavEvents {
     const parent = this.parent as IRestMarker;
     const layout = this.route.snapshot.queryParams.layout;
     const mListSubj = MockDataService.getSubjByUuid(this.parent.uuid);
-
+    const mGroupSubj = this._mgSub;
+    // const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
+    const commitSubj: SubjectiveService<IRestMarker> = parent._rest_action ? mListSubj : mGroupSubj;
     // begin commit from MarkerList
     switch (action) {
       case "commit":
       // propagate changes to MarkerList
-      let commitSubj:SubjectiveService<IRestMarker>;
-      const mgSubjUuids = this._mgSub.value().map(o => o.uuid);
+      const mgSubjUuids = mGroupSubj.value().map(o => o.uuid);
       try {
-        const mList_markerGroupIds = this.parent.markerGroupIds;
-        if ( 
-          // check if MarkerList stale, if markerGroupIds are not equal
-          parent._rest_action ||
-          mgSubjUuids.length != mList_markerGroupIds.length ||
-          mgSubjUuids.filter(v => !mList_markerGroupIds.includes(v)).length > 0
-        ) {
+        if ( parent._rest_action ) {
           this.parent.markerGroupIds = mgSubjUuids;
           parent._rest_action = parent._rest_action || 'put';
+          parent._commit_child_items = mGroupSubj.value();
+        }
 
-          parent._commit_child_items = this._mgSub.value();
-          commitSubj = mListSubj;
-        }
-        else {
-          // markerList not changed, just update markerGroups
-          commitSubj = this._mgSub;
-        }
         const committed = await RestyTrnHelper.applyChanges(action, commitSubj, this.dataService);
-        console.log("HomePage: committed", committed);
-        // subject.reload() called in RestyTrnHelper.applyChanges()
-        if ( layout=='edit' )  this.router.navigateByUrl('list');
+        // reload subj in RestyTrnHelper._childComponents_CommitChanges()
+        console.warn("HomePage: COMMIT complete", committed);  
+        // reload this.parent after commit reload
+        const done = mListSubj.watch$().subscribe( (mLs:IMarkerList[])=>{
+          const found = mLs.find( o=>o.uuid ==this.parent.uuid );
+          if (!found) console.error("Error: HomePage.applyChanges(), expecting to find an mList after COMMIT");
+          this.parent = found;
+          done && done.unsubscribe();
+          if ( layout=='edit' ){
+            this.router.navigateByUrl('list');
+          }
+        });
         return Promise.resolve(committed);
 
       } catch (err) {
-        console.warn("Error: cannot save to DEV MarkerGroup, parent is null");
+        console.warn("Error: cannot save to DEV MarkerGroup, parent is null", err);
         return Promise.reject(err);
       }
     case "rollback":
-      this._mgSub.reload();
-      mListSubj.reload();
-      if ( layout=='edit' )  this.router.navigateByUrl('list');
+      // reload tree
+      mgSubjUuids && mgSubjUuids.forEach( uuid=>{
+        const mItemSubj = MockDataService.getSubjByParentUuid(uuid);
+        mItemSubj && mItemSubj.reload();
+      })
+      mGroupSubj.reload();
+      if (commitSubj == mListSubj) {
+        mListSubj.reload().then( (mLs:IMarkerList[])=>{
+          this.parent = mLs.find( o=>o.uuid ==this.parent.uuid );
+          if ( layout=='edit' ){
+            this.router.navigateByUrl('list');
+          }
+        })
+      }
     }
   }
 

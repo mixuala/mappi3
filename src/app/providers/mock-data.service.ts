@@ -471,28 +471,21 @@ export class RestyTrnHelper {
       //   this._selectedMarkerGroup = mg.uuid;
       //   break;
       case 'add':
+        // update ChildComponent subject, which is referenced by ParentComponent
         const newMarker = change.data;
         newMarker['_rest_action'] = 'post';
         const items = this.getCachedMarkers(markers); // just sort
         items.push(newMarker);
         subj.next(items);
-        return;
-      case 'update_marker':
-
-        console.warn("What does update_marker do here?");
-        // ???:update markerGroup.position from markerItem.position, DEPRECATE?
-
-        // // update google.map.Marker position directly
-        // const m = MappiMarker.findByUuid([marker.uuid]).shift();
-        // m.setPosition(marker.position);
-
-
-        subj.next(this.getCachedMarkers(markers));
         return;   
       case 'update':
         marker['_rest_action'] = marker['_rest_action'] || 'put';
         return;    
       case 'move':
+        /**
+         * NOTE:  use action='move' for manual re-index => _rest_action='put'
+         *  - use _rest_action='seq' for auto re-indexing on commit
+         *  */ 
         marker['_rest_action'] = marker['_rest_action'] || 'put';
         return;
       case 'remove':
@@ -530,8 +523,6 @@ export class RestyTrnHelper {
           console.error(`ERROR: problem saving '${subj.className}' nodes.`, allItems);
           return Promise.reject(err);
         })
-        subj.reload( remainingItems.map(o=>o.uuid) );
-        console.warn( "> RestyTrn.applyChanges, reload from", subj.className )
         return changed.concat(res);
 
       case "rollback":
@@ -611,7 +602,11 @@ export class RestyTrnHelper {
           if (o instanceof Array) 
             changed = changed.concat(o);
           else changed.push(o);
-        })
+        });
+        // TODO: reload all subjects together, after COMMIT complete
+        const reloadUuids = RestyTrnHelper.getCachedMarkers( changes, 'visible').map( o=>o.uuid);
+        subj.reload( reloadUuids );
+        console.warn( "> RestyTrnHelper COMMIT, className=", subj.className, reloadUuids )
         return changed as IMarker[];
       }
       ,(err)=>{

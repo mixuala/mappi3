@@ -32,7 +32,7 @@ export class MappiImageComponent implements OnChanges {
       switch(k){
         case 'thumbSrc':
           if (this.thumbSrc){
-            console.log( "@@@@ CHANGED!!!! <mappi-img>.thumbSrc$=", this.thumbSrc.src && this.thumbSrc.src.slice(0,25));
+            // console.log( "@@@@ CHANGED!!!! <mappi-img>.thumbSrc$=", this.thumbSrc.src && this.thumbSrc.src.slice(0,25));
             this.data = this.thumbSrc;
           }
       }

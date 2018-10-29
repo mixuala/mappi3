@@ -74,6 +74,8 @@ export class MarkerItemComponent implements OnInit , OnChanges {
     else this.layout = this["_stash_miLayout"];
   }
 
+  // called by (click)="removeMarkerItem(photo)", 
+  // send notification to Parent Component for handling
   removeMarkerItem(o:IPhoto){
     this.debug("removeMarkerItem(): id=", o.dateTaken, o.uuid);
     this.miChange.emit( {data:o, action:'remove'} );
