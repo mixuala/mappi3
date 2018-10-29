@@ -36,6 +36,10 @@ ion-header.google-maps-wrap {
   height: var(--google-map-height);
   width: 100vw;
   background-color: white;
+  &.hide {
+    height: 0;
+    display: none;
+  }
 }
 
 

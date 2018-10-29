@@ -107,19 +107,14 @@
   --google-map-lg-left: var(--split-pane-side-max-width);
   
 
-  /**
-  * test google maps BEFORE <ion-split-pane>
-  * 
-  */
   .google-maps-header {
-    --google-map-fixed-height: 20vh;
-    .google-maps-wrap {
-      height: var(--google-map-fixed-height);
+    #google-maps-host {
+      height: var(--google-map-height);
       width: 100vw;
       background-color: white;
     }
     ion-split-pane {
-      top: var(--google-map-fixed-height);
+      top: var(--google-map-height);
     }
   }
 

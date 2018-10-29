@@ -15,7 +15,9 @@ import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { MarkerGroupComponent } from '../marker-group/marker-group.component';
 import { GoogleMapsComponent } from '../google-maps/google-maps.component';
+import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { MappiMarker } from '../providers/mappi/mappi.service';
+import { AppConfig } from '../providers/helpers';
 
 
 
@@ -91,7 +93,6 @@ export class ListPage implements OnInit {
   viewWillLeave(){
     try {
       this.stash.activeView==false;
-      this.map && this.map.ngOnDestroy();
       console.warn("viewWill-Leave: ListPage");
     } catch (err) {console.warn(err)}
   }
@@ -185,11 +186,11 @@ export class ListPage implements OnInit {
         // no IPhoto returned, get a placeholder
         return Promise.resolve(true)
         .then( ()=>{
-          let position = this.map.map && this.map.map.getCenter();
+          let position = AppConfig.map.getCenter();
           if (position) 
             return position;
           else 
-            return GoogleMapsComponent.getCurrentPosition();
+            return GoogleMapsHostComponent.getCurrentPosition();
         })
         .then( (latlng:google.maps.LatLng)=>{
           const position = latlng.toJSON();

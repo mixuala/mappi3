@@ -13,7 +13,7 @@ import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { MappiMarker } from '../providers/mappi/mappi.service';
-import { GoogleMapsComponent } from '../google-maps/google-maps.component';
+import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { ScreenDim } from '../providers/helpers';
 
 
@@ -208,7 +208,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         return photo;
 
       // no IPhoto returned, get a placeholder
-      return GoogleMapsComponent.getCurrentPosition()
+      return GoogleMapsHostComponent.getCurrentPosition()
       .then( (latlng:google.maps.LatLng)=>{
         const position = latlng.toJSON();
         console.warn("create Photo with default position", position);

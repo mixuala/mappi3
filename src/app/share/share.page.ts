@@ -18,9 +18,9 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
 import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
+import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 import { ScreenDim, AppConfig } from '../providers/helpers';
-
 
 const { App, Browser, Device } = Plugins;
 declare const launchnavigator:any;
@@ -54,14 +54,10 @@ export class SharePage implements OnInit, IViewNavEvents {
 
   private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string, mgUuids?:string[]}
 
-  @ViewChild('gmap') map: GoogleMapsComponent;
-
   private _selectedMarkerGroup: string;
   public get selectedMarkerGroup() { return this._selectedMarkerGroup }
   public set selectedMarkerGroup(value: string) {
-
     this._selectedMarkerGroup = value;
-
     // console.warn( "SharePage setter: fire detectChanges() for selected", value);
     setTimeout(()=>this.cd.detectChanges())
   }
@@ -123,18 +119,9 @@ export class SharePage implements OnInit, IViewNavEvents {
     return found && found.watch$();
   }
 
-
-  public gmap:any;
-  setMap(o:{map:google.maps.Map,key:string}){
-    this.gmap=o;
-    this.map.activeView = true;
-    console.warn("GoogleMapComponent for SharePage is active map=", this.map.map['id']);
-  }
-
   getStaticMap(){
-    const {map, key} = this.gmap;
     const markers = RestyTrnHelper.getCachedMarkers(this._mgSub.value(), 'visible');
-    this.qrcodeData = GoogleMapsComponent.getStaticMap(map, key, markers );
+    this.qrcodeData = GoogleMapsComponent.getStaticMap(AppConfig.map, markers);
     return
   }
 
@@ -182,7 +169,7 @@ export class SharePage implements OnInit, IViewNavEvents {
         console.log( "Launch Google Maps to marker.loc=", marker.loc)
         const calcDistanceBetween = google.maps.geometry.spherical.computeDistanceBetween;
         const {lat, lng} = marker.position;
-        const dist = calcDistanceBetween(GoogleMapsComponent.currentLoc, new google.maps.LatLng(lat,lng));
+        const dist = calcDistanceBetween(GoogleMapsHostComponent.currentLoc, new google.maps.LatLng(lat,lng));
         // console.log("distance from marker=", dist, marker.position, GoogleMapsComponent.currentLoc.toJSON());
         const MAX_NAVIGATION_DISTANCE = 500000;  // meters
         if (dist < MAX_NAVIGATION_DISTANCE){
@@ -237,11 +224,11 @@ export class SharePage implements OnInit, IViewNavEvents {
 
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
-                                                  .pipe( skipWhile( ()=>!this.stash.activeView) );
-                                                  // NOTE: causes a delay before map loads
+        .pipe( skipWhile( ()=>!this.stash.activeView) );
+        // NOTE: causes a delay before map loads
 
     // initialize subjects
-    await this.dataService.ready();
+    await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
     this.parent = mListSubj.value().find( o=>o.uuid==mListId) as IMarkerList;
     if (!this.parent){
       // initializers for deep-linking
@@ -265,18 +252,16 @@ export class SharePage implements OnInit, IViewNavEvents {
     try {
       this._mgSub.reload();
       this.stash.activeView = true;
-      if (!this.map) return;
-      this.map.activeView=true;
-      console.warn(`viewWillEnter: SharePage, map=${this.map.map['id']}`)
+      // AppConfig.map.activeView=true;
+      console.warn(`viewWillEnter: SharePage, map=${AppConfig.map['id']}`)
     } catch {}
   }
 
   viewWillLeave(){
     try {
       this.stash.activeView = false;
-      if (!this.map) return;
-      this.map.activeView=false;
-      console.warn(`viewWillLeave: SharePage, map=${this.map.map['id']}`);
+      // AppConfig.map.activeView=false;
+      console.warn(`viewWillLeave: SharePage, map=${AppConfig.map['id']}`);
     } catch {}
   }
 

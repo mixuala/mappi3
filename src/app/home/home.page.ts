@@ -16,8 +16,9 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService } from '../providers/photo/photo.service';
 import { GoogleMapsComponent , IMapActions } from '../google-maps/google-maps.component';
+import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
-import { ScreenDim } from '../providers/helpers';
+import { ScreenDim, AppConfig } from '../providers/helpers';
 
 @Component({
   selector: 'app-home',
@@ -48,7 +49,6 @@ export class HomePage implements OnInit, IViewNavEvents {
   private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string}
 
   @ViewChild('markerGroupList') slidingList: List;
-  @ViewChild('gmap') map: GoogleMapsComponent;
 
   private _selectedMarkerGroup: string;
   public get selectedMarkerGroup() { return this._selectedMarkerGroup }
@@ -103,11 +103,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     private route: ActivatedRoute,
     private cd: ChangeDetectorRef,
   ){
-    this.dataService.ready()
-    .then( ()=>{
-      // this._mgSub = this.dataService.sjMarkerGroups;
-      // set in ngOnInit()
-    })
+    // this.dataService.ready()
   }
 
   nav(page:string, item:IMarkerList){
@@ -121,13 +117,6 @@ export class HomePage implements OnInit, IViewNavEvents {
   getSubjByParentUuid_Watch$ = (uuid:string)=>{
     const found = MockDataService.getSubjByParentUuid(uuid);
     return found && found.watch$();
-  }
-
-  public gmap:any;
-  setMap(o:{map:google.maps.Map,key:string}){
-    this.gmap=o;
-    this.map.activeView = true;
-    console.warn("GoogleMapComponent for HomePage is active map=", this.map.map['id']);
   }
 
   async ngOnInit() {
@@ -144,10 +133,10 @@ export class HomePage implements OnInit, IViewNavEvents {
 
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
-                                                  .pipe( skipWhile( ()=>!this.stash.activeView) );
+                        .pipe( skipWhile( ()=>!this.stash.activeView) );
       
     // initialize subjects
-    await this.dataService.ready();
+    await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
     this.parent = mListSubj.value().find( o=>o.uuid==mListId) as IMarkerList;
     if (!this.parent){
       // initializers for deep-linking
@@ -166,7 +155,6 @@ export class HomePage implements OnInit, IViewNavEvents {
           }
         })
     }
-    const check = mListSubj.value().find( o=>o.uuid==this.parent.uuid)
     
     // detectChanges if in `edit` mode
     const layout = this.route.snapshot.queryParams.layout;
@@ -185,19 +173,14 @@ export class HomePage implements OnInit, IViewNavEvents {
     try {
       // this.mapSettings = Object.assign({}, this.mapSettings);
       this._mgSub.repeat();
-      this.stash.activeView = true;
-      if (!this.map) return;
-      this.map.activeView = true;
-      console.warn("viewWillEnter: HOMEPage, map=", this.map.map['id']);
+      console.warn("viewWillEnter: HOMEPage, map=", AppConfig.map['id']);
     } catch (err) {console.warn(err)}
   }
 
   viewWillLeave(){
     try {
       this.stash.activeView = false;
-      if (!this.map) return;
-      this.map.activeView = false;
-      console.warn(`viewWillLeave: HOMEPage, map=${this.map.map['id']}`)
+      console.warn(`viewWillLeave: HOMEPage, map=${AppConfig.map['id']}`)
     } catch (err) {console.error(err)}
   }
 
@@ -287,11 +270,11 @@ export class HomePage implements OnInit, IViewNavEvents {
         // no IPhoto returned, get a placeholder
         return Promise.resolve(true)
         .then( ()=>{
-          let position = this.map.map && this.map.map.getCenter();
+          let position = AppConfig.map.getCenter();
           if (position) 
             return position;
           else
-            return GoogleMapsComponent.getCurrentPosition();
+            return GoogleMapsHostComponent.getCurrentPosition();
         })
         .then( (latlng:google.maps.LatLng)=>{
           const position = latlng.toJSON();

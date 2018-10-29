@@ -1,13 +1,13 @@
 import { Component, OnInit, Input, Renderer2, ElementRef, Inject, ViewEncapsulation,
   SimpleChange, EventEmitter, Output, ChangeDetectionStrategy,
 } from '@angular/core';
-import { Observable, BehaviorSubject } from 'rxjs';
+import { Observable, } from 'rxjs';
 import { DOCUMENT } from '@angular/platform-browser';
 import { Plugins } from '@capacitor/core';
-import { GoogleMapsReady } from '../providers/mappi/google-maps-ready';
-import { MappiService, ListenerWrapper,
-  quickUuid, MappiMarker,
-} from '../providers/mappi/mappi.service';
+
+import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
+import { ScreenDim, AppConfig } from '../providers/helpers';
+import { MappiService, ListenerWrapper, MappiMarker, } from '../providers/mappi/mappi.service';
 import * as mappi from '../providers/mappi/mappi.types';
 
 import  { MockDataService, IMarkerGroup,  IPhoto, IMarker, RestyTrnHelper } from '../providers/mock-data.service';
@@ -33,25 +33,16 @@ export interface IMapActions {
 })
 export class GoogleMapsComponent implements OnInit {
 
-  @Input('apiKey') apiKey: string;
   @Input() items: mappi.IMappiMarker[];
   @Input() mode: IMapActions = {};
-  
-
   @Input() selected:string;
-  
 
-  @Output() mapReady: EventEmitter<{map:google.maps.Map,key:string}> = new EventEmitter<{map:google.maps.Map,key:string}>();
   @Output() itemChange: EventEmitter<{data:mappi.IMappiMarker,action:string}> = new EventEmitter<{data:mappi.IMappiMarker,action:string}>();
   @Output() selectedChange: EventEmitter<string> = new EventEmitter<string>();
-
-  public static currentLoc: google.maps.LatLng;
   
   public map: google.maps.Map;
   public markers: any[] = [];
   public activeView:boolean = false;   
-  private _mapSDKReady: Promise<void>;
-  private _mapReadyResolvers: [(value?:any)=>void, (value?:any)=>void];
   private _stash:any={};
 
   /**
@@ -62,91 +53,19 @@ export class GoogleMapsComponent implements OnInit {
 
   constructor(
     public mappi:MappiService,
-    private renderer: Renderer2, 
-    private element: ElementRef, 
-    @Inject(DOCUMENT) private _document,
     public dataService: MockDataService,
   ) {
-    const loading:Promise<any>[] = [];
-    loading.push(
-      this.dataService.ready()
-      .then( ()=>{
-        this._mgSub = this.dataService.sjMarkerGroups;
-      })
-    )
-    loading.push(
-      this._mapSDKReady = new Promise( (resolve, reject)=> {
-        this._mapReadyResolvers = [resolve, reject];
-      })
-    )
-    Promise.all(loading)
-    .then( ()=>{
-      this.onMapReady();
-    });
-     
   }
 
   async ngOnInit() {
-    const map = await new GoogleMapsReady(this.apiKey, this.renderer, this._document).init()
-    .then(() => {
-      return this.loadMap();
-    }, (err) => {
-      console.log(err);
-      this._mapReadyResolvers[1]("Could not initialize Google Maps");
-    })
-
-    // console.warn("> GoogleMapsComponent ngOnInit, map.id=", this.map['id']);
-    this._mapReadyResolvers[0](true);
-
+    AppConfig.mapReady.then( map=>this.map=map);
   }
 
   ngOnDestroy() {
     const count = MappiMarker.remove(this.map);
     // console.warn(`>>> destroy Map ${this.map['id']}, remove markers, count=${count}`);
-    google.maps.event.clearInstanceListeners(this.map);
+    // google.maps.event.clearInstanceListeners(this.map);
     return;
-  }
-
-  private loadMap(): Promise<google.maps.Map> { 
-    return new Promise((resolve, reject) => {
-      // get map center then resolve
-      GoogleMapsComponent.getCurrentPosition()
-      .then ( (position)=>{
-        const mapOptions:google.maps.MapOptions = {
-          zoom: 15,
-          center: position,
-        };
-        this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
-        this.map['id'] = this.map['id'] || `gmap-${Date.now() % 99}`;
-        return resolve(this.map);
-      });
-    });
-  }
-
-  static getCurrentPosition():Promise<google.maps.LatLng> {
-    if (GoogleMapsComponent.currentLoc)
-      return Promise.resolve(GoogleMapsComponent.currentLoc);
-
-    return Geolocation.getCurrentPosition()
-    .then(
-      (position) => {
-        console.log(position);
-        return GoogleMapsComponent.currentLoc = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-      }, 
-      (err) => {
-        if (err.message.startsWith("Origin does not have permission to use Geolocation")) {
-          console.warn("Geolocation error, using test data");
-          const position = {latitude: 3.1581906, longitude: 101.7379296};
-          GoogleMapsComponent.currentLoc = new google.maps.LatLng(position.latitude, position.longitude);
-          return Promise.resolve(GoogleMapsComponent.currentLoc);
-        }
-        console.error(err);
-        Promise.reject('GoogleMapsComponent: Could not initialise map.');
-    })
-  }
-
-  public onMapReady():void {
-    this.mapReady.emit({map:this.map, key:this.apiKey});
   }
 
   async ngOnChanges(o){
@@ -202,7 +121,7 @@ export class GoogleMapsComponent implements OnInit {
           });
           break;
         case 'items':
-          await this._mapSDKReady
+          await AppConfig.mapReady;
 
           let items:IMarker[] = change.currentValue;
           // const diff = this.diffMarkers(change);
@@ -217,7 +136,7 @@ export class GoogleMapsComponent implements OnInit {
    * @param items IMarker[], if null, then skip rendering step
    */
   renderMarkers(items:IMarker[]) {
-    if (this.activeView==false) return; // pause updates
+    // if (this.activeView==false) return; // pause updates
 
     var gm = this.map;
     items.forEach( (m,i)=>m.seq=i);  // reindex for labels
@@ -299,24 +218,6 @@ export class GoogleMapsComponent implements OnInit {
       mm._marker._listeners.dragend = self.listen_DragEnd(mm)(!!this.mode['dragend']);
       mm._marker._listeners.click = self.listen_Click(mm)(!!this.mode['click']);
     }
-  }
-
-  public XXXaddMarkers(items:mappi.IMappiMarker[]){
-    // const newItems = MappiMarker.except(items.map(o=>o._marker));
-    items.forEach( (mm,i)=>{
-      if (mm._marker) {
-        mm._marker.setMap(this.map);
-        mm._marker.setLabel({
-          text:`${i+1}`,
-          color: mm.uuid == this.selected ? 'black' : 'darkred',
-          fontWeight: mm.uuid == this.selected ? '900' : '400',
-        })
-        mm._marker._listeners.dragend(!!this.mode['dragend']);
-        mm._marker._listeners.click(!!this.mode['click']);
-        return;
-      }  
-      this.addOneMarker(mm);
-    })
   }
  
 
@@ -424,8 +325,7 @@ export class GoogleMapsComponent implements OnInit {
    */
 
   // see: https://developers.google.com/maps/documentation/maps-static/dev-guide
-  static
-  getStaticMap(map:google.maps.Map, apiKey:string, markers:IMarker[] ):string {
+  static getStaticMap(map:google.maps.Map, markers:IMarker[] ):string {
     // helper functions
     const round6 = (n:number):number=>Math.round(n*1e6)/1e6
     const mapDim = (fit640?:boolean)=>{
@@ -460,7 +360,7 @@ export class GoogleMapsComponent implements OnInit {
       scale:2,
       mapType: map.getMapTypeId(),
       markers: markerSpec.join('&markers='),
-      key: apiKey
+      key: AppConfig.mapKey
     }
     // console.log(params);
     // console.log(markerSpec);
