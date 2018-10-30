@@ -10,15 +10,26 @@ ion-grid {
   }
 }
 
-/**
- * set layout dims on google maps container, google maps will fit inside
- */
-ion-header.google-maps-wrap {
-  height: var(--google-map-height);
-  width: 100vw;
-  background-color: white;
-}
+//
+// `ios` patches for photoswipe
+//
+.google-maps-header {
+  // photoswipe active
 
+  @at-root.plt-ios.mobile-safari { 
+    & .ion-page ion-header:first-child
+    , &.fullscreen-gallery .ion-page {
+      position:fixed;
+      z-index: -1;
+    }
+  }
+
+  // keep page on same stacking context as photoswipe
+  @at-root.plt-ios &.fullscreen-gallery .ion-page {
+    position:fixed;
+    z-index: -1;
+  }
+}
 
 // ip6/7/8 LANDSCAPE
 @media only screen
@@ -27,19 +38,6 @@ ion-header.google-maps-wrap {
   and (orientation: landscape)
   and (-webkit-min-device-pixel-ratio: 2)
 {
-  .google-maps-header #google-maps-host.google-maps-host-wrap, ion-header.google-maps-wrap {
-    // height: calc(100% - var(--google-map-top));
-    height: 100vh;
-    width: var(--google-map-landscape-right);
-  }
-    
-  ion-content.content-right-if-mq-landscape {
-      position: absolute;
-      left: var(--google-map-landscape-right);
-      top: var(--toolbar-min-height);
-      height: calc(100vh - var(--toolbar-min-height));
-      width: calc(100vw - var(--google-map-landscape-right));
-  }
 
   // rollback ion-col[offset-sm="2"] in landscape mode
   ion-col {

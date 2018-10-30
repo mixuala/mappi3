@@ -75,6 +75,127 @@
   --ion-color-dark-shade: #1e1e1e;
   --ion-color-dark-tint: #383838;
 
+
+  html.plt-desktop ion-back-button.mobile-only{
+    display:none;
+  }
+
+
+  // google map reference points
+  --google-map-size: 40vh;
+  --google-map-bottom: var(--google-map-size);
+  --google-map-height: var(--google-map-size);
+  --google-map-landscape-right: 40vw;
+  --google-map-lg-left: var(--split-pane-side-max-width);
+  --google-map-top: 0px;
+
+  .google-maps-header {
+
+    
+    @at-root.portrait {
+      --google-map-height: var(--google-map-bottom);
+      --google-map-width: 100vw;
+      --ion-safe-area-top: 0px;  
+      --mappi-safe-area-top: 20px;  //env(safe-area-inset-top);
+    }
+    @at-root.landscape {
+      --google-map-height: 100vh;
+      --google-map-width: var(--google-map-landscape-right);
+      --ion-safe-area-top: 20px;   //env(safe-area-inset-top);
+      --mappi-safe-area-top: 0px;
+    }
+
+
+    @at-root.plt-ios.mobile-safari {
+      --ion-safe-area-top: 20px;  // undo for ios
+      --pswp-top-safari: calc( var(--google-map-bottom) + var(--ion-safe-area-top) );
+    }
+
+    .google-maps-host-wrap {
+      background-color: white;
+      height: var(--google-map-height);
+      width: var(--google-map-width);
+      padding-top: var(--ion-safe-area-top);
+    }
+
+    ion-split-pane {
+      top: var(--google-map-height);
+    }
+
+    @at-root.landscape {
+      & ion-split-pane.content-right-if-mq-landscape {
+        top: var(--ion-safe-area-top);
+        left: var(--google-map-landscape-right);
+      }
+      & .ion-page ion-header ion-toolbar:first-child {
+        padding-top: 0px;
+      }
+    }
+
+    // @at-root.landscape.safari {
+    //   & .ion-page ion-header ion-toolbar:first-child {
+    //     padding-top: 0px;
+    //   }
+    // }
+
+    @at-root &.fullscreen-gallery {
+      
+      --ion-safe-area-top: 0px;
+      --mappi-safe-area-top: 0px;
+
+      .google-maps-host-wrap {
+        position: fixed;
+        z-index: -1;
+      }
+      ion-split-pane {
+        top: 0px;
+        left: 0px;
+      }
+    }
+    
+  }
+
+  
+    // .fullscreen-gallery .google-maps-header {
+    //   .google-maps-host-wrap {
+    //     height: 0;
+    //     width: 100vw;
+    //   }
+    //   ion-split-pane {
+    //     top: 0;
+    //   }
+    // }
+  
+  // add to each xxx.page.scss
+  // &html.plt-ios {
+  //   &.portrait {
+  //     --ion-safe-area-top: 0px;  
+  //     --mappi-safe-area-top: 20px;  //env(safe-area-inset-top);
+  //     #google-maps-host {
+  //       padding-top: var(--mappi-safe-area-top); // move to map.css
+  //     }
+  //     .fullscreen-gallery {
+  //       --mappi-safe-area-top: 0px;
+  //     }
+  //   } 
+  //   &.landscape {
+  //     --ion-safe-area-top: 20px;   //env(safe-area-inset-top);
+  //     --mappi-safe-area-top: 0px;
+  //     #google-maps-host {
+  //       padding-top: var(--mappi-safe-area-top);
+  //     }
+  //   }
+  //   .fullscreen-gallery {
+  //     --ion-safe-area-top: 0px;
+  //     --mappi-safe-area-top: 0px;
+
+  //     ion-menu {  // for safari
+  //       position:fixed;
+  //       z-index: -1;
+  //     }
+  //   }
+  // }
+
   /**
   * HACK: adjust CSS to allow fullscreen photoswipe in app.
   * BUG: position:fixed and z-index not working in mobile safari
@@ -88,7 +209,7 @@
       position:fixed;
       z-index: -1;
       &.google-maps-wrap {
-        top: var(--google-map-top);
+        // top: var(--google-map-top);
       }
     }
   }
@@ -99,36 +220,10 @@
   }
   --thumbnail-size: 80px;
 
-  // use map-bottom, map-landscape-right as the reference point for all calc
-  --google-map-bottom: 40vh;
-  --google-map-landscape-right: 40vw;
-  --google-map-top: calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
-  --google-map-height: calc(var(--google-map-bottom) - var(--google-map-top));
-  --google-map-lg-left: var(--split-pane-side-max-width);
+
   
 
-  // for <app-google-maps-host> BEFORE <ion-app>
-  .google-maps-header {
-    #google-maps-host {
-      height: var(--google-map-height);
-      width: 100vw;
-      background-color: white;
-    }
-    ion-split-pane {
-      top: var(--google-map-height);
-    }
-  }
 
-  .fullscreen-gallery.google-maps-header {
-    .google-maps-host-wrap {
-      height: 0;
-      width: 100vw;
-      background-color: white;
-    }
-    ion-split-pane {
-      top: 0;
-    }
-  }
 
   // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
   @media only screen 

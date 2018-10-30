@@ -21,6 +21,46 @@ export class AppConfig {
     AppConfig.devicePixelRatio = window.devicePixelRatio;
     ScreenDim.getWxH().then( res=>AppConfig.screenWH=res );
   }, 10);
+
+
+  /**
+   * for testing CSS4 on Mobile Safari
+   * @param value 
+   */
+  static detectBrowser(device?:DeviceInfo):string {
+    if (!device) device = AppConfig.device || {} as DeviceInfo;
+    const {platform, model, manufacturer} = device;
+    const el = document.getElementsByTagName('HTML')[0];
+    el.classList.remove( 'mobile-safari', 'safari', 'chrome');
+
+    let browser;
+
+    if (platform=='ios' && model=='iPhone') {
+      el.classList.add('safari');
+      el.classList.add('mobile-safari');
+      browser = 'mobile-safari';
+    }
+    else if (platform=='web' && model=='iPhone' && manufacturer == "Apple Computer, Inc.") {
+      el.classList.add('safari'); // responsive mode
+      browser = 'safari:responsive';
+    }
+    else if (platform=='web' && manufacturer == "Apple Computer, Inc.") {
+      el.classList.add('safari'); // responsive mode
+      browser = 'safari';
+    }
+    else if (platform=='web' && model=='iPhone' && manufacturer == "Google Inc.") {
+      el.classList.add('chrome:responsive');
+      browser = 'chrome';
+    } else {
+      // everything else is chrome
+      el.classList.add('chrome');
+      browser = 'chrome';
+    }
+    console.log('Detect browser for CSS, browser=',browser);
+    return browser;
+  }
+
+
 }
 
 /**
@@ -49,6 +89,7 @@ export class ScreenDim {
           return ScreenDim.set(false,100).then( __dim=>resolve(__dim));
         }
         console.log(`ScreenDim.set(${checkOnce}) [wxh]=`, _dim);
+        ScreenDim.setOrientationClasses(_dim);
         resolve(_dim);
       }, delay);
     });
@@ -77,4 +118,18 @@ export class ScreenDim {
     if (dim) return getSize(dim);
     return ScreenDim.getWxH().then( dim=>getSize(dim));
   }
+
+  static setOrientationClasses(dim:string){
+    const[fitW, fitH] = dim.split('x').map(v=>parseInt(v));
+    const el = document.getElementsByTagName('HTML')[0]
+    if (fitW>fitH) {
+      el.classList.add('landscape');
+      el.classList.remove('portrait');
+    }
+    else {
+      el.classList.add('portrait');
+      el.classList.remove('landscape');
+    }
+  }
+
 }
