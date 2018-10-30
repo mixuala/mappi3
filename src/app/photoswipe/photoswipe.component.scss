@@ -1,7 +1,9 @@
 app-photoswipe .pswp {
   // --google-map-bottom set in variables.scss 
-  top: var(--google-map-bottom);
-  height: calc(100vh - var(--google-map-bottom));
+  // top: var(--google-map-bottom);
+  // height: calc(100vh - var(--google-map-bottom));
+  top: calc(-1 * var(--toolbar-min-height));
+  height: 100vh;
 
   // force display of fs button when device fullscreen not available
   &.support-app-fs .pswp__button--fs {
@@ -33,19 +35,25 @@ app-photoswipe .pswp {
   and (orientation: landscape)
   and (-webkit-min-device-pixel-ratio: 2)
 {
-  app-photoswipe.content-right-if-mq-landscape .pswp {
+  .fullscreen-gallery app-photoswipe.content-right-if-mq-landscape .pswp {
     // position: fixed does not include ion-safe-area
+    // top: var(--ion-safe-area-top);
+    left: calc(-1 * var(--google-map-landscape-right));
+  }
+
+
+  html.plt-ios app-photoswipe.content-right-if-mq-landscape .pswp {
+    top: 0;
     left: var(--google-map-landscape-right);
-    width: calc(100vw - var(--google-map-landscape-right));
-    top: var(--google-map-top);
-    height: calc(100vh - var(--google-map-top));
+    height: 100vh;
+    width: calc(100vw - var(--google-map-landscape-right))
   }
 
   /**
    * HACK: fix ios landscape full screen rendering bug by
    * expanding photoswipe wrap before jumping to fullscreen
    */
-  html.plt-ios .fullscreen-gallery ion-content.content-right-if-mq-landscape {
+  html.plt-ios .fullscreen-gallery app-photoswipe.content-right-if-mq-landscape {
     left: 0 !important;
     top: 0 !important;
     height: 100% !important;
@@ -80,14 +88,18 @@ app-photoswipe .pswp {
 {
   app-photoswipe .pswp {
     // position: fixed does not include ion-safe-area
-    top:  calc(var(--google-map-bottom) + var(--ion-safe-area-top));
+    // top:  calc( 0 + var(--ion-safe-area-top));
     height: calc(100vh + var(--ion-safe-area-top) - var(--google-map-bottom));
   }
-
+  
+  html.plt-ios app-photoswipe .pswp {
+    top:  calc( var(--google-map-bottom) - var(--toolbar-min-height));
+    height: calc( 100vh - var(--google-map-height) + var(--toolbar-min-height));
+  }
 
   html.plt-ios .fullscreen-gallery app-photoswipe .pswp {
     top: 0;
-    height: 100%;
+    height: 100vh;
   }  
 
 }

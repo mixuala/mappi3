@@ -101,12 +101,13 @@
 
   // use map-bottom, map-landscape-right as the reference point for all calc
   --google-map-bottom: 40vh;
-  --google-map-landscape-right: 50vw;
+  --google-map-landscape-right: 40vw;
   --google-map-top: calc(var(--ion-safe-area-top) + var(--toolbar-min-height));
   --google-map-height: calc(var(--google-map-bottom) - var(--google-map-top));
   --google-map-lg-left: var(--split-pane-side-max-width);
   
 
+  // for <app-google-maps-host> BEFORE <ion-app>
   .google-maps-header {
     #google-maps-host {
       height: var(--google-map-height);
@@ -115,6 +116,17 @@
     }
     ion-split-pane {
       top: var(--google-map-height);
+    }
+  }
+
+  .fullscreen-gallery.google-maps-header {
+    .google-maps-host-wrap {
+      height: 0;
+      width: 100vw;
+      background-color: white;
+    }
+    ion-split-pane {
+      top: 0;
     }
   }
 

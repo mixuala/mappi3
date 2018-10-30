@@ -50,19 +50,25 @@ ion-header.google-maps-wrap {
   and (orientation: landscape)
   and (-webkit-min-device-pixel-ratio: 2)
 {
-  ion-header.google-maps-wrap {
-    // height: calc(100% - var(--google-map-top));
-    // width: var(--google-map-landscape-right-pct);
-    height: calc(100vh - var(--google-map-top));
+  .google-maps-header #google-maps-host.google-maps-host-wrap, ion-header.google-maps-wrap {
+    height: 100vh;
     width: var(--google-map-landscape-right);
   }
-    
-  ion-content.content-right-if-mq-landscape {
-      position: absolute;
+   
+  ion-app.google-maps-header {
+    ion-split-pane.content-right-if-mq-landscape {
+      top: var(--ion-safe-area-top);
       left: var(--google-map-landscape-right);
-      top: var(--toolbar-min-height);
-      height: calc(100vh - var(--toolbar-min-height));
-      width: calc(100vw - var(--google-map-landscape-right));
+    }
+  }
+
+  ion-app.fullscreen-gallery.google-maps-header {
+    #google-maps-host.google-maps-host-wrap {
+      width: 0;
+    }
+    ion-split-pane.content-right-if-mq-landscape {
+      left: 0;
+    }
   }
 
   // rollback ion-col[offset-sm="2"] in landscape mode

@@ -27,10 +27,9 @@ ion-header.google-maps-wrap {
   and (orientation: landscape)
   and (-webkit-min-device-pixel-ratio: 2)
 {
-  ion-header.google-maps-wrap {
+  .google-maps-header #google-maps-host.google-maps-host-wrap, ion-header.google-maps-wrap {
     // height: calc(100% - var(--google-map-top));
-    // width: var(--google-map-landscape-right-pct);
-    height: calc(100vh - var(--google-map-top));
+    height: 100vh;
     width: var(--google-map-landscape-right);
   }
     

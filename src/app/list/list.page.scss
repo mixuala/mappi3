@@ -14,7 +14,7 @@ ion-grid {
 /**
  * set layout dims on google maps container, google maps will fit inside
  */
- ion-header.google-maps-wrap {
+ #google-maps-host, ion-header.google-maps-wrap {
   height: var(--google-map-height);
   width: 100vw;
 }

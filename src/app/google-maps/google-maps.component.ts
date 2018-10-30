@@ -121,7 +121,7 @@ export class GoogleMapsComponent implements OnInit {
           });
           break;
         case 'items':
-          await AppConfig.mapReady;
+          await AppConfig.mapReady.then( map=>this.map=map);
 
           let items:IMarker[] = change.currentValue;
           // const diff = this.diffMarkers(change);
@@ -138,11 +138,11 @@ export class GoogleMapsComponent implements OnInit {
   renderMarkers(items:IMarker[]) {
     // if (this.activeView==false) return; // pause updates
 
-    var gm = this.map;
+    var gm = AppConfig.map;
     items.forEach( (m,i)=>m.seq=i);  // reindex for labels
     // ignore markers that are marked for delete pending commit
     const visible = items.filter(o=>o['_rest_action']!='delete');
-    const hidden = MappiMarker.except(visible, this.map['id']);
+    const hidden = MappiMarker.except(visible, AppConfig.map['id']);
     MappiMarker.hide(hidden);
     visible.forEach( (marker,i)=>{
       this.addOneMarker(marker as mappi.IMappiMarker);
