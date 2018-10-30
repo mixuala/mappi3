@@ -1,28 +1,42 @@
+
 app-photoswipe .pswp {
+
+  // define css4 vars
   @at-root.portrait & {
     --pswp-top-chrome: calc( 0px - var(--toolbar-min-height) );
     --pswp-top-safari: var(--google-map-bottom);
+  }
+  // @at-root.portrait.mobile-safari & { 
+  // }
+  @at-root.landscape & {
+    --pswp-top-chrome: calc( 0px - var(--toolbar-min-height) - 0px );
+    --pswp-height: calc( 100vh - var(--ion-safe-area-top) );
+    --pswp-top-safari: var(--ion-safe-area-top);
+    --pswp-left-safari: var(--google-map-landscape-right);
+  }
+
+
+
+
+  @at-root.portrait & {
     height: calc( 100vh - var(--google-map-height)  );
     top: var(--pswp-top-chrome);
   }
-  @at-root.portrait.plt-ios.safari &  {
-    // css patch for desktop safari. what selector?
+  @at-root.portrait.safari & {
+    top: var(--pswp-top-safari);
+  }
+  @at-root.portrait.mobile-safari & {
     top: var(--pswp-top-safari);
   }
 
   @at-root.landscape & {
-    --pswp-top-chrome: calc( 0px - var(--toolbar-min-height) - 0px );
-    --pswp-top-safari: var(--ion-safe-area-top);
-    --pswp-height: calc( 100vh - var(--ion-safe-area-top) );
-    --pswp-left-safari: var(--google-map-landscape-right);
-
     width: calc(100vw - var(--google-map-landscape-right));
     top: var(--pswp-top-chrome);
     height: var(--pswp-height);
     left: 0px;
   }
 
-  @at-root.landscape.plt-ios.safari &  {
+  @at-root.landscape.safari &  {
     top: var(--pswp-top-safari);
     height: var(--pswp-height);
     left: var(--pswp-left-safari);
@@ -35,6 +49,7 @@ app-photoswipe .pswp {
 
 }
 
+
 .portrait, .landscape {
   @at-root .fullscreen-gallery app-photoswipe > .pswp {
     &.pswp {
@@ -45,98 +60,49 @@ app-photoswipe .pswp {
       transform: translate3d(0,0,0);
     }
 
-    // rollback safari `ion-safe-area` overrides for fullscreen
+    // rollback safari `ion-safe-area` overrides for fullscreen, safari only
     @at-root.portrait.plt-ios.safari &.pswp  {
       top: 0px;
     }
     @at-root.landscape.plt-ios.safari &.pswp  {
       left: 0px;
     } 
+    @at-root.portrait.chrome &.pswp {
+      top: var(--pswp-top-chrome);
+    }
   }
+
 }
 
 
-/**
-* adjust CSS to allow fullscreen photoswipe in app.
-* BUG: position:fixed and z-index not working in mobile safari
-*/
+
+
+
+
 
 
 
   
-// ip6/7/8 landscape
-@media only screen
-  and (max-width: 812px) 
-	and (max-height: 414px) 
-  and (orientation: landscape)
-  and (-webkit-min-device-pixel-ratio: 2)
-{
-  .fullscreen-gallery app-photoswipe.content-right-if-mq-landscape .pswp {
-    // position: fixed does not include ion-safe-area
-    // top: var(--ion-safe-area-top);
-    // left: calc(-1 * var(--google-map-landscape-right));
-  }
+// // ip6/7/8 landscape
+// @media only screen
+//   and (max-width: 812px) 
+// 	and (max-height: 414px) 
+//   and (orientation: landscape)
+//   and (-webkit-min-device-pixel-ratio: 2)
+// {
 
 
-  html.plt-ios app-photoswipe.content-right-if-mq-landscape .pswp {
-    // top: 0;
-    // left: var(--google-map-landscape-right);
-    // height: 100vh;
-    // width: calc(100vw - var(--google-map-landscape-right))
-  }
+// } 
 
-  /**
-   * HACK: fix ios landscape full screen rendering bug by
-   * expanding photoswipe wrap before jumping to fullscreen
-   */
-  html.plt-ios .fullscreen-gallery app-photoswipe.content-right-if-mq-landscape {
-    // left: 0 !important;
-    // top: 0 !important;
-    // height: 100% !important;
-    // width: 100% !important;
-    // transition:All 0.3s ease-out;
-    // -webkit-transition:All 0.3s ease-out;
-    // -moz-transition:All 0.3s ease-out;
-    // -o-transition:All 0.3s ease-out;
-  }
-
-  /**
-  * HACK: adjust CSS to allow fullscreen photoswipe in app.
-  * BUG: position:fixed and z-index not working in mobile safari
-  */
-  html.plt-ios .fullscreen-gallery app-photoswipe .pswp {
-    // position: fixed;
-    // z-index: 9999;
-    // top: 0;
-    // height: 100%;
-    // left: 0;
-    // width: 100%;
-  }  
-
-} 
-
-// ip6/7/8 PORTRAIT
-@media only screen 
-  and (max-width: 414px) 
-	and (max-height: 812px) 
-  and (orientation: portrait)
-  and (-webkit-min-device-pixel-ratio: 2)
-{
+// // ip6/7/8 PORTRAIT
+// @media only screen 
+//   and (max-width: 414px) 
+// 	and (max-height: 812px) 
+//   and (orientation: portrait)
+//   and (-webkit-min-device-pixel-ratio: 2)
+// {
   
-  html.plt-ios app-photoswipe .pswp {
-    // top: var(--google-map-height);     // ok on safari>ios
-    // top: calc( var(--google-map-height) + var(--toolbar-min-height) + var(--ion-safe-area-top));       // ok on ios
-    // height: calc( 100vh - var(--google-map-height) );
-  }
-
-   
-
-  html.plt-ios .fullscreen-gallery app-photoswipe .pswp {
-    // top: 0;
-    // height: 100vh;
-  }  
-
-}
+// }
 
 // breakpoint=lg
 // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )

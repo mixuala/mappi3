@@ -29,6 +29,20 @@ ion-card-content {
 }
 
 
+//
+// `ios` patches for photoswipe
+//
+.ion-page {
+  @at-root.mobile-safari .gallery & ion-header:first-child {
+    position:fixed;
+    z-index: -1;
+  }
+  @at-root.mobile-safari .fullscreen-gallery &.ion-page {
+    position:fixed;
+    z-index: -1 !important;
+  }
+}
+
 ion-thumbnail {
   width: var(--thumbnail-size);
   height: var(--thumbnail-size);

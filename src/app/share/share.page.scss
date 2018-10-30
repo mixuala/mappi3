@@ -31,21 +31,16 @@ ion-card.qrcode {
 //
 // `ios` patches for photoswipe
 //
-.google-maps-header {
-  // photoswipe active
 
-  @at-root.plt-ios.mobile-safari & { 
-    .ion-page ion-header:first-child
-    , &.fullscreen-gallery .ion-page {
-      position:fixed;
-      z-index: -1;
-    }
-  }
 
-  // keep page on same stacking context as photoswipe
-  @at-root.plt-ios &.fullscreen-gallery .ion-page {
+.ion-page {
+  @at-root.mobile-safari .gallery & ion-header:first-child {
     position:fixed;
     z-index: -1;
+  }
+  @at-root.mobile-safari .fullscreen-gallery &.ion-page {
+    position:fixed;
+    z-index: -1 !important;
   }
 }
 
@@ -57,44 +52,6 @@ ion-card.qrcode {
   and (orientation: landscape)
   and (-webkit-min-device-pixel-ratio: 2)
 {
-
-  .google-maps-header #google-maps-host.google-maps-host-wrap, ion-header.google-maps-wrap {
-    // height: var(--google-map-height);
-    // width: var(--google-map-width);
-  }
-   
-  ion-app.google-maps-header {
-    ion-split-pane.content-right-if-mq-landscape {
-      // top: var(--ion-safe-area-top);
-      // left: var(--google-map-landscape-right);
-    }
-  }
-
-  html.plt-ios ion-app.google-maps-header {
-    ion-split-pane.content-right-if-mq-landscape {
-      // top: calc(0 - var(--ion-safe-area-top));
-      // left: var(--google-map-landscape-right);
-    }
-  }
-
-
-  ion-app.fullscreen-gallery.google-maps-header {
-    #google-maps-host.google-maps-host-wrap {
-      // width: 0;
-    }
-    ion-split-pane.content-right-if-mq-landscape {
-      // left: 0;
-    }
-  }
-
-  html.plt-ios ion-app.fullscreen-gallery.google-maps-header {
-    #google-maps-host.google-maps-host-wrap {
-      // width: 0;
-    }
-    ion-split-pane.content-right-if-mq-landscape {
-      // left: 0;
-    }
-  }
 
   // rollback ion-col[offset-sm="2"] in landscape mode
   ion-col {
@@ -111,32 +68,6 @@ ion-card.qrcode {
   and (orientation: portrait)
   and (-webkit-min-device-pixel-ratio: 2)
 {
-
-  html.plt-ios ion-app.google-maps-header {
-    #google-maps-host.google-maps-host-wrap {
-      // height: var(--google-map-height);
-    }
-    ion-split-pane {
-      // top: calc(0 - var(--ion-safe-area-top));
-      // left: 0;
-
-      ion-header ion-toolbar:first-child {
-        // ios
-        // --ion-safe-area-top: 0;
-        // padding-top: var(--ion-safe-area-top);
-      }
-
-    }
-  }
-
-  html.plt-ios ion-app.fullscreen-gallery.google-maps-header {
-    #google-maps-host.google-maps-host-wrap {
-      // height: 0;
-    }
-    ion-split-pane {
-      // top: 0;
-    }
-  }
 
   ion-row.hscroll-if-mq-portrait {
     flex-wrap: nowrap;

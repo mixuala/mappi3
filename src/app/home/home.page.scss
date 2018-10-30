@@ -13,23 +13,17 @@ ion-grid {
 //
 // `ios` patches for photoswipe
 //
-.google-maps-header {
-  // photoswipe active
-
-  @at-root.plt-ios.mobile-safari { 
-    & .ion-page ion-header:first-child
-    , &.fullscreen-gallery .ion-page {
-      position:fixed;
-      z-index: -1;
-    }
-  }
-
-  // keep page on same stacking context as photoswipe
-  @at-root.plt-ios &.fullscreen-gallery .ion-page {
+.ion-page {
+  @at-root.mobile-safari .gallery & ion-header:first-child {
     position:fixed;
     z-index: -1;
   }
+  @at-root.mobile-safari .fullscreen-gallery &.ion-page {
+    position:fixed;
+    z-index: -1 !important;
+  }
 }
+
 
 // ip6/7/8 LANDSCAPE
 @media only screen

@@ -121,6 +121,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     const self = this;
     gallery.listen('close', ()=>{
       self.toggle_appFullscreen(false);
+      self.toggle_appFullscreen(false, 'gallery');
     })
 
     gallery.listen('destroy', () => {
@@ -139,6 +140,8 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     gallery.init();
     self.setup_fullscreen_override(gallery);
     // gallery.ui.hideControls();
+    // add className to parent for css styling of ancestors
+    self.toggle_appFullscreen(true, 'gallery');
     self.gallery = gallery;
   }
 
@@ -194,22 +197,19 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     // add fullscreen within app, only
     gallery.framework.bind(el, type, handler);
   }
-  toggle_appFullscreen(value?:boolean){
+  toggle_appFullscreen(value?:boolean, className:string='fullscreen-gallery'){
     const parent = this.galleryElement.closest('ION-APP');
     if (!parent) {
-      console.warn("Cannot find ION=APP, has the view already been destroyed?")
+      console.warn("Cannot find ION-APP, has the view already been destroyed?")
       return;
     }
     if (typeof value == 'undefined') 
-      value = !parent.classList.contains('fullscreen-gallery');
-    // console.info("toggle_fullscreen", value);
+      value = !parent.classList.contains(className);
     if (value) {
-      parent.classList.toggle('fullscreen-gallery',true);
-      // this.gallery.updateSize(true);
-      // console.warn("*** > set to app fs")
+      parent.classList.toggle(className,true);
     } 
     else
-      parent.classList.toggle('fullscreen-gallery',false);
+      parent.classList.toggle(className,false);
 
     setTimeout( ()=>{
       // add a delay before getting viewport size and hiding fullscreen

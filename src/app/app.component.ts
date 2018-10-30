@@ -71,6 +71,7 @@ export class AppComponent {
   async listenAppState(){
     const device = await Device.getInfo();
     AppConfig.device = device;
+    AppConfig.detectBrowser(device);
     switch (device.platform){
       case 'ios':
       case 'android':
