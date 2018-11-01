@@ -8,8 +8,7 @@ import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil, switchMap, filter, skipWhile, first } from 'rxjs/operators';
 
 import { IViewNavEvents } from "../app-routing.module";
-import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
-import * as mappi from '../providers/mappi/mappi.types';
+import { MappiMarker, } from '../providers/mappi/mappi.service';
 import  { MockDataService, RestyTrnHelper, quickUuid,
   IMarkerGroup, IPhoto, IMarker, IRestMarker, IMarkerList,
 } from '../providers/mock-data.service';
@@ -19,6 +18,7 @@ import { GoogleMapsComponent , IMapActions } from '../google-maps/google-maps.co
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 import { ScreenDim, AppConfig } from '../providers/helpers';
+import { AppCache } from '../providers/appcache';
 
 @Component({
   selector: 'app-home',
@@ -232,11 +232,30 @@ export class HomePage implements OnInit, IViewNavEvents {
     const mgSubj = MockDataService.getSubjByParentUuid(this.parent.uuid);
 
     let mgParent:IMarkerGroup;
-
     let child:IPhoto;
-    if (target=='ION-BUTTON')
-      child = await this.photoService.choosePhoto(0);
-    else if (data.className == 'Photo')
+    if (target=='ION-BUTTON'){
+      const mgs = mgSubj.value() as IMarkerGroup[];
+      if (mgs.length==0) {
+        child = await this.photoService.choosePhoto(0);
+        console.log( "### 0) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
+      } else {
+        const positions = mgs.map(o=>o.position);
+        const bounds = AppConfig.map.getBounds();
+        const except = mgs.reduce((res,o)=>{
+          return res.concat(o.markerItemIds || [])
+        },[])
+        .map(uuid=>{
+          const found = AppCache.for('Photo').get(uuid);
+          return found && found.camerarollId;
+        }).filter( v=>!!v);
+        /**
+         * choose one from photos near position of first markerGroup. 
+         * or bounds of current map
+         *  */ 
+        child = await this.photoService.choosePhoto(0, {positions, bounds, except});
+        console.log( "### 1+) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
+      }
+     } else if (data.className == 'Photo')
       // create markerGroup using photo as location
       child = data;
 

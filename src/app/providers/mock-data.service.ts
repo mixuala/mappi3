@@ -4,8 +4,9 @@ import { Observable, ReplaySubject } from 'rxjs';
 
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
-import { MappiMarker, } from '../providers/mappi/mappi.service';
-import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
+import { MappiMarker, } from './mappi/mappi.service';
+import { ImgSrc, IImgSrc, IImgSrcItem } from './photo/imgsrc.service';
+import { AppCache, IMarkerSubject } from './appcache';
 
 const { SplashScreen, Storage } = Plugins;
 
@@ -89,25 +90,18 @@ export class MockDataService {
   /**
    * helper functions
    */
-  // local cache of SubjectiveService<IMarker>
-  public static subjectCache: {
-    [uuid: string]:{
-      self:SubjectiveService<IMarker>, 
-      child:SubjectiveService<IMarker>
-    }
-  } = {};
   static getSubjByUuid(uuid:string, subj?:SubjectiveService<IMarker>){
-    MockDataService.subjectCache[uuid] = MockDataService.subjectCache[uuid] || {self: null, child:null};
-    if (subj)
-      MockDataService.subjectCache[uuid].self = subj;   
-    return MockDataService.subjectCache[uuid].self || null;
+    const empty:IMarkerSubject = {uuid, self: null, child:null};
+    const markerSubj:IMarkerSubject = AppCache.for('IMarker').get(uuid) || AppCache.for('IMarker').set(empty);
+    if (subj) markerSubj.self = subj;
+    return markerSubj.self || null;
   }
+
   static getSubjByParentUuid(uuid:string, subj?:SubjectiveService<IMarker>){
-    MockDataService.subjectCache[uuid] = MockDataService.subjectCache[uuid] || {self: null, child:null};
-    if (subj){
-      MockDataService.subjectCache[uuid].child = subj;
-    }   
-    return MockDataService.subjectCache[uuid].child || null;
+    const empty:IMarkerSubject = {uuid, self: null, child:null};
+    const markerSubj:IMarkerSubject = AppCache.for('IMarker').get(uuid) || AppCache.for('IMarker').set(empty);
+    if (subj) markerSubj.child = subj;
+    return markerSubj.child || null;
   }
 
 
@@ -117,10 +111,8 @@ export class MockDataService {
       SplashScreen.hide().catch((err)=>{});
       console.log("TESTDATA READY");
     });
-    window['_mockDataService'] = this;
-    // // see: AppComponent.exposeDebug()
-    window['_MockDataService'] = MockDataService;
-    window['_SubjectiveService'] = SubjectiveService;
+
+    window['_mockDataService'] = this;   // instance
     return;
   }
 
@@ -333,13 +325,6 @@ export const PHOTOS: IPhoto[] = [
   {uuid: null, loc: [3.1569080416737467, 101.74091468521124], locOffset:[0,0], dateTaken:"2018-07-25T16:29:00", orientation: 1,  src:"https://picsum.photos/80?image={id}" , width:0, height:0 },
   {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?image={id}" , width:0, height:0 },    
 ]
-
-
-
-
-
-
-
 
 
 

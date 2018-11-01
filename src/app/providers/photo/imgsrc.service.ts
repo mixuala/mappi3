@@ -12,6 +12,7 @@ import { MockDataService, IPhoto } from '../mock-data.service';
 import { PhotoLibraryHelper } from './photo.service';
 import { AppConfig, ScreenDim } from '../helpers';
 import { SubjectiveService } from '../subjective.service';
+import { AppCache } from '../appcache';
 
 const { Storage } = Plugins;
 
@@ -75,10 +76,10 @@ export class ImgSrc {
   static handleAppStateChange(state:AppState){
     if (state.isActive){
       ImgSrc.retryBroken();
-      console.warn( "&&& AppState restored. ImgSrc items...", ImgSrc.items().map(o=>o.key).slice(0,3));
+      console.warn( "&&& AppState restored. ImgSrc items...", AppCache.for('ImgSrc').items().map(o=>o.key).slice(0,3));
     }
     else {
-      console.warn( "&&& AppState inactive. ImgSrc item count=", ImgSrc.items().map(o=>o.key).length)
+      console.warn( "&&& AppState inactive. ImgSrc item count=", AppCache.for('ImgSrc').items().map(o=>o.key).length)
     }
   }
 
@@ -133,13 +134,12 @@ export class ImgSrc {
 
   static retryBroken(filter?: string[]) {
     console.log('calling "retryBroken()')
-    const broken = ImgSrc.items().filter(o=>o.imgSrc.src==null);
+    const broken:IImgSrcItem[] = AppCache.for('ImgSrc').items().filter(o=>o.imgSrc.src==null);
     broken.forEach( cacheItem=>{
       const [dim, uuid] = cacheItem.key.split(':');
       if (filter && filter.includes(uuid)==false) return; // skip
 
-      // const photo = SubjectiveService.photoCache[uuid];
-      const photo = SubjectiveService.photoCache[uuid];
+      const photo:IPhoto = AppCache.for('Photo').get(uuid);
       if (!photo) console.warn("retryBroken(), photo not found, uuid=", uuid);
       else {
         // retry
@@ -165,7 +165,7 @@ export class ImgSrc {
     let cacheItem:IImgSrcItem;
 
     // check cache
-    const cached = ImgSrc.get(photo.uuid, dim);
+    const cached:IImgSrcItem = AppCache.for('ImgSrc').get([dim,photo.uuid].join(':'));
     if (cached && !force) {
       if (cached['loading'] || cached.imgSrc.src){
         // good or still loading...
@@ -254,6 +254,7 @@ export class ImgSrc {
       cacheItem.subj.next(cacheItem.imgSrc);
     });
     ImgSrc.set(cacheItem)
+    AppCache.for('ImgSrc').set(cacheItem);
     return cacheItem.imgSrc$;
   }
   

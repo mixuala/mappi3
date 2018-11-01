@@ -11,10 +11,11 @@ import { Plugins } from '@capacitor/core';
 import { MockDataService, RestyTrnHelper, IMarkerGroup, IPhoto, IMarker, IRestMarker } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
-import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
+import { PhotoService, IExifPhoto, PhotoLibraryHelper, IMappiLibraryItem, IMoment } from '../providers/photo/photo.service';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { ScreenDim } from '../providers/helpers';
+import { AppCache } from '../providers/appcache';
 
 
 @Component({
@@ -201,8 +202,19 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
   createMarkerItem(ev:any){
     const mg = this.mg;
-    return this.photoService.choosePhoto(mg.markerItemIds.length)
+    const photos = MockDataService.getSubjByParentUuid(mg.uuid).value() as IPhoto[];
+    let moments:IMoment[] = photos.reduce( (res,p)=>{
+      const moment = AppCache.findMomentByItemId(p.camerarollId);
+      if (moment) res.push(moment);
+      return res;
+    }, []);
+    moments = moments.length ? moments : null;
+    const except = photos.map(o=>o.camerarollId);
+    const options:any = {except, moments};
+    return this.photoService.choosePhoto(mg.markerItemIds.length, options)
     .then( photo=>{
+      console.log( "### MarkerGroup.choosePhoto, photo=",photo, AppCache.for('Cameraroll').get(photo.camerarollId))
+
       this.childComponentsChange({data:photo, action:'add'});
       if (MappiMarker.hasLoc(photo)) 
         return photo;

@@ -4,6 +4,7 @@ import { takeUntil,  map } from 'rxjs/operators';
 
 import { RestyService } from './resty.service';
 import { IPhoto } from './mock-data.service';
+import { AppCache } from './appcache';
 
 @Injectable({
   providedIn: 'root'
@@ -96,6 +97,7 @@ export class SubjectiveService<T> {
   cacheOnlyPhotos(items:T[]){
     if (this.className != 'Photo') return;
     (items as any as IPhoto[]).forEach( o=>{
+      AppCache.for('Photo').set(o)
       if (!SubjectiveService.photoCache[o.uuid])
         SubjectiveService.photoCache[o.uuid] = o;
     });

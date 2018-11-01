@@ -6,6 +6,8 @@ import { Component, OnDestroy, OnInit, AfterViewInit,
 import * as PhotoSwipe from 'photoswipe';  
 import { ImgSrc } from '../providers/photo/imgsrc.service';
 import { SubjectiveService } from '../providers/subjective.service';
+import { AppCache } from '../providers/appcache';
+import { IPhoto } from '../providers/mock-data.service';
 
 declare const PhotoSwipeUI_Default: any;
 
@@ -66,7 +68,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
 
     const waitFor:Promise<string>[] = [];
     this.gallery.items.forEach( (o,i)=>{
-      const p = SubjectiveService.photoCache[ o['uuid'] ];
+      const p:IPhoto = AppCache.for('Photo').get(o['uuid'] );
       const pr = ImgSrc.scaleDimToScreen(p, screenDim)
       .then( (fsDim)=>{
         const [imgW, imgH] = fsDim.split('x');

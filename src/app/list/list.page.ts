@@ -12,12 +12,13 @@ import  {
   IMarker, IMarkerGroup, IPhoto, IMarkerList, IRestMarker,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
-import { MarkerGroupComponent } from '../marker-group/marker-group.component';
+import { PhotoService, PhotoLibraryHelper, IMappiLibraryItem, } from '../providers/photo/photo.service';
 import { GoogleMapsComponent } from '../google-maps/google-maps.component';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { AppConfig } from '../providers/helpers';
+import { ImgSrc,  } from '../providers/photo/imgsrc.service';
+import { AppCache } from '../providers/appcache';
 
 
 
@@ -75,10 +76,12 @@ export class ListPage implements OnInit {
         // cache MarkerList Subject back-references
         res.forEach( mL=> MockDataService.getSubjByUuid(mL.uuid, this._mListSub) );
         console.info(`ListPage mLists, count=`, res.length);
+        ImgSrc.retryBroken();
         done.unsubscribe();
       });
     this.stash.activeView = true;
     this._mListSub.get$();  // get all MarkerLists, or query
+
   }
 
 
@@ -94,6 +97,7 @@ export class ListPage implements OnInit {
     try {
       this.stash.activeView==false;
       console.warn("viewWill-Leave: ListPage");
+      ImgSrc.retryBroken();
     } catch (err) {console.warn(err)}
   }
 
@@ -168,6 +172,9 @@ export class ListPage implements OnInit {
       if (target=='ION-BUTTON') {
         return this.photoService.choosePhoto(0)
         .then( (p:IPhoto)=>{
+
+          console.log( "### ListPage.choosePhoto, photo=",p, AppCache.for('Cameraroll').get(p.camerarollId))
+
           RestyTrnHelper.setFKfromChild(child, p);
           RestyTrnHelper.setFKfromChild(item, child);
           if (MappiMarker.hasLoc(p)) {
@@ -185,8 +192,8 @@ export class ListPage implements OnInit {
       if (err=='continue') {
         // no IPhoto returned, get a placeholder
         return Promise.resolve(true)
-        .then( ()=>{
-          let position = AppConfig.map.getCenter();
+        .then( async ()=>{
+          let position = AppConfig.map && AppConfig.map.getCenter();
           if (position) 
             return position;
           else 
