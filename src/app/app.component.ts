@@ -59,7 +59,10 @@ export class AppComponent {
 
     const menu = document.querySelector('ion-menu-controller');
     menu.close();
-    this.router.navigate(['/list']);
+    this.cd.detectChanges();
+    setTimeout(  ()=>{
+      this.router.navigate(['/list']);
+    }, 500 )
   }
 
   exposeDebug(){

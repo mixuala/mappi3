@@ -253,7 +253,7 @@ export class SharePage implements OnInit, IViewNavEvents {
       this._mgSub.reload();
       this.stash.activeView = true;
       // AppConfig.map.activeView=true;
-      console.warn(`viewWillEnter: SharePage, map=${AppConfig.map['id']}`)
+      console.warn(`viewWillEnter: SharePage`)
     } catch {}
   }
 
@@ -261,7 +261,7 @@ export class SharePage implements OnInit, IViewNavEvents {
     try {
       this.stash.activeView = false;
       // AppConfig.map.activeView=false;
-      console.warn(`viewWillLeave: SharePage, map=${AppConfig.map['id']}`);
+      console.warn(`viewWillLeave: SharePage`);
     } catch {}
   }
 

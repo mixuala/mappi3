@@ -173,14 +173,14 @@ export class HomePage implements OnInit, IViewNavEvents {
     try {
       // this.mapSettings = Object.assign({}, this.mapSettings);
       this._mgSub.repeat();
-      console.warn("viewWillEnter: HOMEPage, map=", AppConfig.map['id']);
+      console.warn(`viewWillEnter: HOMEPage`);
     } catch (err) {console.warn(err)}
   }
 
   viewWillLeave(){
     try {
       this.stash.activeView = false;
-      console.warn(`viewWillLeave: HOMEPage, map=${AppConfig.map['id']}`)
+      console.warn(`viewWillLeave: HOMEPage`)
     } catch (err) {console.error(err)}
   }
 

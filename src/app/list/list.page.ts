@@ -34,8 +34,6 @@ export class ListPage implements OnInit {
   public unsubscribe$ : Subject<boolean> = new Subject<boolean>();
   public stash:any = {};
 
-  @ViewChild('gmap') map: GoogleMapsComponent;
-
   private _mListSub: SubjectiveService<IMarkerList>;
   
   private _selectedMarkerList: string;

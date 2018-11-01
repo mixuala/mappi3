@@ -14,6 +14,8 @@ import { MappiMarker } from '../mappi/mappi.service';
 import { GoogleMapsHostComponent } from '../../google-maps/google-maps-host.component';
 import { AppCache } from '../appcache';
 
+// import * as PhotoLibraryCordova from '../../../../node_modules/cordova-plugin-photo-library/PhotoLibrary';
+
 let PhotoLibraryCordova:any = null;
 
 export interface IMoment extends AlbumItem {
@@ -22,6 +24,10 @@ export interface IMoment extends AlbumItem {
   endDate: Date;
   itemIds: string[];
 }
+
+// export interface IPhotoLibraryMappi extends PhotoLibrary {
+//   getMoments:(from?:string, to?:string)=>Promise<IMoment[]>
+// }
 
 export interface IExifPhoto {
   src: string,

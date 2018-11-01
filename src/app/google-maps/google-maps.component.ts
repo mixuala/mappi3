@@ -126,6 +126,7 @@ export class GoogleMapsComponent implements OnInit {
           let items:IMarker[] = change.currentValue;
           // const diff = this.diffMarkers(change);
           this.renderMarkers(items);
+          if (items.length == 1) setTimeout( ()=>this.map.setZoom(15), 100 );
           break;
       }
     });

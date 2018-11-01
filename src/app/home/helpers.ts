@@ -7,7 +7,7 @@ import { HomePage } from './home.page';
 export class ConfirmChangesRouteGuard implements CanDeactivate<HomePage> {
   canDeactivate(component: HomePage): Promise<boolean> {
     if (component.hasChanges()) {
-      const resp = confirm('You have unsaved changes. Are you sure?');
+      const resp = confirm('Discard changes?');
       if (resp) {
         return component.applyChanges("rollback").then( ()=>true);
       }
