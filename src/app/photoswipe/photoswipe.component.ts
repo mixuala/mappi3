@@ -8,6 +8,7 @@ import { ImgSrc } from '../providers/photo/imgsrc.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { AppCache } from '../providers/appcache';
 import { IPhoto } from '../providers/mock-data.service';
+import { AppConfig } from '../providers/helpers';
 
 declare const PhotoSwipeUI_Default: any;
 
@@ -124,7 +125,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     gallery.listen('close', ()=>{
       self.toggle_appFullscreen(false);
       self.toggle_appFullscreen(false, 'gallery');
-    })
+    });
 
     gallery.listen('destroy', () => {
         // This is required to remove component from DOM
@@ -137,6 +138,15 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
           self._fsClosure = null;
         }
         self.gallery = null;
+    });
+    gallery.listen('afterInit', ()=>{
+      // check also: initialLayout
+      const el = document.getElementsByClassName('pswp--open')[0];
+      const [w,h] = AppConfig.screenWH;
+      let pct:number;
+      if (h > w) pct = el['offsetTop']/h * 100;
+      else pct = el['offsetLeft']/w * 100;
+      console.warn( `@@@ photoswipe, layout top/left=${Math.round(pct)}%`);
     });
 
     gallery.init();

@@ -19,7 +19,7 @@ export class AppConfig {
   // init config "constants"
   static init = setTimeout( () => {
     AppConfig.devicePixelRatio = window.devicePixelRatio;
-    ScreenDim.getWxH().then( res=>AppConfig.screenWH=res );
+    ScreenDim.getWxH();
   }, 10);
 
 
@@ -91,6 +91,7 @@ export class ScreenDim {
         console.log(`ScreenDim.set(${checkOnce}) [wxh]=`, _dim);
         ScreenDim.setOrientationClasses(_dim);
         resolve(_dim);
+        AppConfig.screenWH = _dim.split('x').map(v=>parseInt(v)) as [number,number]
       }, delay);
     });
     ScreenDim.dim.then( _dim=>{ 

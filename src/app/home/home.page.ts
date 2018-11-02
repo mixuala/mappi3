@@ -227,7 +227,7 @@ export class HomePage implements OnInit, IViewNavEvents {
    * @param ev click event
    * 
    */
-  async createMarkerGroup(ev:any={}, data:any={}):Promise<IMarkerGroup>{
+  async createMarkerGroup(ev:any={}, data:any={}, provider?:string):Promise<IMarkerGroup>{
     const target = ev.target && ev.target.tagName;
     const mgSubj = MockDataService.getSubjByParentUuid(this.parent.uuid);
 
@@ -236,9 +236,10 @@ export class HomePage implements OnInit, IViewNavEvents {
     if (target=='ION-BUTTON'){
       const mgs = mgSubj.value() as IMarkerGroup[];
       if (mgs.length==0) {
-        child = await this.photoService.choosePhoto(0);
+        child = await this.photoService.choosePhoto(0, {provider});
         console.log( "### 0) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
       } else {
+        // once a markerGroup is available, filter by map bounds
         const positions = mgs.map(o=>o.position);
         const bounds = AppConfig.map.getBounds();
         const except = mgs.reduce((res,o)=>{

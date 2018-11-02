@@ -574,7 +574,13 @@ export class RestyTrnHelper {
           resty.put(o.uuid, o, ['seq']).then( o=>{delete o['_rest_action'];})    
           break;
         case "delete":
-          pr.push( resty.delete(o.uuid).then( o=>{delete o['_rest_action']; return o;}) );     
+          pr.push( resty.delete(o.uuid).then( resp=>{
+            if (!resp && !o.uuid){
+              return false;   // otherwise, item was not in DB
+            }
+            delete o['_rest_action']; 
+            return true;
+          }) );     
           break;
       }
     });
@@ -590,7 +596,7 @@ export class RestyTrnHelper {
         });
         // TODO: reload all subjects together, after COMMIT complete
         const reloadUuids = RestyTrnHelper.getCachedMarkers( changes, 'visible').map( o=>o.uuid);
-        subj.reload( reloadUuids );
+        subj.reload( reloadUuids , false);  // do NOT re-sort
         console.warn( "> RestyTrnHelper COMMIT, className=", subj.className, reloadUuids )
         return changed as IMarker[];
       }

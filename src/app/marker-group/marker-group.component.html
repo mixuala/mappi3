@@ -31,7 +31,10 @@
             (miChange)="childComponentsChange($event)"></app-marker-item>
         </ion-list>
         <ion-list>            
-          <ion-item class="add-marker-item wrap-btn-as-thumbnail" (click)="createMarkerItem($event)">
+          <ion-item class="add-marker-item wrap-btn-as-thumbnail" 
+            (click)="createMarkerItem($event)"
+            (dblclick)="createMarkerItem($event, 'Camera')"
+            >
             <ion-button class="as-thumbnail" slot="start" expand="full" size="large">
               <ion-icon slot="icon-only" name="add"></ion-icon>
             </ion-button>

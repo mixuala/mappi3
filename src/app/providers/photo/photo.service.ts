@@ -111,7 +111,8 @@ export interface IChoosePhotoOptions {
   moments?:IMoment[]; 
   positions?:{lat:number, lng:number}[];
   bounds?:google.maps.LatLngBounds; 
-  except?:string[]   // IMappiLibraryItem.id[] 
+  except?:string[];   // IMappiLibraryItem.id[] 
+  provider?: string;
 }
 
 
@@ -210,11 +211,18 @@ export class PhotoService {
    * @param options 
    */
   async choosePhoto(seq?:number, options:IChoosePhotoOptions={}):Promise<IPhoto>{
-    let { moments, positions, bounds } = options;
+    let { moments, positions, bounds, provider, except } = options;
+    let itemCount;
+    if (moments && moments.length) {
+      itemCount = moments.reduce( (res,m)=>res.concat(m.itemIds),[])
+      if (except && except.length) itemCount = itemCount.filter(v=>!except.includes(v));
+    }
     try {
       switch (AppConfig.device.platform){
         case 'ios':
-          if (moments)
+          if (provider)
+            return this.choosePhoto_Provider( provider ,seq , options);
+          else if (moments && itemCount>10)
             return this.choosePhoto_Provider("Moments",seq , options);
           else if (bounds || positions )
             return this.choosePhoto_Provider("Bounds",seq , options);
@@ -249,21 +257,19 @@ export class PhotoService {
         }
 
         const b:google.maps.LatLngBounds = bounds || new google.maps.LatLngBounds(null);
-        if (positions) {
+        if (positions && ! bounds) {
           positions.forEach( p=>b.extend(new google.maps.LatLng(p.lat, p.lng)));
         }  
         if (bounds || positions){
           // filter by mapBounds
           items = items.filter( item=>b.contains( new google.maps.LatLng(item.latitude, item.longitude ) ));
         }
-        items = items.filter(v=>!except.includes(v));
+        items = items.filter(v=>!except.includes(v.id));
         if (!items.length){
           console.warn("### choosePhoto_Provider:Bounds, item not in map bounds", bounds);
-          return this.choosePhoto_Provider('RandomCameraRoll', seq);
+          return this.choosePhoto_Provider('Camera', seq);
         }
-                
-        const photos = items.map( (item:IMappiLibraryItem)=>this._libraryItem2Photo(item) );
-        photo = this._pickRandomPhoto( photos );
+        photo = this._pickRandomPhotoItemFavorite( null, items );        
         AppCache.for('Photo').set(photo);   // cache picked photo with unique p.uuid
         return Promise.resolve( photo );
       case "Moments":
@@ -277,7 +283,7 @@ export class PhotoService {
           
           if (!item) {
             console.warn("### choosePhoto_Provider:Moments, item not in cache ", moment);
-            return this.choosePhoto_Provider('RandomCameraRoll', seq);
+            return this.choosePhoto_Provider('Camera', seq);
           }
           // found valid moment and item
         } else item = checkItem;
@@ -292,21 +298,15 @@ export class PhotoService {
         .then( ()=>{
           const items = AppCache.for('Cameraroll').items();
           if (items.length > PHOTO_LIBRARY_WAIT_LIMIT) {
-            // TODO: cant load more items until we add a {from: to:} option
+            // TODO: cant load more items INCREMENTALLY until we add a {from: to:} option
             if (items.length < LOAD_LIMIT) {
               const nowait = this.load_PhotoLibraryByChunk(LOAD_LIMIT);
             }
-            // return immediately, but load more items for the next request
-            AppCache.for('Cameraroll').items().map( (item:IMappiLibraryItem)=>this._libraryItem2Photo(item) );
-          }
-          else {
-            return this.load_PhotoLibraryByChunk()
-            .then( (items)=>items.map( item=>this._libraryItem2Photo(item) ) )
           }
         })
-        .then( (photos)=>{
-          console.log( "### choosePhoto_Provider(): check photos.camerarollId", photos);
-          photo = this._pickRandomPhoto( photos );
+        .then( ()=>{
+          const items = AppCache.for('Cameraroll').items();
+          photo = this._pickRandomPhotoItemFavorite( null, items );
           AppCache.for('Photo').set(photo);   // cache picked photo with unique p.uuid
           return Promise.resolve( photo );
         });
@@ -343,9 +343,17 @@ export class PhotoService {
     return favorites;
   }
 
-  _pickRandomPhoto(photos:IPhoto[], attempts:number=5):IPhoto{
-    const favorites = this._findFavorites(photos.map(o=>o.camerarollId));
-    const pickFrom = favorites.length ? favorites : photos;
+  _pickRandomPhotoItemFavorite(photos:IPhoto[], items?:IMappiLibraryItem[], attempts:number=5):IPhoto{
+    let pickFrom = photos ? photos : items;
+    let favorites;
+    if (!pickFrom) return;
+    if (pickFrom == photos){
+      favorites = this._findFavorites(photos.map(o=>o.camerarollId));
+      pickFrom = favorites.length ? favorites : photos;
+    } else {
+      favorites = items.filter(o=>!!o.isFavorite);
+      pickFrom = favorites.length ? favorites : items;
+    }
     /**
      * choose a random photo from cameraroll, prefer one with GPS loc
      */

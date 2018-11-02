@@ -74,14 +74,14 @@ export class SubjectiveService<T> {
     this.subject$.next(this.value());
   }
   
-  reload(ids?:any[]):Promise<T[]>{
+  reload(ids?:any[], sort:boolean=true):Promise<T[]>{
     if (!ids) {
       ids = this.subject$.value.map( o=>o['uuid'] );
     } 
     return this.resty.get(ids)
     .then( arr=>{
       // reindex for Subject only, NOT DB
-      arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>o['seq']=i);
+      if (sort) arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>o['seq']=i);
       this.next(arr);
       return arr
     });
