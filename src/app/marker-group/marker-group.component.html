@@ -162,7 +162,7 @@
       </ng-template>      
 
       <ion-label>
-        <h3>{{ marker.label || marker.seq +1 }}</h3>
+        <h3  (click)="getTitle($event)">{{ marker.label || marker.seq +1 }}</h3>
         <p>{{marker.uuid}}</p>
         <p>{{ asPositionLabel(marker) | json }}</p>
       </ion-label>

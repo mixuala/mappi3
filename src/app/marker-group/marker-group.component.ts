@@ -5,7 +5,6 @@ import { Component, ElementRef, EventEmitter, OnInit, OnChanges, Input, Output, 
 import { List } from '@ionic/angular';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
-import { Plugins } from '@capacitor/core';
 
 
 import { MockDataService, RestyTrnHelper, IMarkerGroup, IPhoto, IMarker, IRestMarker } from '../providers/mock-data.service';
@@ -14,7 +13,7 @@ import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
 import { PhotoService, IMoment, IChoosePhotoOptions } from '../providers/photo/photo.service';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { ScreenDim, AppConfig } from '../providers/helpers';
+import { ScreenDim, AppConfig, Prompt } from '../providers/helpers';
 import { AppCache } from '../providers/appcache';
 
 
@@ -264,6 +263,14 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
     // push changes
     MockDataService.getSubjByParentUuid(this.mg.uuid).next(this._getCachedMarkerItems(mg));
+  }
+
+  async getTitle(ev:MouseEvent){
+    const target = ev.target && ev.target['tagName'];
+    if (target!='H3') return;
+    const changes = await Prompt.getText('label', 'label', this.mg, null);
+    console.log("Prompt for title, mg=", changes.pop() );
+    ev.preventDefault();
   }
 
 

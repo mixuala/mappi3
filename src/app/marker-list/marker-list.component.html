@@ -2,7 +2,7 @@
 <div [ngSwitch]="layout" *ngIf="(markerList$ | async) as mList">
 
   <ion-card *ngSwitchCase="'gallery'">
-    <ion-card-header (click)="nav(mList)">
+    <ion-card-header (click)="getTitle($event)">
       <ion-toolbar color="primary">
         <ion-title>{{ mList.label || mList.seq+1 }}</ion-title>
         <ion-buttons slot="end">

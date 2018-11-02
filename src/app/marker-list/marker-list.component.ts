@@ -14,7 +14,7 @@ import  {
 } from '../providers/mock-data.service';
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { ScreenDim } from '../providers/helpers';
+import { ScreenDim, Prompt } from '../providers/helpers';
 
 @Component({
   selector: 'app-marker-list',
@@ -193,6 +193,14 @@ export class MarkerListComponent implements OnInit {
 
   removeMarkerGroup(o:IMarkerList){
     this.mListChange.emit( {data:o, action:'remove'} );
+  }
+
+  async getTitle(ev:MouseEvent){
+    const target = ev.target && ev.target['tagName'];
+    if (ev.clientX > 100) return;
+    if (target=='ION-BUTTON') return;
+    const changes = await Prompt.getText('label', 'label', this.mList, this.dataService);
+    ev.preventDefault();
   }
 
    /*
