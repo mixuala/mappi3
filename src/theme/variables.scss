@@ -76,160 +76,183 @@
   --ion-color-dark-tint: #383838;
 
 
-  html.plt-desktop ion-back-button.mobile-only{
-    display:none;
+
+
+  // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
+
+  // ionic component overrides
+  --toolbar-min-height: 44px;
+  --split-pane-side-max-width: 280px;
+  ion-toolbar {
+    --min-height: var(--toolbar-min-height);
+  }
+  ion-split-pane.split-pane-md.split-pane-visible>.split-pane-side {
+    max-width: var(--split-pane-side-max-width);
   }
 
-
-  // google map reference points
-  --google-map-size: 40vh;
-  --google-map-bottom: var(--google-map-size);
-  --google-map-height: var(--google-map-size);
-  --google-map-landscape-right: 40vw;
-  --google-map-lg-left: var(--split-pane-side-max-width);
-  --google-map-top: 0px;
-
-  .google-maps-header {
-
-    // define css4 vars
-    @at-root.portrait {
-      --google-map-height: var(--google-map-bottom);
-      --google-map-width: 100vw;
-      --ion-safe-area-top: 0px;
+  // thumbnails
+  --thumbnail-size: 80px;
+  @media only screen 
+    and (max-width: 767px) 
+    // and (-webkit-min-device-pixel-ratio: 2) 
+  {
+    --thumbnail-size:56px;
+    ion-thumbnail {
+      --thumbnail-size: 56px;
     }
-    @at-root.portrait.mobile-safari {
-      // untested
-      --mappi-safe-area-top: 20px;  // add to --google-map-top
-      --ion-safe-area-top: 20px;  // this adds to top and also to header
-      --pswp-top-safari: calc( var(--google-map-bottom) - var(--ion-safe-area-top) );
-
-      & .ion-page > .header {
-        --ion-safe-area-top: 0px;
-      }
-    }
-
-    @at-root.landscape {
-      --google-map-height: 100vh;
-      --google-map-width: var(--google-map-landscape-right);
-    }
-
-    @at-root &.fullscreen-gallery {
-      // override both .portrait and .landscape
-      --ion-safe-area-top: 0px;
-    }
-
-
-
-    
-    // define rules
-    .google-maps-host-wrap {
-      background-color: white;
-      height: var(--google-map-height);
-      width: var(--google-map-width);
-      padding-top: var(--ion-safe-area-top);
-
-    }
-
-    ion-split-pane {
-      top: var(--google-map-height);
-    }
-
-    @at-root.plt-ios.mobile-safari {
-      & .ion-page ion-header:first-child {
-        // no toolbar padding, tightly scoped
-        --ion-safe-area-top: 0px; 
-      }
-    }
-
-    @at-root.landscape {
-      & ion-split-pane.content-right-if-mq-landscape {
-        top: var(--ion-safe-area-top);
-        left: var(--google-map-landscape-right);
-      }
-      & .ion-page ion-header ion-toolbar:first-child {
-        padding-top: 0px;
-      }
-    }
-
-    @at-root &.fullscreen-gallery {
-
-      --ion-safe-area-top: 0px;
-      --mappi-safe-area-top: 0px;
-
-      .google-maps-host-wrap {
-        position: fixed;
-        z-index: -1;
-      }
-      ion-split-pane {
-        top: 0px;
-        left: 0px;
-
-
-      }
-    }
-    
   }
 
 
   /**
-  * HACK: adjust CSS to allow fullscreen photoswipe in app.
-  * BUG: position:fixed and z-index not working in mobile safari
+  * google map reference points
   */
-  .fullscreen-gallery {
-    ion-menu {  // for safari
-      position:fixed;
-      z-index: -1;
+  // baseline (portrait)
+  --google-map-size: 40vh;
+  --google-map-landscape-right: 40vw;
+  --google-map-top: var(--ion-safe-area-top);
+  --google-map-height: calc(var(--google-map-size) - var(--google-map-top));
+  --google-map-bottom: var(--google-map-size);
+  --google-map-width: 100vw;
+
+  // landscape
+  --google-map-top-landscape: var(--ion-safe-area-top);
+  --google-map-height-landscape: calc( 100vh - var(--google-map-top-landscape));
+  --google-map-width-landscape: var(--google-map-landscape-right);
+
+  // menu open
+  --google-map-lg-left: var(--split-pane-side-max-width);
+
+
+
+
+  ion-split-pane {
+    top: var(--google-map-height);
+  }
+
+  @at-root.landscape {
+    & ion-split-pane.content-right-if-mq-landscape {
+      top: var(--ion-safe-area-top);
+      left: var(--google-map-landscape-right);
     }
-    ion-header.header-ios {
-      position:fixed;
-      z-index: -1;
-      &.google-maps-wrap {
-        // top: var(--google-map-top);
-      }
+    & .ion-page ion-header ion-toolbar:first-child {
+      padding-top: 0px;
     }
   }
 
-  --split-pane-side-max-width: 280px;
-  ion-split-pane.split-pane-md.split-pane-visible>.split-pane-side {
-    max-width: var(--split-pane-side-max-width);
-  }
+
   --thumbnail-size: 80px;
-
-
-  
-
-
-
   // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
   @media only screen 
     and (max-width: 767px) 
     // and (-webkit-min-device-pixel-ratio: 2) 
   {
-
     --thumbnail-size:56px;
     ion-thumbnail {
       --thumbnail-size: 56px;
     }
-
   }
 
 
-  --toolbar-min-height: 44px;
-  ion-toolbar {
-    --min-height: var(--toolbar-min-height);
-  }
 
 
   html, body {
     max-width: 100%;
     overflow-x: hidden;
-  
     min-height: 100%;
     min-height: calc(100% + constant(safe-area-inset-top));
     min-height: calc(100% + env(safe-area-inset-top));
   }
 
+
+  /**
+   * rules for position:fixed map and photoswipe
+   */
+  .content-fixed {
+    .fixed {
+      // stack ABOVE <ion-content> 
+      position: fixed;
+      z-index: 2;
+      // z-index:0 stacks BELOW <ion-content>
+      background-color: white;
+    }
+
+    // define rules
+    & .google-maps-host-wrap {
+      top: var(--google-map-top);
+      height: var(--google-map-height);
+      width: var(--google-map-width);
+      // padding-top: var(--ion-safe-area-top);
+    }
+
+    @at-root.portrait {
+      .photoswipe-wrap .pswp {
+        top: var(--google-map-bottom);
+        height: calc( 100vh - var(--google-map-bottom) );
+      }
+      .fullscreen-gallery .photoswipe-wrap .pswp {
+        top: 0px;
+        left: 0px;
+        height: 100vh;
+        width: 100vw;
+        transform: translate3d(0,0,0);
+      }
+    }
+
+    @media only screen 
+    and (max-width: 991px)
+    {
+      @at-root.landscape  {
+
+        .google-maps-host-wrap.google-maps-host-wrap {
+          top: var(--google-map-top-landscape);
+          height: var(--google-map-height-landscape);
+          width: var(--google-map-width-landscape);
+          // padding-top: var(--ion-safe-area-top);
+        }
+
+        .photoswipe-wrap .pswp {
+          top: calc( 0px + var(--ion-safe-area-top) );
+          height: calc( 100vh - 0px - var(--ion-safe-area-top) );
+          left: var(--google-map-width-landscape);
+          width: calc( 100vw - var(--google-map-width-landscape) );
+        }
+
+        .fullscreen-gallery .photoswipe-wrap .pswp {
+          top: 0px;
+          left: 0px;
+          height: 100vh;
+          width: 100vw;
+          transform: translate3d(0,0,0);
+        }
+
+      }
+    }
+  }
+
+  // sidemenu open overrides
+  @media only screen 
+  and (min-width: 992px)
+  {
   
+    .google-maps-host-wrap {
+      left: var(--split-pane-side-max-width) !important;
+      width: calc(100vw - var(--split-pane-side-max-width)) !important;
+    }
+  
+    .photoswipe-host-wrap .pswp {
+      left: var(--split-pane-side-max-width);
+      width: calc(100vw - var(--split-pane-side-max-width));
+    }
+
+    ion-split-pane.split-pane {
+      top: 0px;
+      ion-router-outlet ion-content {
+        top: calc( var(--google-map-bottom) - var(--toolbar-min-height) ); 
+      }
+    }
+  }
+
 }
+
 
 

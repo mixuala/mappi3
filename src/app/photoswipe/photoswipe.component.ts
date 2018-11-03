@@ -99,6 +99,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     // this.dom
     // document.getElementsByTagName('ION-APP')[0];
     // contentEl = document.getElementsByClassName('marker-group-wrap')[0];
+    this.moveToContainer('fixed')
   }
 
   ngOnDestroy(){
@@ -106,6 +107,23 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
       this.toggle_appFullscreen(false);
       this.gallery.destroy();
     }
+  }
+
+  /**
+   * move galleryElement, .pswp, to position:fixed container for proper z-index positioning
+   * - move AFTER sizing but BEFORE display
+   * 
+   * @param target ['content', 'fixed']
+   */
+  moveToContainer(target:string) {
+    let container:HTMLElement;
+    switch (target) {
+      case 'content':
+        container = this.elementRef.nativeElement;
+      case 'fixed':
+        container = document.getElementById('photoswipe-host');
+    }
+    container.appendChild(this.galleryElement);
   }
 
   async rescaleToScreen(screenDim:string){
@@ -188,12 +206,25 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     });
     gallery.listen('afterInit', ()=>{
       // check also: initialLayout
+
       const el = document.getElementsByClassName('pswp--open')[0];
       const [w,h] = AppConfig.screenWH;
       let pct:number;
       if (h > w) pct = el['offsetTop']/h * 100;
       else pct = el['offsetLeft']/w * 100;
-      console.warn( `@@@ photoswipe, layout top/left=${Math.round(pct)}%`);
+      console.warn( `@@@ photoswipe 'afterInit', layout top/left=${Math.round(pct)}%`);
+
+      // setTimeout( ()=>this.moveToContainer('fixed'), 2000)
+    });
+    gallery.listen('initialLayout', ()=>{
+      // init() > updateSize() > 'initialLayout' > 'afterInit' > 'resize'
+      // check also: initialLayout
+      console.warn( `@@@ photoswipe, 'initialLayout' `);
+    });
+    gallery.listen('resize', ()=>{
+      // init() > updateSize() > 'resize' > 'afterInit' > 'resize'
+      // check also: initialLayout
+      console.warn( `@@@ photoswipe, 'resize' `);
     });
 
     gallery.init();

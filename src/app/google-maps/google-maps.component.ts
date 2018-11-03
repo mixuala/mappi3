@@ -58,7 +58,12 @@ export class GoogleMapsComponent implements OnInit {
   }
 
   async ngOnInit() {
-    AppConfig.mapReady.then( map=>this.map=map);
+    await AppConfig.mapReady.then( map=>this.map=map);
+    // DEV 
+    const listen_zoom = google.maps.event.addListener(this.map, 'zoom_changed', ()=>{
+      const markers = RestyTrnHelper.getCachedMarkers(this.items, 'visible');
+      console.log(`~~~ map zoom=${this.map.getZoom()}, m count=${markers.length}`);
+    });
   }
 
   ngOnDestroy() {

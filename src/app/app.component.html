@@ -1,8 +1,11 @@
 <ion-app class="google-maps-header">
-    <!-- googleMaps -->
-  <div id="google-maps-host" class="google-maps-host-wrap">
-      <app-google-maps-host apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94">
-      </app-google-maps-host>
+  <div class="content-fixed">
+    <!-- google-maps -->
+    <div id="google-maps-host" class="fixed google-maps-host-wrap">
+      <app-google-maps-host apiKey="AIzaSyApvJzra_C7sKYF8q1InQWw5c7RfTYTg94"></app-google-maps-host>
+    </div>
+    <!-- photoswipe host, stack ABOVE google maps -->
+    <div id="photoswipe-host" class="fixed photoswipe-wrap content-right-if-mq-landscape"></div>  
   </div>
   <ion-split-pane class="content-right-if-mq-landscape" when="lg">
     <ion-menu>

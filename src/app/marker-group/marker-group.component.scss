@@ -24,6 +24,12 @@ ion-card-content {
 }
 
 
+// doesn't work
+.menu-commit-rollback.sticky {
+  position: -webkit-sticky; /* Safari */
+  position: sticky;
+  top: calc(var(--google-map-bottom) + var(--toolbar-min-height));
+}
 
 
 
