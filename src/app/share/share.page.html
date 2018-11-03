@@ -5,7 +5,7 @@
         <ion-menu-button></ion-menu-button>
       </ion-buttons>
       <ion-buttons slot="end">
-          <ion-button fill="outline" (click)="getStaticMap()" *ngIf="gmap">
+          <ion-button fill="outline" (click)="getStaticMap()" *ngIf="stash.map">
             <ion-icon name="cloud-download" slot="icon-only"></ion-icon>
           </ion-button>
           <ion-button fill="outline" [href]="'/home/'+parent?.uuid">
@@ -22,7 +22,8 @@
     <app-google-maps #gmap *ngIf="markerCollection$ | async as items"
     [items]="items"
     [mode]="mapSettings"
-    [(selected)]="selectedMarkerGroup"
+    [selected]="selectedMarkerGroup"
+    (selectedChange)="handleMapMarkerSelected($event)"
     ></app-google-maps>
   </ion-header>
   
@@ -44,7 +45,7 @@
                             <ion-card-title color="light" >Share Map</ion-card-title>
                             <ion-buttons slot="end">
                               <ion-button color="light" fill="outline" title="Share QR Code"
-                                (click)="toggle.mapLink=!toggle.mapLink">
+                                (click)="stash.mapLink=!stash.mapLink">
                                 <ion-icon slot="icon-only" name="share"></ion-icon>
                               </ion-button>    
                               <ion-button color="light" fill="outline" title="Show Printable Map"
@@ -70,7 +71,7 @@
                         </div>
                       </ion-item>
                       <ion-item no-padding>
-                        <ion-label *ngIf="toggle.mapLink">
+                        <ion-label *ngIf="stash.mapLink">
                           <h2>Copy Map Link</h2>
                           <p><ion-text text-wrap color="primary">{{qrcodeData}}</ion-text></p>
                         </ion-label>
@@ -87,8 +88,7 @@
             <app-marker-group  *ngIf="item?._rest_action!='delete'"
               [mg]="item" [parentLayout]="'share'"
               (mgChange)="childComponentsChange($event)"
-              (thumbClick)="thumbClicked($event)"
-              [(mgFocus)]="mgFocus" ></app-marker-group>
+              (thumbClick)="thumbClicked($event)"></app-marker-group>
           </ion-col>
         </ion-row>
         <ion-row>

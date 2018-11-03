@@ -424,7 +424,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     return
   }
 
-
+  // called by photoswipe on item changed
   focusMarker(ev:{index:number, items:any[], uuid:string}){
     this.selectedMarkerGroup = this.gallery.uuid;
   }

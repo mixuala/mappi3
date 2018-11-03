@@ -24,7 +24,7 @@ import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 import { AppConfig, ScreenDim } from '../providers/helpers';
 
 const { App, Browser, Device } = Plugins;
-declare const launchnavigator:any;
+declare const launchNavigator:any;
 
 @Component({
   selector: 'app-share',
@@ -51,7 +51,10 @@ export class SharePage implements OnInit, IViewNavEvents {
   public markerCollection$ : Observable<IMarker[]>;
   public unsubscribe$ : Subject<boolean> = new Subject<boolean>();
   public qrcodeData: string = null;
-  public stash:any = {};
+  public stash:any = {
+    mapLink: null,
+    map: null,
+  };
 
   private gallery:{items:PhotoSwipe.Item[], index:number, uuid:string, mgUuids?:string[]}
 
@@ -73,25 +76,13 @@ export class SharePage implements OnInit, IViewNavEvents {
   set mgFocus(value: IMarkerGroup) {
     this._mgFocus = value;
     const markerItemsOrGroups:string = value ? "items" : "groups"; 
-    switch (markerItemsOrGroups) {
-      case "items":
-        /****
-         * render googleMaps markers for markerGroup Photos 
-         */
-        // MappiMarker.reset();
-        const subject = this._getSubjectForMarkerItems(value);
-        this.markerCollection$ = subject.watch$();
-        break;
-      case "groups":
-        // MappiMarker.reset();
-        if ( this.selectedMarkerGroup == value.uuid ) {
-          console.warn("Testing Native.LaunchNavigator on repeated select")
-          this.launchApp('Map', value.uuid);          
-        }
-        this.selectedMarkerGroup = value ? value.uuid : null;
-        this.markerCollection$ = this.mgCollection$;
-        break;
+
+    if ( this.selectedMarkerGroup == value.uuid ) {
+      console.warn("Testing Native.LaunchNavigator on repeated select")
+      this.launchApp('Map', value.uuid);          
     }
+    this.selectedMarkerGroup = value ? value.uuid : null;
+    this.markerCollection$ = this.mgCollection$;
   }
   private _mgSub: SubjectiveService<IMarkerGroup>;
 
@@ -109,6 +100,10 @@ export class SharePage implements OnInit, IViewNavEvents {
       this._mgSub = this.dataService.sjMarkerGroups;
     })
     this.gallery = null;
+    AppConfig.mapReady.then( map=>{
+      this.stash.map = map;  // *ngIf for Share button
+      launchNavigator = this.launchNavigator;
+    })
   }
 
   private _getSubjectForMarkerItems(mg:IMarkerGroup):SubjectiveService<IMarker>{
@@ -132,32 +127,48 @@ export class SharePage implements OnInit, IViewNavEvents {
    * @param uuid 
    */
   async launchApp(type:string, uuid:string){
+    const launchNavigator = this.launchNavigator;
     const _launchMapWithNavigation = async (marker:IMarker)=>{
       // open map with navigation
-      // const isAvailable = await this.launchNavigator.isAppAvailable(launchnavigator.APP.GOOGLE_MAPS);
-      // const app = isAvailable ? launchnavigator.APP.GOOGLE_MAPS : launchnavigator.APP.USER_SELECT;
+      const isAvailable = await launchNavigator.isAppAvailable(launchNavigator.APP.GOOGLE_MAPS);
+      const app = isAvailable ? launchNavigator.APP.GOOGLE_MAPS : launchNavigator.APP.USER_SELECT;
       const options:LaunchNavigatorOptions = {
-        app: launchnavigator.APP.USER_SELECT,
+        app: launchNavigator.APP.USER_SELECT,
         appSelection:{
           callback: (app)=>console.log("launchApp(): User prefers map app=", app),
           rememberChoice: {enabled:"prompt"},
         }
       }
-      const result = await this.launchNavigator.navigate(marker.loc, options);
+      const result = await launchNavigator.navigate(marker.loc, options);
       // console.log(result);
     }
     const _launchMapOnly = async (marker:IMarker)=>{
+      /**
+       * how to set zoom=14 with map?
+       * - open map to center,zoom, no marker: 
+       *    - https://www.google.com/maps/@3.1602273,101.7369175,14z
+       * - marker, no zoom
+       *    - https://maps.google.com/?q=@3.1602273,101.7369175
+       * - with zoom
+       *  - `https://www.google.com/maps/place/${lat},${lng}/@${lat},${lng},${zoom}z`
+       *  - https://www.google.com/maps/place/3.1602222,101.734728/@3.1602222,101.734728,14z
+       *  - https://www.google.com/maps/place/3°09'36.8"N+101°44'12.9"E/@3.1602222,101.734728,14z
+       */
       let URI;
       const {lat, lng} = marker.position;
       switch (AppConfig.device.platform){
         case 'web':
+          const zoom = 14;
+          URI = `https://www.google.com/maps/place/${lat},${lng}/@${lat},${lng},${zoom}z`
+          this.browserOpen(URI);
+          break;
         case 'android':
           URI = `https://maps.google.com/?q=@${lat},${lng}`;
           this.browserOpen(URI);
           break;
         case 'ios':
           // URI = `comgooglemapsurl://maps.google.com/?q=@${lat},${lng}`;
-          URI = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&zoom=15`;
+          URI = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&zoom=13`;
           const ret = await App.openUrl({ url: URI });
           // console.log('APP: Open url response: ', ret, URI);
           break;
@@ -173,7 +184,7 @@ export class SharePage implements OnInit, IViewNavEvents {
         const dist = calcDistanceBetween(GoogleMapsHostComponent.currentLoc, new google.maps.LatLng(lat,lng));
         // console.log("distance from marker=", dist, marker.position, GoogleMapsComponent.currentLoc.toJSON());
         const MAX_NAVIGATION_DISTANCE = 500000;  // meters
-        if (dist < MAX_NAVIGATION_DISTANCE){
+        if (dist < MAX_NAVIGATION_DISTANCE && AppConfig.platform.is('cordova')){
           _launchMapWithNavigation(marker);
         }
         else {
@@ -289,12 +300,16 @@ export class SharePage implements OnInit, IViewNavEvents {
     this.openGallery(ev.mg, ev.mi);
   }
 
-
+  // called by photoswipe on item changed
   focusMarker(ev:{index:number, items:any[], uuid:string}){
     this.selectedMarkerGroup = this.gallery.mgUuids[ev.index];
   }
 
-
+  // called by photoswipe on item changed
+  handleMapMarkerSelected(uuid:string){
+    this.mgFocus = this._mgSub.value().find(o=>o.uuid==uuid);
+    // this.selectedMarkerGroup = uuid;
+  }
 
   /*
    * additional event handlers, possibly called from @ViewChilds
@@ -304,7 +319,8 @@ export class SharePage implements OnInit, IViewNavEvents {
     const marker = change.data;
     switch(change.action){
       case 'selected':
-        return this.selectedMarkerGroup = change.data.uuid;
+        // invoked by ion-icon[pin](click) from MarkerGroupComponent
+        return this.mgFocus = change.data as IMarkerGroup;
       case 'favorite':
         // DEV: commit immediately
         marker['modified'] = new Date();

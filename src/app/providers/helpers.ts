@@ -1,5 +1,7 @@
 import { Observable, ReplaySubject } from 'rxjs';
 import { DeviceInfo } from '@capacitor/core';
+import { Platform } from '@ionic/angular';
+
 import { MockDataService, RestyTrnHelper,
   IMarker, IRestMarker, IPhoto,
 } from './mock-data.service';
@@ -11,6 +13,7 @@ import { IMappiMarker } from './mappi/mappi.types';
  */
 export class AppConfig {
   static device:DeviceInfo;
+  static platform: Platform;
   static devicePixelRatio:number;
   // changes on device rotate, or window dragged to new screen
   static screenWH:[number,number];

@@ -96,6 +96,7 @@ export class AppComponent {
     AppCache.init();
 
     await this.platform.ready().then( async() => {
+      AppConfig.platform = this.platform;
       this.statusBar.styleDefault();
       SplashScreen.hide().catch((err)=>{});
       await this.listenAppState();

@@ -175,8 +175,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     console.log(`MarkerGroupComponent: ${this.mg.label},  mgLayout=${this.layout} `)
   }
 
+  // called by ion-icon[pin](click) and thumbClicked below
   selectMarkerGroup(o:IMarkerGroup){
-    this.mgChange.emit({data:o, action:'selected'});
+  this.mgChange.emit({data:o, action:'selected'});
   }
 
   thumbClicked(mg:IMarkerGroup, mi:IPhoto){
