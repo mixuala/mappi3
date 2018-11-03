@@ -14,7 +14,7 @@ import  {
 } from '../providers/mock-data.service';
 import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { ScreenDim, Prompt } from '../providers/helpers';
+import { ScreenDim, Humanize, Prompt } from '../providers/helpers';
 
 @Component({
   selector: 'app-marker-list',
@@ -28,6 +28,7 @@ export class MarkerListComponent implements OnInit {
   public layout: string;
   public thumbDim: string;
 
+  public humanize = Humanize;
   private stash:any = {};
 
   // PARENT Subject/Observable
@@ -227,9 +228,6 @@ export class MarkerListComponent implements OnInit {
     }
   }
 
-
-
-  private asPositionLabel = MappiMarker.asPositionLabel;
 
 
 }

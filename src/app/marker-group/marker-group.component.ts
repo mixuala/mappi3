@@ -13,7 +13,7 @@ import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
 import { PhotoService, IMoment, IChoosePhotoOptions } from '../providers/photo/photo.service';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { ScreenDim, AppConfig, Prompt } from '../providers/helpers';
+import { AppConfig, ScreenDim, Humanize, Prompt } from '../providers/helpers';
 import { AppCache } from '../providers/appcache';
 
 
@@ -32,6 +32,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   // set thumbnail overflow break. 
   public miLimit:number = 3;
   public static miLimit: number;
+  public humanize = Humanize;
   private stash:any = {};
   
   // PARENT Subject/Observable, single MarkerGroup
@@ -168,7 +169,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           this.layout = this.stash.layout;
           this.mgFocusChange.emit( null );
         },
-        err=>console.log('ERROR saving changes')
+        err=>console.log('ERROR saving changes',err)
       )
     }
     console.log(`MarkerGroupComponent: ${this.mg.label},  mgLayout=${this.layout} `)
@@ -362,8 +363,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     let kv = Object.entries(o).reduce( (a,v)=> {a.push(v.join(':')); return a} ,[])
     return `{ ${kv.join(', ')} }`
   }
-
-  private asPositionLabel = MappiMarker.asPositionLabel;
 
   private asLocalTime(p:IPhoto):Date {
     let getTzOffset = function(loc:[number,number]):number {

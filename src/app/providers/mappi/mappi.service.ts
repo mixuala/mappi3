@@ -193,15 +193,6 @@ export class MappiMarker {
     }
   }
 
-  static asPositionLabel(p:IMarker, n:number=6){
-    if (!p.position) return
-    const digits = Math.pow(10,n);
-    return {
-      lat: Math.round(p.position.lat*digits)/digits,
-      lng: Math.round(p.position.lng*digits)/digits,
-    }
-  }
-
   static moveItem (item: IMarker, marker: google.maps.Marker) {
     const MAX_OFFSET = [0.001296216636290648, 0.0011265277862548828];
     const offset = MappiMarker.getMarkerOffset(marker, item.loc);

@@ -6,6 +6,7 @@ import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { MockDataService, IPhoto, IMarker } from '../providers/mock-data.service';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
+import { ScreenDim, Humanize, Prompt } from '../providers/helpers';
 
 
 
@@ -22,6 +23,7 @@ export class MarkerItemComponent implements OnInit , OnChanges {
   // PARENT Subject/Observable
   public miSubject: BehaviorSubject<IPhoto> = new BehaviorSubject<IPhoto>(null);
   public photo$: Observable<IPhoto> = this.miSubject.asObservable();
+  public humanize = Humanize;
   private stash:any = {};
 
   @Input() mi: IPhoto;
@@ -89,7 +91,6 @@ export class MarkerItemComponent implements OnInit , OnChanges {
     let kv = Object.entries(o).reduce( (res,v)=> {res.push(v.join(':')); return res} ,[])
     return `{ ${kv.join(', ')} }`
   }
-  private asPositionLabel = MappiMarker.asPositionLabel;
 
   private asLocalTime(p:IPhoto):Date {
     let getTzOffset = function(loc:[number,number]):number {

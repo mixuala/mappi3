@@ -533,6 +533,14 @@ export class RestyTrnHelper {
     }
   }
 
+  /**
+   * commit changes to Resty and reload Subject to push changes to Observers
+   * - recursively commit child items before parent
+   * - SubjectiveService.reload( items, resort='false') after each leaf node complete
+   * @param changes 
+   * @param subj 
+   * @param dataSvc 
+   */
   private static async _childComponents_CommitChanges(
     changes:IRestMarker[], 
     subj: SubjectiveService<IMarker>, 
@@ -563,7 +571,12 @@ export class RestyTrnHelper {
 
       switch(o._rest_action) {
         case "post":
-          pr.push( resty.post(o).then( o=>{delete o['_rest_action']; return o;}) );     
+          pr.push( resty.post(o).then( 
+            o=>{delete o['_rest_action']; return o;}
+            , err=>{
+              if (err=="ERROR: duplicate uuid") return Promise.resolve(o);
+              return Promise.reject(err);
+            }) );     
           break;
         case "put":
           pr.push( resty.put(o.uuid, o).then( o=>{delete o['_rest_action']; return o;}) );     
@@ -596,7 +609,7 @@ export class RestyTrnHelper {
         });
         // TODO: reload all subjects together, after COMMIT complete
         const reloadUuids = RestyTrnHelper.getCachedMarkers( changes, 'visible').map( o=>o.uuid);
-        subj.reload( reloadUuids , false);  // do NOT re-sort
+        subj.reload( reloadUuids , false);  // do NOT re-sort, preserve m.seq values
         console.warn( "> RestyTrnHelper COMMIT, className=", subj.className, reloadUuids )
         return changed as IMarker[];
       }

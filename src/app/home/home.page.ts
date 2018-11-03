@@ -14,6 +14,7 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService } from '../providers/photo/photo.service';
+import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 import { GoogleMapsComponent , IMapActions } from '../google-maps/google-maps.component';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
@@ -417,42 +418,10 @@ export class HomePage implements OnInit, IViewNavEvents {
    */
   async openGallery(ev:{mg:IMarkerGroup, mi:IPhoto}) {
     const {mg, mi} = ev;
-    const items:PhotoSwipe.Item[] = []; 
-    const screenDim = await ScreenDim.dim;
-    // get all photos for this markerGroup
-    const waitFor:Promise<void>[] = [];
-    let found:number;
-    const mgPhotos_subject = this._getSubjectForMarkerItems(mg);
-    mgPhotos_subject.value().map( (p:IPhoto)=>{
-
-      waitFor.push(
-        new Promise( async (resolve, reject)=>{
-          const fsDim = await ImgSrc.scaleDimToScreen(p, screenDim);
-          const [imgW, imgH] = fsDim.split('x');
-          const done = ImgSrc.getImgSrc$(p, fsDim)
-          .subscribe( (fsSrc:IImgSrc)=>{
-            if (!fsSrc.src) return;
-            const item = {
-              src: fsSrc.src,
-              w: parseInt(imgW),
-              h: parseInt(imgH),
-            }; 
-            item['uuid'] = p.uuid;
-            items.push(item);
-            if (p.uuid == mi.uuid) found = items.length-1;
-            done && done.unsubscribe();
-            resolve();
-          });
-
-        })
-      );
-
-    });
-    await Promise.all(waitFor);
-    const index = found || 0;
-    const uuid = mg.uuid;
-    this.gallery = {items, index, uuid};
+    const gallery = await PhotoswipeComponent.prepareGallery([mg], mi, mg.uuid);
+    this.gallery = gallery;
     this.cd.detectChanges();
+    return
   }
 
 

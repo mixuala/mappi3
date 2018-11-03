@@ -17,9 +17,8 @@
         <!-- <app-mappi-image [thumbSrc]="photo._imgSrc$ | async" [dim]="thumbDim"></app-mappi-image> -->
       </ion-thumbnail>
       <ion-label>
-        <h3>dateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>
-        <p>{{ asPositionLabel(photo) | json }}</p>
-        <p>offset: [{{ photo.locOffset }}]</p>
+        <h3>DateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>
+        <p>{{ humanize.position(photo) | json }}</p>
       </ion-label>
       <ion-reorder slot="end"></ion-reorder>
     </ion-item>

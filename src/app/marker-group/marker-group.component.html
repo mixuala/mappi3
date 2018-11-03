@@ -55,9 +55,7 @@
           <h3>
             <ion-text color="primary">{{ marker.label || marker.seq+1 }}</ion-text>
           </h3>
-          <p>{{ asPositionLabel(marker) | json }}</p>
-          <p>loc: [{{ marker.loc }}]</p>
-          <p>offset: [{{ marker.locOffset }}]</p>
+          <p>{{ humanize.position(marker) | json }}</p>
         </ion-label>
         <ion-buttons slot="end">
           <ion-button color="primary" fill="outline" (click)="toggleEditMode()">
@@ -120,7 +118,7 @@
   
       <ion-card-content>
         <ion-item no-padding>
-            <p>{{ asPositionLabel(marker) | json }}</p>
+            <p>{{ humanize.position(marker) | json }}</p>
         </ion-item>
         <ion-item class="gallery">
           <ng-container *ngIf="marker?.markerItemIds?.length; else gallery_pinIcon">
@@ -164,7 +162,7 @@
       <ion-label>
         <h3  (click)="getTitle($event)">{{ marker.label || marker.seq +1 }}</h3>
         <p>{{marker.uuid}}</p>
-        <p>{{ asPositionLabel(marker) | json }}</p>
+        <p>{{ humanize.position(marker) | json }}</p>
       </ion-label>
       <ion-reorder slot="end"></ion-reorder>
     </ion-item>  

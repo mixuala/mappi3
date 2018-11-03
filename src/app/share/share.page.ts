@@ -17,10 +17,11 @@ import  { MockDataService, RestyTrnHelper, quickUuid,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
+import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
-import { ScreenDim, AppConfig } from '../providers/helpers';
+import { AppConfig, ScreenDim } from '../providers/helpers';
 
 const { App, Browser, Device } = Plugins;
 declare const launchnavigator:any;
@@ -250,7 +251,7 @@ export class SharePage implements OnInit, IViewNavEvents {
 
   viewWillEnter(){
     try {
-      this._mgSub.reload();
+      this._mgSub.reload(undefined, false);
       this.stash.activeView = true;
       // AppConfig.map.activeView=true;
       console.warn(`viewWillEnter: SharePage`)
@@ -277,46 +278,11 @@ export class SharePage implements OnInit, IViewNavEvents {
    * @param ev photoswipe gallery
    */
   async openGallery( mg:IMarkerGroup, mi:IPhoto ) {
-
-    const items:PhotoSwipe.Item[] = [];
-    const mgUuids:string[] = []; // index lookup to MarkerGroup.uuid
-    const mgs = this._mgSub.value();
-    const screenDim = await ScreenDim.dim;
-    // get all photos for all markerGroups in this markerList
-    const waitFor:Promise<void>[] = [];
-    let found:number;
-    mgs.forEach( mg=>{
-      const mgPhotos_subject = this._getSubjectForMarkerItems(mg);
-      mgPhotos_subject.value().forEach( (p:IPhoto)=>{
-        waitFor.push(
-          new Promise( async (resolve, reject)=>{
-            const fsDim = await ImgSrc.scaleDimToScreen(p, screenDim);
-            const [imgW, imgH] = fsDim.split('x');
-            const done = ImgSrc.getImgSrc$(p, fsDim)
-            .subscribe( (fsSrc:IImgSrc)=>{
-              if (!fsSrc.src) return;
-              const item = {
-                src: fsSrc.src,
-                w: parseInt(imgW),
-                h: parseInt(imgH),
-              }; 
-              item['uuid'] = p.uuid;
-              items.push(item);
-              mgUuids.push(mg.uuid);
-              if (p.uuid == mi.uuid) found = items.length-1;
-              done && done.unsubscribe();
-              resolve();
-            });
-
-          })
-        );
-      });
-    });
-    await Promise.all(waitFor);
-    const index = found || 0;
-    const uuid = this.parent.uuid;
-    this.gallery = {items, index, uuid, mgUuids};
+    const markerGroups = this._mgSub.value();
+    const gallery = await PhotoswipeComponent.prepareGallery(markerGroups, mi, this.parent.uuid);
+    this.gallery = gallery;
     this.cd.detectChanges();
+    return
   }
 
   thumbClicked(ev:{mg:IMarkerGroup, mi:IPhoto}){

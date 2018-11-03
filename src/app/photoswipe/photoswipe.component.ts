@@ -4,11 +4,11 @@ import { Component, OnDestroy, OnInit, AfterViewInit,
 } from '@angular/core';
 
 import * as PhotoSwipe from 'photoswipe';  
-import { ImgSrc } from '../providers/photo/imgsrc.service';
+import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { AppCache } from '../providers/appcache';
-import { IPhoto } from '../providers/mock-data.service';
-import { AppConfig } from '../providers/helpers';
+import { AppCache, IMarkerSubject } from '../providers/appcache';
+import { MockDataService, IMarker, IPhoto } from '../providers/mock-data.service';
+import { AppConfig, ScreenDim } from '../providers/helpers';
 
 declare const PhotoSwipeUI_Default: any;
 
@@ -36,13 +36,60 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
   @Input() data:{items:PhotoSwipe.Item[], index:number, uuid:string};
   @Input() screenDim:string;
   @Output() indexChange: EventEmitter<{index:number, items:any[], uuid:string}> = new EventEmitter<{index:number, items:any[], uuid:string}>();
+
   constructor(
     private elementRef: ElementRef,
     // private viewCtrl: ViewController,
-  ) { 
+  ) { }
+
+  /**
+   * 
+   * @param markerGroups 
+   * @param initial 
+   * @param galleryId 
+   */
+  static async prepareGallery( markerGroups:IMarker[], initial:IPhoto, galleryId:string){
+    let items:PhotoSwipe.Item[] = [];
+    const mgUuids:string[] = []; // index lookup to MarkerGroup.uuid
+    const screenDim = await ScreenDim.dim;
+    // get all photos for all markerGroups in this markerList
+    const waitFor:Promise<void>[] = [];
+    let sortOrder:string[] = [];
+    markerGroups.forEach( mg=>{
+      const mgPhotos = MockDataService.getSubjByParentUuid(mg.uuid).value();
+      sortOrder = sortOrder.concat(mgPhotos.sort( (a,b)=>a['seq']-b['seq']).map(o=>o.uuid));
+      mgPhotos.forEach( (p:IPhoto)=>{
+        waitFor.push(
+
+          new Promise( async (resolve, reject)=>{
+            const fsDim = await ImgSrc.scaleDimToScreen(p, screenDim);
+            const [imgW, imgH] = fsDim.split('x');
+            const done = ImgSrc.getImgSrc$(p, fsDim)
+            .subscribe( (fsSrc:IImgSrc)=>{
+              if (!fsSrc.src) return;
+              const item = {
+                src: fsSrc.src,
+                w: parseInt(imgW),
+                h: parseInt(imgH),
+              }; 
+              item['uuid'] = p.uuid;
+              items.push(item);
+              mgUuids.push(mg.uuid);
+              done && done.unsubscribe();
+              resolve();
+            });
+          }) // end new Promise()
+
+        );
+      });
+
+    });
+    await Promise.all(waitFor);
+    const index = sortOrder.findIndex( key=>key == initial.uuid);
+    const sortedItems:PhotoSwipe.Item[] = sortOrder.map( key=>items.find(o=>o['uuid']==key) );
+    const uuid = galleryId;
+    return {items:sortedItems, index, uuid, mgUuids};    
   }
-
-
 
   ngOnInit() {
   }

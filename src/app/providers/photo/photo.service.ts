@@ -256,22 +256,31 @@ export class PhotoService {
           items = AppCache.for('Cameraroll').items();
         }
 
-        const b:google.maps.LatLngBounds = bounds || new google.maps.LatLngBounds(null);
-        if (positions && ! bounds) {
-          positions.forEach( p=>b.extend(new google.maps.LatLng(p.lat, p.lng)));
-        }  
-        if (bounds || positions){
-          // filter by mapBounds
-          items = items.filter( item=>b.contains( new google.maps.LatLng(item.latitude, item.longitude ) ));
-        }
+        const filterBounds:google.maps.LatLngBounds = bounds || new google.maps.LatLngBounds(null);
+        let pickFrom:IMappiLibraryItem[] = [];
         items = items.filter(v=>!except.includes(v.id));
-        if (!items.length){
+
+        if (filterBounds==bounds){
+          // prefer map bounds over marker bounds
+          pickFrom = items.filter( item=>filterBounds.contains( 
+            new google.maps.LatLng(item.latitude, item.longitude) 
+            ));
+        }  
+        if (pickFrom.length==0 && positions) {
+          // try again after extending bounds by marker positions
+          positions.forEach( p=>filterBounds.extend(new google.maps.LatLng(p.lat, p.lng)));
+          pickFrom = items.filter( item=>filterBounds.contains( 
+            new google.maps.LatLng(item.latitude, item.longitude) 
+            ));
+        }
+        if (!pickFrom.length){
           console.warn("### choosePhoto_Provider:Bounds, item not in map bounds", bounds);
           return this.choosePhoto_Provider('Camera', seq);
         }
-        photo = this._pickRandomPhotoItemFavorite( null, items );        
+        photo = this._pickRandomPhotoItemFavorite( null, pickFrom );        
         AppCache.for('Photo').set(photo);   // cache picked photo with unique p.uuid
         return Promise.resolve( photo );
+        
       case "Moments":
         // use cordova-plugin-photo-library(mappi) with ios moment
         // let m = await this.scan_moments_PhotoLibrary_Cordova({daysAgo:90})

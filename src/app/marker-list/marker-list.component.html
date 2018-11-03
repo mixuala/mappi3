@@ -25,14 +25,13 @@
     <ion-card-content>
       
       <ion-label>
-        <p>loc: [{{ mList.loc }}]</p>
-        <p>offset: [{{ mList.locOffset }}]</p>
+        <p>{{ humanize.position(mList) | json }}</p>
       </ion-label>
       <ion-label *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
         {{mg.label}}
       </ion-label>
 
-      <ion-item class="gallery">
+      <ion-item class="gallery"  (click)="nav(mList)">
         <ng-container *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
           <ng-container *ngIf="mg?.markerItemIds?.length; else gallery_pinIcon">
             <ng-container *ngIf="getSubjByParentUuid_Watch$(mg.uuid) | async as items">
@@ -74,7 +73,7 @@
   
         <ion-label>
           <h3>{{ mList.label || mList.seq+1 }}</h3>
-          <p>{{ asPositionLabel(mList) | json }}</p>
+          <p>{{ humanize.position(mList) | json }}</p>
         </ion-label>
         <ion-reorder slot="end"></ion-reorder>
       </ion-item>  

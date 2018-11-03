@@ -1,5 +1,9 @@
 import { Observable, ReplaySubject } from 'rxjs';
 import { DeviceInfo } from '@capacitor/core';
+import { MockDataService, RestyTrnHelper,
+  IMarker, IRestMarker, IPhoto,
+} from './mock-data.service';
+import { IMappiMarker } from './mappi/mappi.types';
 
 /**
  * stash App (mostly) constants here. 
@@ -125,7 +129,7 @@ export class ScreenDim {
     const el = document.getElementsByTagName('HTML')[0]
     if (fitW>fitH) {
       el.classList.add('landscape');
-      el.classList.remove('portrait');
+      el.classList.remove('portrait')
     }
     else {
       el.classList.add('portrait');
@@ -133,4 +137,47 @@ export class ScreenDim {
     }
   }
 
+}
+
+
+export class Prompt {
+  static async getText(label:string, key:string, o:IRestMarker, dataService:MockDataService):Promise<IMarker[]>{
+    const resp =  window.prompt(`Enter ${label}:`);
+    if (!resp) return;
+    o[key] = resp;
+    o['_rest_action'] = o['_rest_action'] || 'put'; 
+    const subj = MockDataService.getSubjByUuid(o.uuid);
+    RestyTrnHelper.childComponentsChange({data:o, action:'update'}, subj);
+    if (!dataService) 
+      return Promise.resolve([o]);
+
+    const changed = await RestyTrnHelper.applyChanges('commit', subj, dataService);
+    return changed;
+  }
+}
+
+export class Humanize {
+
+  static position(p:IMarker | {lat:number, lng:number}, n:number=6){
+    let pos:{lat:number, lng:number};
+    if (p.hasOwnProperty('position')) pos = (p as IMarker).position;
+    else pos = p as {lat:number, lng:number};
+    const digits = Math.pow(10,n);
+    return {
+      lat: Math.round(pos.lat*digits)/digits,
+      lng: Math.round(pos.lng*digits)/digits,
+    }
+  }
+
+  static asLocalTime(p:IPhoto):Date {
+    let getTzOffset = function(loc:[number,number]):number {
+      // get timezone offset from location
+      // let offset = res.dstOffset + res.rawOffset;
+      return -3600;
+    }
+    let offset = getTzOffset(p.loc);
+    let d = new Date(p.dateTaken);
+    d.setTime( d.getTime() + offset*1000 );
+    return d;
+  }
 }
