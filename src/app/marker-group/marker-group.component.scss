@@ -1,15 +1,31 @@
 ion-card {
   margin:0;
-}
-
-ion-card-content {
-  padding-top: 0;
-  ion-item.gallery {
-    --padding-start: 0;
-    --inner-padding-end:0;
+  ion-card-header {
+    padding-bottom: 0px;
   }
 }
 
+
+ion-card.marker-group {
+  ion-item {
+    --padding-start: 0;
+  }
+  ion-chip.marker {
+    height: 24px;
+    padding: 0px;
+    margin-right: 0px;
+    ion-label {
+      margin:0
+    }
+  }
+  ion-card-content {
+    padding-top: 0;
+    ion-item.gallery {
+      --padding-start: 0;
+      --inner-padding-end:0;
+    }
+  }
+}
 
 // ip6/7/8 PORTRAIT
 @media only screen 

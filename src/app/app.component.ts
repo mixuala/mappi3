@@ -110,7 +110,7 @@ export class AppComponent {
     setTimeout( async ()=>{
       this.photoService.load_PhotoLibraryByChunk(1000,100);
     }, 2000 );
-
+    setTimeout( ()=>ImgSrc.retryBroken(), 3000);
     setTimeout( async ()=>{
       const moments = await this.photoService.scan_moments_PhotoLibrary_Cordova({daysAgo:90})
       moments.forEach( m=>{
@@ -118,7 +118,6 @@ export class AppComponent {
           AppCache.for('Moment').set(m, itemId);  // set back ref
         });
       });
-
     },5000);
     
   }

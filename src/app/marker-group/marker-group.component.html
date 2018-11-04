@@ -46,16 +46,21 @@
   </ion-card>
 
   <!-- 'gallery' view -->
-  <ion-card *ngSwitchCase="'gallery'">
+  <ion-card class="marker-group layout-gallery" *ngSwitchCase="'gallery'">
     <ion-card-header color="secondary">
-      <ion-item>
-        <ion-icon name="pin" slot="start" color="primary" (click)="selectMarkerGroup(marker)"
-        ></ion-icon>
+      <ion-item >
+        <ion-button (click)="selectMarkerGroup(marker, $event)">
+          <ion-chip class="marker" color="primary" fill="solid">
+            <ion-icon name="pin" slot="start"></ion-icon>
+            <ion-label>{{marker.seq+1}}</ion-label>
+          </ion-chip>
+        </ion-button>
+        &nbsp;
         <ion-label>
           <h3>
             <ion-text color="primary">{{ marker.label || marker.seq+1 }}</ion-text>
           </h3>
-          <p>{{ humanize.position(marker) | json }}</p>
+          <!-- <p>{{ humanize.position(marker) | json }}</p> -->
         </ion-label>
         <ion-buttons slot="end">
           <ion-button color="primary" fill="outline" (click)="toggleEditMode()">
@@ -65,8 +70,11 @@
         </ion-buttons>
       </ion-item>
     </ion-card-header>
-
+    
     <ion-card-content>
+      <ion-item no-padding lines="none">
+        <ion-label><p>{{ humanize.position(marker) | json }}</p></ion-label>
+      </ion-item>
       <ion-item class="gallery">
         <ng-container *ngIf="marker?.markerItemIds?.length; else gallery_pinIcon">
           <ng-container *ngFor="let mi of miCollection$[marker.uuid] | async | slice:0:miLimit">
@@ -94,16 +102,17 @@
   <ion-card class="marker-group layout-share" *ngSwitchCase="'share'">
       <ion-card-header padding-vertical color="secondary">
         <ion-item>
-              <ion-chip class="marker" color="primary" fill="solid" (click)="selectMarkerGroup(marker)">
-                <ion-icon name="pin" slot="start"></ion-icon>
-                <ion-label>{{marker.seq+1}} </ion-label>
-              </ion-chip>
-
+          <ion-button (click)="selectMarkerGroup(marker, $event)">
+            <ion-chip class="marker" color="primary" fill="solid">
+              <ion-icon name="pin" slot="start"></ion-icon>
+              <ion-label>{{marker.seq+1}}</ion-label>
+            </ion-chip>
+          </ion-button>
+          &nbsp;
           <ion-label>
             <h3>
               <ion-text color="primary">{{ marker.label || marker.seq+1 }}</ion-text>
             </h3>
-            
           </ion-label>
           <ion-buttons slot="end">
             <ion-button color="primary" fill="outline" (click)="toggleFavorite()">

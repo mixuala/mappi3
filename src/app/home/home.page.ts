@@ -420,12 +420,15 @@ export class HomePage implements OnInit, IViewNavEvents {
     const {mg, mi} = ev;
     const gallery = await PhotoswipeComponent.prepareGallery([mg], mi, mg.uuid);
     this.gallery = gallery;
+
+    // update selectedMarkerGroup
+    this.selectedMarkerGroup = mg.uuid;
     this.cd.detectChanges();
     return
   }
 
   // called by photoswipe on item changed
-  focusMarker(ev:{index:number, items:any[], uuid:string}){
+  handle_GalleryIndexChange(ev:{index:number, items:any[], uuid:string}){
     this.selectedMarkerGroup = this.gallery.uuid;
   }
 

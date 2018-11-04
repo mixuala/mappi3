@@ -74,8 +74,8 @@ export class ListPage implements OnInit {
         // cache MarkerList Subject back-references
         res.forEach( mL=> MockDataService.getSubjByUuid(mL.uuid, this._mListSub) );
         console.info(`ListPage mLists, count=`, res.length);
-        ImgSrc.retryBroken();
         done.unsubscribe();
+        // setTimeout( ()=>ImgSrc.retryBroken(), 1000); // move to AppComponent
       });
     this.stash.activeView = true;
     this._mListSub.get$();  // get all MarkerLists, or query

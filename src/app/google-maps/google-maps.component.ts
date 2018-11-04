@@ -104,18 +104,17 @@ export class GoogleMapsComponent implements OnInit {
               color: mm.uuid == this.selected ? 'black' : 'darkred',
               fontWeight: mm.uuid == this.selected ? '900' : '400',
             });
+            mm._marker.setZIndex(1);
             if (mm.uuid == this.selected) {
+              mm._marker.setZIndex(10);
               // the the SelectedMarker is not clearly visible, one over another, then zoom
               // check distance from Center, then pan if necessary
               const central = MappiMarker.mapCentral(this.map);
-              const panToMarker = (MappiMarker.mapCentral(this.map).contains(mm.position) == false);
-              let target;
-              if (panToMarker) 
-                target = MappiMarker.panToBounds(this.map, mm.position);
-              setTimeout( ()=>{
-                this.map.setZoom(15);
-                if (panToMarker) this.map.panToBounds( target );
-              },100);
+              const panToMarker = (central.contains(mm.position) == false);
+              if (panToMarker) {
+                const target = MappiMarker.panToBounds(this.map, mm.position);
+                this.map.panToBounds( target );
+              }
             }
             // if (m.uuid == this.selected) {
             //   // BUG: animation does NOT include labels
@@ -124,14 +123,13 @@ export class GoogleMapsComponent implements OnInit {
             //   setTimeout( ()=>m.setAnimation(null), 3000);
             // }
           });
+
           break;
         case 'items':
           await AppConfig.mapReady.then( map=>this.map=map);
 
           let items:IMarker[] = change.currentValue;
-          // const diff = this.diffMarkers(change);
           this.renderMarkers(items);
-          if (items.length == 1) setTimeout( ()=>this.map.setZoom(15), 100 );
           break;
       }
     });
@@ -156,11 +154,12 @@ export class GoogleMapsComponent implements OnInit {
 
     if (visible.length) {
       // console.warn(`setMapBoundsWithMinZoom: ${this.map['id']}`)
-      this.setMapBoundsWithMinZoom(visible);
+      const minZoom = (items.length == 1) ? 13 : 15;
+      this.setMapBoundsWithMinZoom(visible, minZoom);
     }
   }
 
-  public setMapBoundsWithMinZoom(markers:IMarker[], minZoom=15){
+  public setMapBoundsWithMinZoom(markers:IMarker[], defaultMinZoom=15){
     // adjust google.maps.LatLngBounds
     const bounds = new google.maps.LatLngBounds(null);
     markers.forEach(o=>{
@@ -171,21 +170,29 @@ export class GoogleMapsComponent implements OnInit {
 
     // This is needed to set the zoom after fitbounds, 
     // begin with zoom=15
-    let initialZoom = true;
+    let setInitialMapZoom = this.mode['initialZoom'] == undefined;
+    const minZoom = Math.max(this.mode['initialZoom'] || defaultMinZoom);
+
+    let _first_zoom_change = true; // mapZoom changes asynchronously
     const listen_zoom = google.maps.event.addListener(this.map, 'zoom_changed', ()=>{
       google.maps.event.addListenerOnce(this.map, 'bounds_changed', (event)=> {
-        // console.log("*** map.zoom=", this.map.getZoom());
-        if (this.map.getZoom() > minZoom && initialZoom == true) {
+        if (setInitialMapZoom) this.mode['initialZoom'] = this.map.getZoom();
+        console.warn(`*** MapBounds changed, markers=${markers.length}, minZoom=${minZoom}, initialZoom=${this.mode['initialZoom']}`);
+        if (this.map.getZoom() > minZoom && _first_zoom_change == true) {
             // Change max/min zoom here
-            this.map.setZoom(minZoom);
-            initialZoom = false;
-            // console.warn("**** MapBounds minZoom fired, count=", markers.length)
+            setTimeout( ()=>this.map.setZoom(minZoom) );
+            if (setInitialMapZoom) {
+              this.mode['initialZoom'] = minZoom;
+            }
+            _first_zoom_change = setInitialMapZoom = false;
+            console.warn(`*** >>> MapBounds minZoom fired, markers=${markers.length}, minZoom=${minZoom}, initialZoom=${this.mode['initialZoom']}`);
         }
       });
     });
     const padding= {left:60, right:60, top:40, bottom:40};
     this.map.fitBounds(bounds,padding);
-    setTimeout( ()=>{listen_zoom.remove()}, 2000)
+    if (setInitialMapZoom) this.mode['initialZoom'] = this.map.getZoom();
+    setTimeout( ()=>{listen_zoom.remove()}, 1000)
   }
 
   public addOneMarker(mm:mappi.IMappiMarker): void {

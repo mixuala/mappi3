@@ -176,13 +176,12 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   }
 
   // called by ion-icon[pin](click) and thumbClicked below
-  selectMarkerGroup(o:IMarkerGroup){
-  this.mgChange.emit({data:o, action:'selected'});
+  selectMarkerGroup(o:IMarkerGroup, ev?:MouseEvent){
+    this.mgChange.emit({data:o, action:'selected'});
   }
 
   thumbClicked(mg:IMarkerGroup, mi:IPhoto){
-    this.selectMarkerGroup(mg)
-    this.thumbClick.emit({mg, mi});
+    this.thumbClick.emit({mg, mi}); // pass it up
   }
 
   toggleFavorite(value?:boolean, mg?:IMarkerGroup){

@@ -84,7 +84,7 @@
           <app-photoswipe class="content-right-if-mq-landscape" 
           [data]="gallery"
           [screenDim]="screenDim$ | async"
-          (indexChange)="focusMarker($event)"
+          (indexChange)="handle_GalleryIndexChange($event)"
           ></app-photoswipe>
         </ion-col>
       </ion-row>
