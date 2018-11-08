@@ -148,6 +148,8 @@ export class MockDataService {
       const result = await Storage.keys();
       if (result.keys.length==0) 
       return Promise.resolve(false);
+
+      result.keys = result.keys.filter( k=>!k.startsWith('cache-'));
       
       await Promise.all(result.keys.map( async (uuid)=> {
         const resp:object = await Storage.get({key:uuid});
@@ -161,6 +163,7 @@ export class MockDataService {
             data.unknown[uuid] = o; break;
         }
       }));
+
       return Promise.resolve(data);
     }
     // restore raw data

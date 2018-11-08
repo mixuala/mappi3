@@ -54,7 +54,6 @@ export class AppComponent {
     Storage.clear();
     AppCache.for('ImgSrc').reset();
     AppCache.for('Cameraroll').reset();
-    ImgSrc.reset();  // deprecate
     await this.dataService.loadDatasources(raw);
 
     const menu = document.querySelector('ion-menu-controller');
@@ -73,6 +72,16 @@ export class AppComponent {
     window['_ImgSrc'] = ImgSrc;
     window['_AppCache'] = AppCache;
     window['_AppConfig'] = AppConfig;
+    window['_Storage'] = Storage;
+
+
+    window['_loadCameraroll'] = ()=>{
+      setTimeout( async ()=>{
+        this.photoService.load_PhotoLibraryByChunk(3000);
+      }, 1000 );
+    }
+
+
   }
 
   async listenAppState(){
@@ -108,17 +117,17 @@ export class AppComponent {
     }  
     // warm up cache by preloading cameraroll and moments
     setTimeout( async ()=>{
-      this.photoService.load_PhotoLibraryByChunk(1000,100);
-    }, 2000 );
-    setTimeout( ()=>ImgSrc.retryBroken(), 3000);
-    setTimeout( async ()=>{
+      // cameraroll
+      const items = await PhotoLibraryHelper.loadCamerarollFromCache();
+      let count = AppCache.for('Cameraroll').items().length;
+      console.log(`### Cameraroll items restored from Storage, count=${count}`);
+      if (count < 999) {
+        this.photoService.load_PhotoLibraryByChunk(3000);
+      }
+      // moments
       const moments = await this.photoService.scan_moments_PhotoLibrary_Cordova({daysAgo:90})
-      moments.forEach( m=>{
-        m.itemIds.forEach( itemId=>{
-          AppCache.for('Moment').set(m, itemId);  // set back ref
-        });
-      });
-    },5000);
+    }, 5000);
+    setTimeout( ()=>ImgSrc.retryBroken(), 3000);
     
   }
 }

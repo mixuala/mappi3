@@ -83,28 +83,6 @@ export class ImgSrc {
     }
   }
 
-  /**
-   * cache for all IImgSrcItem
-   * use: 
-   *  - ImgSrc.get( Photo.uuid, dim )
-   */
-  private static _cache:{ [key:string]:IImgSrcItem } = {};
-  private static _mru:string[] = []; 
-  static reset(){ ImgSrc._cache = {}; ImgSrc._mru = []; }
-  static get(uuid:string, dim:string="80x80"):IImgSrcItem { 
-    const key = [dim,uuid].join(':');
-    ImgSrc._mru.unshift(key);
-    if (ImgSrc._mru.length>CACHE_MAX) {
-      const remove = ImgSrc._mru.splice(CACHE_MIN, ImgSrc._mru.length-CACHE_MIN );
-      remove.forEach( key=>ImgSrc._cache[key]);
-    }
-    return ImgSrc._cache[key];
-  }
-  static set(item:IImgSrcItem):IImgSrcItem { return ImgSrc._cache[item.key] = item }
-  static items():IImgSrcItem[] {
-    return Object.values(ImgSrc._cache);
-  }  
-
 
   /**
    * 
@@ -186,7 +164,7 @@ export class ImgSrc {
     else {
       if (cached) {
         // force==true, delete from cache
-        delete ImgSrc._cache[cached.key];
+        delete AppCache.for('ImgSrc')._cache[cached.key];
       }
 
       // start fresh
@@ -253,7 +231,6 @@ export class ImgSrc {
       // push result to Observers
       cacheItem.subj.next(cacheItem.imgSrc);
     });
-    ImgSrc.set(cacheItem)
     AppCache.for('ImgSrc').set(cacheItem);
     return cacheItem.imgSrc$;
   }

@@ -94,18 +94,19 @@ export class AppCache {
     return JSON.stringify(counts);
   }
   static init(){
-    // NOTE: AppCache.for('Photo'), restore cache from MockDataService.loadStorage()
     // NOTE: use keys = [IPhoto.uuid, IMappiLibraryItem.id]
-    // refactor, deprecate IMappiLibraryItem._photo, lookup with spare key;
     AppCache._cache['Photo'] = new Cache_WithSpareKeys<IPhoto>({className:'Photo', storage:false});
-    // NOTE: use keys = [IPhoto.uuid, IMappiLibraryItem.id]
-    AppCache._cache['Cameraroll'] = new CacheByKey<IMappiLibraryItem>({className:'Cameraroll', storage:true});
-    AppCache._cache['Moment'] = new Cache_WithSpareKeys<IMoment>({className:'Moment', storage:true});
+    AppCache._cache['Cameraroll'] = new CacheByKey<IMappiLibraryItem>({
+      className:'Cameraroll', storage:false
+    });
+    AppCache._cache['Moment'] = new Cache_WithSpareKeys<IMoment>({className:'Moment', storage:false});
     // NOTE: dataUrls, do not put into Storage
     AppCache._cache['ImgSrc'] = new Cache_WithMru<IImgSrcItem>({className:'ImgSrc', storage:false});
     // NOTE: get sibling & child markers by IMarker.uuid
     AppCache._cache['IMarker'] = new CacheByKey<IMarkerSubject>({className:'IMarker', storage:false});
   }
+
+
   static loadFromStorage(){
     // restore cache from Storage
   }
@@ -145,6 +146,37 @@ export class AppCache {
       return res;
     },{});
     return clean;
+  }
+
+  static async storeByClassName(className:string):Promise<void>{
+    try {
+      const cache = AppCache.for(className);
+      if (!cache || cache.storage==true) throw new Error(`ERROR: storeByClassName() - cannot save to Storage, className=${className}`);
+      
+      const cleanedItems = cache.items().map(o=>AppCache.cleanProperties(o));
+      const key = `cache-${className}`;
+      await Storage.set({key, value:JSON.stringify(cleanedItems)});
+      return Promise.resolve();
+    } catch (err){
+      console.error(err);
+      return Promise.reject(err);
+    }
+  }
+
+  static async loadByClassName(className:string):Promise<any[]>{
+    try {
+      const cache = AppCache.for(className);
+      if (!cache || cache.storage==true) throw new Error(`ERROR: loadByClassName() - cannot save to Storage, className=${className}`);
+      const key = `cache-${className}`;
+      const resp:any = await Storage.get({key});
+      const items = JSON.parse(resp['value']);
+      items.forEach( o=>AppCache.for(className).set(o));
+      return Promise.resolve(items);
+
+    } catch (err){
+      console.error(err);
+      return Promise.reject(err);
+    }
   }
 
   static findMomentByItemId(id:string):IMoment{

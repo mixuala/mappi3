@@ -221,11 +221,11 @@ export class PhotoService {
       switch (AppConfig.device.platform){
         case 'ios':
           if (provider)
-            return this.choosePhoto_Provider( provider ,seq , options);
-          else if (moments && itemCount>10)
-            return this.choosePhoto_Provider("Moments",seq , options);
+            return this.choosePhoto_Provider( provider, seq , options);
           else if (bounds || positions )
-            return this.choosePhoto_Provider("Bounds",seq , options);
+            return this.choosePhoto_Provider("Bounds", seq , options);
+          else if (moments && itemCount>10)
+            return this.choosePhoto_Provider("Moments", seq , options);
           else
             return this.choosePhoto_Provider('Camera', seq); 
         case 'android':
@@ -245,14 +245,14 @@ export class PhotoService {
     let { moments, positions, bounds, except } = options;
     let photo:IPhoto;
     let item:IMappiLibraryItem;
-    const LOAD_LIMIT = 1000;  // DEV: demo only
+    const LOAD_LIMIT = 4000;  // DEV: demo only
     if (AppConfig.device.platform != 'ios')     provider = "Picsum";
 
     switch(provider){
       case "Bounds":
         let items = AppCache.for('Cameraroll').items();
         if (items.length < LOAD_LIMIT) {
-          await this.load_PhotoLibraryByChunk(LOAD_LIMIT, 300);
+          // await this.load_PhotoLibraryByChunk(LOAD_LIMIT, 400);
           items = AppCache.for('Cameraroll').items();
         }
 
@@ -287,7 +287,7 @@ export class PhotoService {
         let [moment, checkItem] = this._pickRandomMomentAndItem(moments, except);
         if ( typeof checkItem == 'string') {
           // moment not found, cache more items
-          await this.load_PhotoLibraryByChunk(LOAD_LIMIT, 300);
+          // await this.load_PhotoLibraryByChunk(LOAD_LIMIT, 300);
           item = AppCache.for('Cameraroll').get(checkItem) as IMappiLibraryItem
           
           if (!item) {
@@ -309,7 +309,7 @@ export class PhotoService {
           if (items.length > PHOTO_LIBRARY_WAIT_LIMIT) {
             // TODO: cant load more items INCREMENTALLY until we add a {from: to:} option
             if (items.length < LOAD_LIMIT) {
-              const nowait = this.load_PhotoLibraryByChunk(LOAD_LIMIT);
+              // const nowait = this.load_PhotoLibraryByChunk(LOAD_LIMIT);
             }
           }
         })
@@ -445,12 +445,15 @@ export class PhotoService {
    * 
    * NOTE: cordova-plugin-photo-library does NOT work through IonicNative.
    * use cordova.plugins.photoLibrary
+   * 
+   * saves to Storage after lastChunk==true
+   * - Storage:         AppCache.storeByClassName('Cameraroll')
+   * 
    * @param options, options.parseItems:(items:LibraryItem[])=>void
    */
   async scan_PhotoLibrary_Cordova(callback?:(items:LibraryItem[])=>void
                                   , options:any={}):Promise<LibraryItem[]>
   {
-
     const photolib_options:IMappiGetThumbnailOptions = { 
       thumbnailWidth: 80, 
       thumbnailHeight: 80,
@@ -463,9 +466,13 @@ export class PhotoService {
       includeAlbumData: false,
       includeVideos: false,
       includeCloudData: false,
-      itemsInChunk: 50, // Loading large library takes time, so output can be chunked so that result callback will be called on
+      
+      // Loading large library takes time, so output can be chunked so that result callback will be called on
+      // chose 1 from below
+      chunkTimeSec: 0.3,      
+      // itemsInChunk: 100,
+
       maxItems: 500,
-      chunkTimeSec: 0.3,
       useOriginalFileNames: false,
     }
     Object.assign(lib_options, options);
@@ -481,10 +488,12 @@ export class PhotoService {
           } else { // no callback
             chunk.library.forEach( item=>{
               AppCache.for('Cameraroll').set(item);
-              // this.load_PhotoLibraryItem(item);
             })
           }
           if (chunk.isLastChunk){
+            console.log(`("#### PhotoLibraryCordova.getLibrary(): reached last chunk`);
+          
+            AppCache.storeByClassName('Cameraroll');
             resolve(AppCache.for('Cameraroll').items());
           }
         },    
@@ -500,6 +509,12 @@ export class PhotoService {
       
   }
 
+  /**
+   * scan Cameraroll for Moments (ios), also calls
+   * - runtime cache:   AppCache.for('Moment').set(m)
+   * - Storage:         AppCache.storeByClassName('Moment')
+   * @param options 
+   */
   async scan_moments_PhotoLibrary_Cordova(options:any={}):Promise<IMoment[]>
   {
     function _daysAgo (n:number):Date {
@@ -509,17 +524,23 @@ export class PhotoService {
     const cached:IMoment[] = AppCache.for('Moment').items();
     if (cached.length) {
       // TODO: check date range
+      console.warn(`###Cameraroll Moments, SKIP SCAN. count=${cached.length}`, JSON.stringify(options), cached);
       return Promise.resolve(  cached  );
     }
 
     let {from, to, daysAgo} = options;
     const HOW_MANY_DAYS_AGO = 90;
     if (!from && !to) options.from = _daysAgo(daysAgo || HOW_MANY_DAYS_AGO).toISOString();
+    const added = [];
     const moments = await new Promise<IMoment[]>( (resolve,reject)=>{
       PhotoLibraryCordova.getMoments( 
         (moments)=>{
           console.log(">>> PhotoLibraryCordova.getMoments():", moments.slice(-5));
-          moments.forEach( m=>AppCache.for('Moment').set(m) );
+          moments.forEach( m=>{
+            const found = AppCache.for('Moment').get(m.id);
+            if (!found) added.push(m);
+            AppCache.for('Moment').set(m);  // update cached value regardless
+          });
           resolve(moments);
         },    
         (err)=>{
@@ -528,19 +549,29 @@ export class PhotoService {
         },
         options)
     });
+    AppCache.storeByClassName('Moment');
+    console.log(`###Cameraroll Moments, count=${moments.length}, new=${added.length}`, JSON.stringify(options), added)
     return moments;
   }
 
+  /**
+   * load Cameraroll, calls:
+   * - runtime cache:   AppCache.for('Cameraroll').set(m)
+   * - Storage:         AppCache.storeByClassName('Cameraroll') from scan_PhotoLibrary_Cordova()
+   * @param limit 
+   * @param waitLimit 
+   */
   load_PhotoLibraryByChunk(limit?:number, waitLimit:number=PHOTO_LIBRARY_WAIT_LIMIT):Promise<IMappiLibraryItem[]>{
     let seq = 0;
     const waitForLimit = new BehaviorSubject<IMappiLibraryItem[]>([]);
     const loaded:IMappiLibraryItem[] = [];
     const cached = AppCache.for('Cameraroll').items();
-    if (cached.length >= waitLimit) {
-      const items = AppCache.for('Cameraroll').items() as IMappiLibraryItem[];
-      return Promise.resolve(  items );
+    if (cached.length >= limit) {
+      // check to see how many we loaded from Storage
+      // NOTE: Cameraroll data is dynamic and we might need to reload, even if found in Storage
+      console.log("### PhotoLibrary scan CANCELLED, cache count=", AppCache.for('Cameraroll').items().length);
+      return Promise.resolve(cached);
     }
-
     const scan_callback = (chunk:IMappiLibraryItem[])=>{
       chunk.forEach( item=>{
         AppCache.for('Cameraroll').set(item);
@@ -550,20 +581,25 @@ export class PhotoService {
       waitForLimit.next(loaded);
       console.log("### PhotoLibrary scan, cache count=", AppCache.for('Cameraroll').items().length);
     }
-    const lib_options = limit ?{ maxItems: limit } : {};
+    // const maxItems = cached.length + limit;
+    const maxItems = limit;
+    const lib_options = limit ? { maxItems } : {};
     return new Promise<IMappiLibraryItem[]>( (resolve, reject)=>{
+
       const done = waitForLimit.subscribe( loaded=>{
         if (loaded.length>waitLimit){
           done.unsubscribe();
-          resolve( loaded );
+          resolve( loaded ); 
         }
-      })
+      });
+
       try {
         /**
          *  all set up, now start scanning
          * */        
         this.scan_PhotoLibrary_Cordova(scan_callback, lib_options)
         .then ( (items)=>{
+
           if (items.length<=waitLimit){
             done.unsubscribe();
             const loaded = waitForLimit.value.slice();
@@ -811,35 +847,12 @@ export class PhotoService {
 
 
 export class PhotoLibraryHelper {
-  // // private static _cache:{[uuid:string]:IMappiLibraryItem | Promise<IMappiLibraryItem>} = {};
-  // public static _cache:{ [uuid:string]:IMappiLibraryItem } = {};
-  // static reset(){ PhotoLibraryHelper._cache = {} }
-  // static get(uuid:string):IMappiLibraryItem { 
-  //   return AppCache.for('Cameraroll').get(uuid) 
-  // }
-  // static set(item:IMappiLibraryItem, key?:string):IMappiLibraryItem { 
-  //   // NOTE: for caching SAME item by item.id AND photo.uuid
-  //   AppCache.for('Cameraroll').set(item, item.id);  // key.length = 43
-  //   AppCache.for('Cameraroll').set(item, key);      // key.length = 36
-  //   // PhotoLibraryHelper._cache[item.id] = item;  // key.length = 43
-  //   // PhotoLibraryHelper._cache[key] = item;      // key.length = 36
-  //   return item;
-  // }
-  // static items():IMappiLibraryItem[] {
-  //   return AppCache.for('Cameraroll').items();
-  //   const itemKeys = Object.keys(PhotoLibraryHelper._cache).filter(k=>k.length==43);
-  //   return itemKeys.map(k=>PhotoLibraryHelper._cache[k]);
-  // }
-
-  // static getEmptyThumbSrc(dim:string='80x80'):IThumbSrc {
-  //   const [imgW, imgH] = dim.split('x');
-  //   return {
-  //     width: imgW,
-  //     height: imgH,
-  //     src: null,
-  //     style: {'width.px':imgW, 'height.px':imgH},
-  //   }
-  // }
+  static loadCamerarollFromCache():Promise<any[]> {
+    return Promise.all( [
+      AppCache.loadByClassName('Cameraroll') 
+      , AppCache.loadByClassName('Moment')
+    ]).then( (resp)=>resp[0].concat(resp[1]));
+  }
 
   /**
    * WARNING: this method mutates p
