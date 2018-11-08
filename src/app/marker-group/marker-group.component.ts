@@ -201,6 +201,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
 
   createMarkerItem(ev:any, provider?:string){
+    const target = ev.target && ev.target.tagName;
     const mg = this.mg;
     const photos = MockDataService.getSubjByParentUuid(mg.uuid).value() as IPhoto[];
     let moments:IMoment[] = photos.reduce( (res,p)=>{
@@ -210,6 +211,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     }, []);
     const except = photos.map(o=>o.camerarollId);
     const bounds = AppConfig.map.getBounds(); 
+    if (AppConfig.device.platform=='ios' && target!='ION-BUTTON'){
+      provider = 'Camera';   // override, for DEMO only
+    }
     const options:IChoosePhotoOptions = {except, moments, bounds, provider};
     return this.photoService.choosePhoto(mg.markerItemIds.length, options)
     .then( photo=>{

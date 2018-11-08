@@ -3,7 +3,7 @@
   <!-- 'focus-marker-group' view -->
   <ion-card *ngSwitchCase="'focus-marker-group'">
     <ion-card-header color="secondary">
-      <ion-item color="primary">
+      <ion-item color="primary" class="menu-commit-rollback sticky">
         <ion-icon name="pin" slot="start" color="primary"></ion-icon>
         <ion-label>{{ marker.label || marker.seq+1 }}</ion-label>
         <ion-buttons slot="end">
@@ -30,18 +30,18 @@
             [dim]="thumbDim"
             (miChange)="childComponentsChange($event)"></app-marker-item>
         </ion-list>
-        <ion-list>            
-          <ion-item class="add-marker-item wrap-btn-as-thumbnail" 
-            (click)="createMarkerItem($event)"
-            (dblclick)="createMarkerItem($event, 'Camera')"
-            >
-            <ion-button class="as-thumbnail" slot="start" expand="full" size="large">
-              <ion-icon slot="icon-only" name="add"></ion-icon>
-            </ion-button>
-            <ion-label color="primary"> Add photo/marker </ion-label>
-          </ion-item>            
-        </ion-list>
       </ion-reorder-group>
+      <ion-list>            
+        <ion-item class="add-marker-item wrap-btn-as-thumbnail" 
+          (click)="createMarkerItem($event)"
+          (dblclick)="createMarkerItem($event, 'Camera')"
+          >
+          <ion-button class="as-thumbnail" slot="start" expand="full" size="large">
+            <ion-icon slot="icon-only" name="add"></ion-icon>
+          </ion-button>
+          <ion-label color="primary"> Add photo/marker </ion-label>
+        </ion-item>            
+      </ion-list>
     </ion-card-content>
   </ion-card>
 

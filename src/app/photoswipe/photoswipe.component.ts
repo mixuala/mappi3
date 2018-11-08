@@ -31,6 +31,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     index: 0,
     history: false,
   };
+  // for managing 2-stage fullscreen
   private _fsClosure:{el:Element, type:string, handler:(e:Event)=>void};
 
   @Input() data:{items:PhotoSwipe.Item[], index:number, uuid:string};
@@ -58,6 +59,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     markerGroups.forEach( mg=>{
       const mgPhotos = MockDataService.getSubjByParentUuid(mg.uuid).value();
       sortOrder = sortOrder.concat(mgPhotos.sort( (a,b)=>a['seq']-b['seq']).map(o=>o.uuid));
+      mgPhotos.forEach( i=>mgUuids.push( mg.uuid) );
       mgPhotos.forEach( (p:IPhoto)=>{
         waitFor.push(
 
@@ -67,6 +69,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
             const done = ImgSrc.getImgSrc$(p, fsDim)
             .subscribe( (fsSrc:IImgSrc)=>{
               if (!fsSrc.src) return;
+              // NOTE: these responses are return async, and not in sort order!!!
               const item = {
                 src: fsSrc.src,
                 w: parseInt(imgW),
@@ -74,7 +77,6 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
               }; 
               item['uuid'] = p.uuid;
               items.push(item);
-              mgUuids.push(mg.uuid);
               done && done.unsubscribe();
               resolve();
             });
@@ -190,6 +192,11 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     gallery.listen('close', ()=>{
       self.toggle_appFullscreen(false);
       self.toggle_appFullscreen(false, 'gallery');
+      this.indexChange.emit({
+        items:[], 
+        index:null,
+        uuid:this.data.uuid,
+      })
     });
 
     gallery.listen('destroy', () => {
@@ -204,28 +211,28 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
         }
         self.gallery = null;
     });
-    gallery.listen('afterInit', ()=>{
-      // check also: initialLayout
+    // gallery.listen('afterInit', ()=>{
+    //   // check also: initialLayout
 
-      const el = document.getElementsByClassName('pswp--open')[0];
-      const [w,h] = AppConfig.screenWH;
-      let pct:number;
-      if (h > w) pct = el['offsetTop']/h * 100;
-      else pct = el['offsetLeft']/w * 100;
-      console.warn( `@@@ photoswipe 'afterInit', layout top/left=${Math.round(pct)}%`);
+    //   const el = document.getElementsByClassName('pswp--open')[0];
+    //   const [w,h] = AppConfig.screenWH;
+    //   let pct:number;
+    //   if (h > w) pct = el['offsetTop']/h * 100;
+    //   else pct = el['offsetLeft']/w * 100;
+    //   console.warn( `@@@ photoswipe 'afterInit', layout top/left=${Math.round(pct)}%`);
 
-      // setTimeout( ()=>this.moveToContainer('fixed'), 2000)
-    });
-    gallery.listen('initialLayout', ()=>{
-      // init() > updateSize() > 'initialLayout' > 'afterInit' > 'resize'
-      // check also: initialLayout
-      console.warn( `@@@ photoswipe, 'initialLayout' `);
-    });
-    gallery.listen('resize', ()=>{
-      // init() > updateSize() > 'resize' > 'afterInit' > 'resize'
-      // check also: initialLayout
-      console.warn( `@@@ photoswipe, 'resize' `);
-    });
+    //   // setTimeout( ()=>this.moveToContainer('fixed'), 2000)
+    // });
+    // gallery.listen('initialLayout', ()=>{
+    //   // init() > updateSize() > 'initialLayout' > 'afterInit' > 'resize'
+    //   // check also: initialLayout
+    //   console.warn( `@@@ photoswipe, 'initialLayout' `);
+    // });
+    // gallery.listen('resize', ()=>{
+    //   // init() > updateSize() > 'resize' > 'afterInit' > 'resize'
+    //   // check also: initialLayout
+    //   console.warn( `@@@ photoswipe, 'resize' `);
+    // });
 
     gallery.init();
     self.setup_fullscreen_override(gallery);

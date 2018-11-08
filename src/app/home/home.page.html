@@ -47,20 +47,20 @@
                       [mg]="item" [parentLayout]="layout" 
                       (mgChange)="childComponentsChange($event)" [(mgFocus)]="mgFocus" ></app-marker-group>
                   </ion-list>
-                  <ion-list>
-                      <ion-item class="add-marker-group wrap-btn-as-thumbnail" 
-                        (click)="createMarkerGroup($event)"
-                        (dblclick)="createMarkerGroup($event, null, 'Camera')">
-                          <ion-button  class="as-thumbnail" slot="start" expand="full" size="large">
-                            <ion-icon slot="icon-only" name="add"></ion-icon>
-                          </ion-button>
-                          <!-- <ion-thumbnail slot="start">
-                            <ion-img src="https://picsum.photos/80?image=0"></ion-img>
-                          </ion-thumbnail> -->
-                        <ion-label color="primary"> Add photo/marker </ion-label>
-                      </ion-item>
-                  </ion-list>                  
-              </ion-reorder-group>
+                </ion-reorder-group>
+                <ion-list>
+                    <ion-item class="add-marker-group wrap-btn-as-thumbnail" 
+                      (click)="createMarkerGroup($event)"
+                      (dblclick)="createMarkerGroup($event, null, 'Camera')">
+                        <ion-button  class="as-thumbnail" slot="start" expand="full" size="large">
+                          <ion-icon slot="icon-only" name="add"></ion-icon>
+                        </ion-button>
+                        <!-- <ion-thumbnail slot="start">
+                          <ion-img src="https://picsum.photos/80?image=0"></ion-img>
+                        </ion-thumbnail> -->
+                      <ion-label color="primary"> Add photo/marker </ion-label>
+                    </ion-item>
+                </ion-list>                  
         </ion-col>
       </ion-row>
     </ion-grid>    

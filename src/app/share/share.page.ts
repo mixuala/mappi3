@@ -65,7 +65,42 @@ export class SharePage implements OnInit, IViewNavEvents {
     // console.warn( "SharePage setter: fire detectChanges() for selected", value);
     setTimeout(()=>this.cd.detectChanges())
   }
-
+    
+  // NOTE: currently unused, but maybe for showing markers on IPhoto[] when photoswipe active
+  // mgFocus Getter/Setter
+  private _mgFocus: IMarkerGroup;
+  get mgFocus() {
+    return this._mgFocus;
+  }
+  set mgFocus(value: IMarkerGroup) {
+    this._mgFocus = value;
+    const markerItemsOrGroups:string = value ? "items" : "groups"; 
+    switch (markerItemsOrGroups) {
+      case "items":
+        /****
+         * render googleMaps markers for markerGroup Photos 
+         */
+        // MappiMarker.reset();
+        const subject = this._getSubjectForMarkerItems(value);
+        this.markerCollection$ = subject.watch$();
+        this.mapSettings = {
+            dragend: true,
+            click: true,
+            clickadd: false,
+          }
+        break;
+      case "groups":
+        // MappiMarker.reset();
+        this.mapSettings = {
+          dragend: false,
+          click: false,
+          clickadd: false,
+        }
+        this.selectedMarkerGroup = value ? value.uuid : null;
+        this.markerCollection$ = this.mgCollection$;
+        break;
+    }
+  }
   private _mgSub: SubjectiveService<IMarkerGroup>;
 
   constructor( 
@@ -272,8 +307,18 @@ export class SharePage implements OnInit, IViewNavEvents {
   async openGallery( mg:IMarkerGroup, mi:IPhoto ) {
     const markerGroups = this._mgSub.value();
     const gallery = await PhotoswipeComponent.prepareGallery(markerGroups, mi, this.parent.uuid);
+
+    // // set mgFocus to show markers on Photos
+    // const selectedMg = gallery.mgUuids[gallery.index];
+    // this.mgFocus = markerGroups.find(o=>o.uuid==selectedMg);
+    // // how do you listen for gallery 'destroy` to set this.mgFocus = null;
+
+
     this.gallery = gallery;
     this.cd.detectChanges();
+    setTimeout( ()=>{
+      this.handle_GalleryIndexChange({index:gallery.index, items:gallery.items, uuid:gallery.uuid})
+    },500)
     return
   }
 
@@ -284,8 +329,27 @@ export class SharePage implements OnInit, IViewNavEvents {
 
   // called by photoswipe on item changed
   handle_GalleryIndexChange(ev:{index:number, items:any[], uuid:string}){
-    this.selectedMarkerGroup = this.gallery.mgUuids[ev.index];
-    // do NOT launch Map app
+    const isClosing = ev.index===null;
+    if (isClosing) {
+      return this.mgFocus = null;
+    }
+    const mgUuid = this.gallery.mgUuids[ev.index];
+    if ("map only MarkerGroups" && false) {
+      this.selectedMarkerGroup = mgUuid;  // highlight IMarkerGroup marker
+    } 
+    else if ("map MarkerGroups or Photos") { 
+      this.selectedMarkerGroup = ev.items[ev.index]['uuid'];  // highlight IPhoto
+      if (mgUuid != this.selectedMarkerGroup){
+        // gallery changed to a new MarkerGroup
+        // show markers for IPhoto
+        const mg = this._mgSub.value().find(o=>o.uuid==mgUuid);
+        this.mgFocus = (mg.markerItemIds.length > 1) ? mg : null;
+        if (this.mgFocus == null) {
+          // go back to mapping MarkerGroups, highlight correct marker
+          this.selectedMarkerGroup = mg.uuid;
+        }
+      }
+    }
   }
 
   // called by GoogleMapComponents, marker click

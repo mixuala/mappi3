@@ -231,12 +231,13 @@ export class HomePage implements OnInit, IViewNavEvents {
   async createMarkerGroup(ev:any={}, data:any={}, provider?:string):Promise<IMarkerGroup>{
     const target = ev.target && ev.target.tagName;
     const mgSubj = MockDataService.getSubjByParentUuid(this.parent.uuid);
+    data = data || {};
 
     let mgParent:IMarkerGroup;
     let child:IPhoto;
-    if (target=='ION-BUTTON'){
+    if (target=='ION-BUTTON' || provider){
       const mgs = mgSubj.value() as IMarkerGroup[];
-      if (mgs.length==0) {
+      if (mgs.length==0 || provider) {
         child = await this.photoService.choosePhoto(0, {provider});
         console.log( "### 0) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
       } else {
@@ -257,14 +258,19 @@ export class HomePage implements OnInit, IViewNavEvents {
         child = await this.photoService.choosePhoto(0, {positions, bounds, except});
         console.log( "### 1+) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
       }
-     } else if (data.className == 'Photo')
+    } else if (AppConfig.device.platform=='ios'){
+      // DEMO only
+      child = await this.photoService.choosePhoto(0, {provider:"Camera"});
+      console.log( "### 0) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
+
+    } else if (data.className == 'Photo'){
       // create markerGroup using photo as location
       child = data;
-
-    // BUG: not adding mg/parent, to MarkerList subject. 
-    // on applyChanges/commit, add MarkerList.markerGroupIds.push(parent)
-    if (child)
+    }
+    
+    if (child){
       mgParent = RestyTrnHelper.getPlaceholder('MarkerGroup');
+    } 
     else {
       // create parent from map click with location data
       mgParent = RestyTrnHelper.getPlaceholder('MarkerGroup', data);
