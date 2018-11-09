@@ -1,12 +1,44 @@
 ion-card {
   margin:0;
+
+  .marker-wrap {   
+    // eliminate CSS flash
+    padding: 0px;
+    margin: 0px;
+    --border-radius: 8px;
+    --padding-start: .5em;
+    --padding-end: .5em;
+    --height: 24px;
+    font-size: 13px;
+    --margin-start: 0;
+    --margin-end: 16px;
+    ion-chip.marker {
+      padding: 0px;
+      margin-right: 0px;
+      ion-label {
+        margin:0px;
+      }
+    }
+  }
+
 }
 
 ion-card-content {
   padding-top: 0;
 }
 
-
+ul.inline-with-disc { 
+  padding-left: 0px;
+  li {
+    display:inline;
+    &:before {
+      content:"• ";
+    }
+    &:first-child:before {
+      content:"";
+    }
+  }
+}
 
 ion-item.gallery { 
   display: flex;

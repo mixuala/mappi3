@@ -9,13 +9,24 @@ ion-card {
 ion-card.marker-group {
   ion-item {
     --padding-start: 0;
-  }
-  ion-chip.marker {
-    height: 24px;
-    padding: 0px;
-    margin-right: 0px;
-    ion-label {
-      margin:0
+    .marker-wrap {   
+      // eliminate CSS flash
+      padding: 0px;
+      margin: 0px;
+      --border-radius: 8px;
+      --padding-start: .5em;
+      --padding-end: .5em;
+      --height: 24px;
+      font-size: 13px;
+      --margin-start: 0;
+      --margin-end: 16px;
+      ion-chip.marker {
+        padding: 0px;
+        margin-right: 0px;
+        ion-label {
+          margin:0px;
+        }
+      }
     }
   }
   ion-card-content {

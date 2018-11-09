@@ -49,7 +49,7 @@
   <ion-card class="marker-group layout-gallery" *ngSwitchCase="'gallery'">
     <ion-card-header color="secondary">
       <ion-item >
-        <ion-button (click)="selectMarkerGroup(marker, $event)">
+        <ion-button class="marker-wrap" size="small" (click)="selectMarkerGroup(marker, $event)">
           <ion-chip class="marker" color="primary" fill="solid">
             <ion-icon name="pin" slot="start"></ion-icon>
             <ion-label>{{marker.seq+1}}</ion-label>
@@ -102,7 +102,7 @@
   <ion-card class="marker-group layout-share" *ngSwitchCase="'share'">
       <ion-card-header padding-vertical color="secondary">
         <ion-item>
-          <ion-button (click)="selectMarkerGroup(marker, $event)">
+          <ion-button class="marker-wrap" (click)="selectMarkerGroup(marker, $event)">
             <ion-chip class="marker" color="primary" fill="solid">
               <ion-icon name="pin" slot="start"></ion-icon>
               <ion-label>{{marker.seq+1}}</ion-label>

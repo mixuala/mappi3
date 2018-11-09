@@ -183,7 +183,7 @@ export class GoogleMapsComponent implements OnInit {
         }
       });
     });
-    if (setInitialMapZoom) this.mode['initialZoom'] = this.map.getZoom();
+    if (setInitialMapZoom) this.mode['initialZoom'] = Math.max(minZoom , this.map.getZoom());
 
     const padding= {left:60, right:60, top:40, bottom:40};
     if (this.mode['resetBounds']!==false){

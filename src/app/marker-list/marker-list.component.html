@@ -12,25 +12,30 @@
             </ion-button>
           </ion-buttons>
       </ion-toolbar>
-      <ion-item>
-          
-        <ion-buttons >
-          <ion-button color="primary" fill="outline" slot="start">
-              <ion-icon name="pin"></ion-icon>
-              <ion-badge color="primary">{{mList.markerGroupIds.length}}</ion-badge>
-          </ion-button>
-        </ion-buttons>
-      </ion-item>
     </ion-card-header>
 
     <ion-card-content>
-      
-      <ion-label>
-        <p>{{ humanize.position(mList) | json }}</p>
-      </ion-label>
-      <ion-label *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
-        {{mg.label}}
-      </ion-label>
+        <ion-item>
+          <ion-button slot="start" class="marker-wrap">
+            <ion-chip class="marker" color="primary" fill="solid">
+              <ion-icon name="pin" slot="start"></ion-icon>
+              <ion-label>{{mList.markerGroupIds.length}}</ion-label>
+            </ion-chip>
+          </ion-button>
+          <ion-label>
+            <p>{{ humanize.position(mList) | json }}</p>
+          </ion-label>
+        </ion-item>
+
+        <ion-item lines="none">
+          <ion-label text-wrap>
+            <ul class="inline-with-disc">
+              <li *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
+                {{mg.label}}
+              </li>
+            </ul> 
+          </ion-label>
+        </ion-item>  
 
       <ion-item class="gallery"  (click)="nav(mList)">
         <ng-container *ngFor="let mg of getSubjByParentUuid_Watch$(mList.uuid) | async">
