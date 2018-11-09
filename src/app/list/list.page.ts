@@ -307,6 +307,9 @@ export class ListPage implements OnInit {
     switch(change.action){
       case 'selected':
         return this.selectedMarkerList = change.data.uuid;
+      case 'prompt':
+        // Prompt.getText() already committed, just reload
+        return this._mListSub.reload();
       case 'remove':
         const item:IRestMarker = mLists.find(o=>o.uuid==change.data.uuid);
         RestyTrnHelper.childComponentsChange(change, this._mListSub);

@@ -148,10 +148,11 @@ export class Prompt {
   static async getText(label:string, key:string, o:IRestMarker, dataService:MockDataService):Promise<IMarker[]>{
     const resp =  window.prompt(`Enter ${label}:`);
     if (!resp) return;
-    o[key] = resp;
-    o['_rest_action'] = o['_rest_action'] || 'put'; 
     const subj = MockDataService.getSubjByUuid(o.uuid);
-    RestyTrnHelper.childComponentsChange({data:o, action:'update'}, subj);
+    const found = subj.value().find(m=>m.uuid==o.uuid);
+    found[key] = resp;
+    found['_rest_action'] = found['_rest_action'] || 'put'; 
+    RestyTrnHelper.childComponentsChange({data:found, action:'update'}, subj);
     if (!dataService) 
       return Promise.resolve([o]);
 

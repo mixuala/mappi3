@@ -185,6 +185,13 @@ export class MarkerListComponent implements OnInit {
     if (ev.clientX > 100) return;
     if (target=='ION-BUTTON') return;
     const changes = await Prompt.getText('label', 'label', this.mList, this.dataService);
+    if (changes.length){
+      this.mListChange.emit({data:this.mList, action:'prompt'})
+      // const subj = MockDataService.getSubjByUuid(this.mList.uuid);
+      // await subj.reload();
+      this.cd.detectChanges();
+    }
+    
     ev.preventDefault();
   }
 
