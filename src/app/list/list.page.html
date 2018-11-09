@@ -20,6 +20,15 @@
   </ion-toolbar>
 </ion-header>
 
+<ion-header class="google-maps-wrap hide">
+    <app-google-maps #gmap *ngIf="markerCollection$ | async as items"
+    [items]="items"
+    [mode]="mapSettings"
+    [selected]="selectedMarkerList"
+    (selectedChange)="handle_MapMarkerSelected($event)"
+    ></app-google-maps>
+  </ion-header>
+
 <ion-content>
     
     <!-- list -->

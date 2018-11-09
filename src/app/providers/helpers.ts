@@ -22,6 +22,7 @@ export class AppConfig {
   static map: google.maps.Map;
   static mapKey: string;
   static mapReady: Promise<google.maps.Map>; // set in GoogleMapsHostComponent
+  static initialMapZoom:number = 4;
 
   // init config "constants"
   static init = setTimeout( () => {

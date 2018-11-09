@@ -239,6 +239,21 @@ export class SharePage implements OnInit, IViewNavEvents {
     return await Browser.open({url:url})
   }
 
+
+  /**
+   * set MarkerList position to mapCenter
+   * @param mL 
+   */
+  private _patch_MarkerListPosition(mL:IMarkerList){
+    setTimeout( ()=>{
+      const {lat, lng} = AppConfig.map.getCenter().toJSON();
+      mL.loc = [lat,lng];
+      mL.locOffset = [0,0];
+      mL.position = MappiMarker.position(mL);
+      this.dataService.MarkerLists.put(mL.uuid, mL);
+    },1000);
+  }
+
   async ngOnInit() {
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
@@ -265,6 +280,7 @@ export class SharePage implements OnInit, IViewNavEvents {
           if (o.length) {
             this.parent = o[0] as IMarkerList;
             this.stash.activeView = true;
+            // this._patch_MarkerListPosition(this.parent);  // DEV
             return mgSubj.get$(this.parent.markerGroupIds);
           } 
           return Observable.create();

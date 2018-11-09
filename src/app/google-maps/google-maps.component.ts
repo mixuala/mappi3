@@ -154,19 +154,12 @@ export class GoogleMapsComponent implements OnInit {
 
     if (visible.length) {
       // console.warn(`setMapBoundsWithMinZoom: ${this.map['id']}`)
-      const minZoom = (items.length == 1) ? 13 : 15;
+      const minZoom = this.mode['initialZoom'] || ( (items.length == 1) ? 13 : 15 );
       this.setMapBoundsWithMinZoom(visible, minZoom);
     }
   }
 
   public setMapBoundsWithMinZoom(markers:IMarker[], defaultMinZoom=15){
-    // adjust google.maps.LatLngBounds
-    const bounds = new google.maps.LatLngBounds(null);
-    markers.forEach(o=>{
-      // console.log("bounds.extend()", MappiMarker.position(o))
-      bounds.extend(MappiMarker.position(o));
-    });
-    console.log(`* bounds.extend, count=${markers.length}, bounds=`, bounds)
 
     // This is needed to set the zoom after fitbounds, 
     // begin with zoom=15
@@ -174,6 +167,7 @@ export class GoogleMapsComponent implements OnInit {
     const minZoom = Math.max(this.mode['initialZoom'] || defaultMinZoom);
 
     let _first_zoom_change = true; // mapZoom changes asynchronously
+    // TODO:  use Observable.fromEventPattern() with debounceTime/throttleTime???
     const listen_zoom = google.maps.event.addListener(this.map, 'zoom_changed', ()=>{
       google.maps.event.addListenerOnce(this.map, 'bounds_changed', (event)=> {
         if (setInitialMapZoom) this.mode['initialZoom'] = this.map.getZoom();
@@ -189,9 +183,19 @@ export class GoogleMapsComponent implements OnInit {
         }
       });
     });
-    const padding= {left:60, right:60, top:40, bottom:40};
-    this.map.fitBounds(bounds,padding);
     if (setInitialMapZoom) this.mode['initialZoom'] = this.map.getZoom();
+
+    const padding= {left:60, right:60, top:40, bottom:40};
+    if (this.mode['resetBounds']!==false){
+      // adjust google.maps.LatLngBounds, default true
+      const bounds = new google.maps.LatLngBounds(null);
+      markers.forEach(o=>{
+        // console.log("bounds.extend()", MappiMarker.position(o))
+        bounds.extend(MappiMarker.position(o));
+      });
+      console.log(`* bounds.extend, count=${markers.length}, bounds=`, bounds)
+      this.map.fitBounds(bounds,padding);  // triggers 'zoom_changed'
+    }
     setTimeout( ()=>{listen_zoom.remove()}, 1000)
   }
 

@@ -9,6 +9,7 @@ import { GoogleMapsReady } from '../providers/mappi/google-maps-ready';
 import { AppConfig } from '../providers/helpers';
 
 const { Geolocation } = Plugins;
+const INITIAL_MAP_ZOOM = 10;
 
 @Component({
   selector: 'app-google-maps-host',
@@ -24,7 +25,7 @@ export class GoogleMapsHostComponent implements OnInit {
   public static currentLoc: google.maps.LatLng;
 
   public map: google.maps.Map;
-  public mapReady: Promise<google.maps.Map>;
+  public mapReady: Promise<google.maps.Map>;   // resolved after map `idle` event
 
   private _mapDeferred: { 
     promise:  Promise<google.maps.Map>, 
@@ -70,16 +71,28 @@ export class GoogleMapsHostComponent implements OnInit {
 
   // get current position as mapCenter and create map
   private _loadMap(): Promise<google.maps.Map> { 
-    // get map center then resolve
+    // get map center before rendering first Map
     return GoogleMapsHostComponent.getCurrentPosition()
     .then ( (position)=>{
       const mapOptions:google.maps.MapOptions = {
-        zoom: 15,
+        zoom: AppConfig.initialMapZoom || INITIAL_MAP_ZOOM,
         center: position,
       };
       this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
+      const mapIdle = this._waitForMapIdle();
       this.map['id'] = this.map['id'] || `gmap-${Date.now() % 99}`;
-      return this.map;
+      return mapIdle;
+    });
+  }
+
+  /**
+   * the map is first rendered and ready to use on `idle`
+   */
+  private _waitForMapIdle():Promise<google.maps.Map> {
+    return new Promise<google.maps.Map>( (resolve, reject)=>{
+      google.maps.event.addListenerOnce(this.map, 'idle', (event)=> {
+        resolve(this.map);
+      });
     });
   }
 
