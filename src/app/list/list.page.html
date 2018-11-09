@@ -7,8 +7,11 @@
       Maps
     </ion-title>
     <ion-buttons slot="end">
-        <ion-button fill="outline" (click)="createOpenMarkerList($event)" *ngIf="layout!='edit'">
-          <ion-icon name="add" slot="icon-only"></ion-icon>
+      <ion-button fill="outline" (click)="createOpenMarkerList($event)" *ngIf="layout!='edit'">
+        <ion-icon name="add" slot="icon-only"></ion-icon>
+      </ion-button>
+        <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
+          <ion-icon name="list" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='edit'">
           <ion-icon name="checkmark" slot="icon-only"></ion-icon>
@@ -33,6 +36,9 @@
     
     <!-- list -->
     <ng-container [ngSwitch]="layout">
+
+
+      <!-- list mode -->
       <ion-grid no-padding *ngSwitchCase="'default'">
           <ion-row>
               <ion-col size="12" size-sm="6" size-xl="4" 
@@ -45,41 +51,28 @@
 
               </ion-col>
           </ion-row>
-          <!-- <ion-row>
-            <ion-col size="12" size-sm="6" size-xl="4">
-              <ion-item class="add-marker-list wrap-btn-as-thumbnail" (click)="createMarkerList($event)">
-                <ion-button class="as-thumbnail" slot="start" expand="full" size="large">
-                  <ion-icon slot="icon-only" name="add"></ion-icon>
-                </ion-button>
-                <ion-label color="primary"> Add Map </ion-label>
-              </ion-item>
-            </ion-col>
-          </ion-row> -->
       </ion-grid>
       
       
       <ion-grid no-padding  *ngSwitchCase="'edit'">
         <ion-row>
           <ion-col size="12" size-sm="8" offset-sm="2" size-xl="6" offset-xl="3">
-            <ion-reorder-group 
-            [disabled]="layout!='edit'" 
-            (ionItemReorder)="reorderMarkerList($event)">
-            <!-- NOTE: ion-reorder does NOT drag-drop app-markger-group unless wrapped by ion-list -->
-            <ion-list *ngFor="let item of mListCollection$ | async" >
-              <app-marker-list *ngIf="item?._rest_action!='delete'"
-                [mList]=item [parentLayout]="layout" 
-                (mListChange)="childComponentsChange($event)"
-                [(mListFocus)]="mListFocus" ></app-marker-list>
-            </ion-list>
-            <ion-list>
-              <ion-item class="add-marker-item wrap-btn-as-thumbnail" (click)="createMarkerList($event)">
+            <ion-list #markerListList>
+              <ng-container *ngFor="let item of mListCollection$ | async" >
+                <app-marker-list *ngIf="item?._rest_action!='delete'"
+                  [mList]=item [parentLayout]="layout" 
+                  (mListChange)="childComponentsChange($event)"></app-marker-list>
+              </ng-container>
+
+              <ion-item class="add-marker-item wrap-btn-as-thumbnail" (click)="createOpenMarkerList($event)">
                 <ion-button  class="as-thumbnail" slot="start" expand="full" size="large">
                   <ion-icon slot="icon-only" name="add"></ion-icon>
                 </ion-button>
                 <ion-label color="primary"> Add Map </ion-label>
               </ion-item>
+
             </ion-list>                  
-          </ion-reorder-group>
+
         </ion-col>
       </ion-row>
     </ion-grid>

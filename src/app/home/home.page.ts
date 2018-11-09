@@ -134,7 +134,7 @@ export class HomePage implements OnInit, IViewNavEvents {
 
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
-                        .pipe( skipWhile( ()=>!this.stash.activeView) );
+        .pipe( skipWhile( ()=>!this.stash.activeView) );
       
     // initialize subjects
     await Promise.all([this.dataService.ready(), AppConfig.mapReady]);

@@ -11,15 +11,6 @@ ion-grid {
   }
 }
 
-/**
- * set layout dims on google maps container, google maps will fit inside
- */
- #google-maps-host, ion-header.google-maps-wrap {
-  height: var(--google-map-height);
-  width: 100vw;
-}
-
-
 ion-reorder-group > ion-list {
   margin: 0;
 }

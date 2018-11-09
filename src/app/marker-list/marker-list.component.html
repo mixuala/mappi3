@@ -1,6 +1,7 @@
 
 <div [ngSwitch]="layout" *ngIf="(markerList$ | async) as mList">
 
+  <!-- default gallery view -->
   <ion-card *ngSwitchCase="'gallery'">
     <ion-card-header (click)="getTitle($event)">
       <ion-toolbar color="primary">
@@ -51,7 +52,7 @@
     </ion-card-content>
   </ion-card>
 
-  <!-- mode='edit': support ion-reorder and ion-item-sliding -->
+  <!-- mode='edit': remove owned maps -->
   <ion-item-sliding *ngSwitchCase="'edit'">
       <ion-item>
         <ng-container *ngIf="mList.markerGroupIds.length; else edit_pinIcon">
@@ -79,7 +80,7 @@
       </ion-item>  
   
       <ion-item-options>
-        <ion-item-option color="danger" slot="top" (click)="removeMarkerGroup(marker)">
+        <ion-item-option color="danger" slot="top" (click)="removeMarkerList(mList)">
           <ion-icon name="trash" slot="top"></ion-icon>
           <ion-label>Delete</ion-label>
         </ion-item-option>

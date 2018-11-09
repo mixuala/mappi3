@@ -3,6 +3,7 @@ import { Component, OnInit, Input, Output, ViewChild,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
+import { List } from '@ionic/angular';
 import { Observable, BehaviorSubject, Subject, fromEventPattern } from 'rxjs';
 import { filter, skipWhile, takeUntil, switchMap, map, debounceTime } from 'rxjs/operators';
 
@@ -42,6 +43,8 @@ export class ListPage implements OnInit {
   public markerCollection$ : Observable<IMarker[]>;
   public unsubscribe$ : Subject<boolean> = new Subject<boolean>();
   public stash:any = {};
+
+  @ViewChild('markerListList') slidingList: List;
 
   private _mListSub: SubjectiveService<IMarkerList>;
   
@@ -300,26 +303,31 @@ export class ListPage implements OnInit {
    */
   childComponentsChange( change: {data:IMarker, action:string}){
     if (!change.data) return;
+    const mLists = this._mListSub.value();
     switch(change.action){
       case 'selected':
         return this.selectedMarkerList = change.data.uuid;
-      default:
-        return RestyTrnHelper.childComponentsChange(change, this._mListSub);
+      case 'remove':
+        const item:IRestMarker = mLists.find(o=>o.uuid==change.data.uuid);
+        RestyTrnHelper.childComponentsChange(change, this._mListSub);
+        return this.slidingList.closeSlidingItems();
     }
   }
 
 
-  applyChanges(action:string):Promise<IMarker[]> {
-    return RestyTrnHelper.applyChanges(action, this._mListSub, this.dataService)
-    .then( (items)=>{
-      // post-save actions
-      switch(action){
-        case "commit":
-          return this.dataService.sjMarkerLists.reload()
-          .then( ()=>items )
-      }
-      return items;
-    });
+  /**
+   * 
+   * @param action 
+   */
+  async applyChanges(action:string):Promise<IMarker[]> {
+    const commitSubj: SubjectiveService<IRestMarker> = this._mListSub;
+    switch(action){
+      case "commit":
+        const committed = await RestyTrnHelper.applyChanges(action, commitSubj, this.dataService);
+        return committed;
+      case "rollback":
+        return this._mListSub.reload(undefined, false);
+    }
   }
 
 }
