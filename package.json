@@ -31,7 +31,7 @@
     "@ionic-native/qr-scanner": "^5.0.0-beta.21",
     "@ionic-native/splash-screen": "^5.0.0-beta.21",
     "@ionic-native/status-bar": "^5.0.0-beta.21",
-    "@ionic/angular": "^4.0.0-beta.11",
+    "@ionic/angular": "^4.0.0-beta.15",
     "@types/photoswipe": "^4.0.28",
     "angularx-qrcode": "^1.2.4",
     "cordova-ios": "4.5.5",

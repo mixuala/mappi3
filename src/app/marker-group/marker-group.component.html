@@ -2,14 +2,11 @@
   <!-- layout={{layout}} -->
   <!-- 'focus-marker-group' view -->
   <ion-card *ngSwitchCase="'focus-marker-group'">
-    <ion-card-header color="secondary">
-      <ion-item color="primary" class="menu-commit-rollback sticky">
+    <ion-card-header>
+      <ion-item class="menu-commit-rollback sticky">
         <ion-icon name="pin" slot="start" color="primary"></ion-icon>
-        <ion-label>{{ marker.label || marker.seq+1 }}</ion-label>
+        <ion-label  color="primary" >{{ marker.label }}</ion-label>
         <ion-buttons slot="end">
-          <ion-button  color="light" fill="outline" (click)="toggleEditMode()" *ngIf="layout!='focus-marker-group'">
-            <ion-icon name="list" slot="icon-only"></ion-icon>
-          </ion-button>
           <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='focus-marker-group'">
             <ion-icon name="checkmark" slot="icon-only"></ion-icon>
           </ion-button>
@@ -47,16 +44,16 @@
 
   <!-- 'gallery' view -->
   <ion-card class="marker-group layout-gallery" *ngSwitchCase="'gallery'">
-    <ion-card-header color="secondary">
+    <ion-card-header>
       <ion-item >
-        <ion-button class="marker-wrap" size="small" (click)="selectMarkerGroup(marker, $event)">
+        <ion-button class="marker-wrap"  color="primary" (click)="selectMarkerGroup(marker, $event)">
           <ion-chip class="marker" color="primary" fill="solid">
             <ion-icon name="pin" slot="start"></ion-icon>
             <ion-label>{{marker.seq+1}}</ion-label>
           </ion-chip>
         </ion-button>
         &nbsp;
-        <ion-label>
+        <ion-label color="primary" >
           <h3>
             <ion-text color="primary">{{ marker.label || marker.seq+1 }}</ion-text>
           </h3>
@@ -100,27 +97,27 @@
 
   <!-- 'share' view, readonly -->
   <ion-card class="marker-group layout-share" *ngSwitchCase="'share'">
-      <ion-card-header padding-vertical color="secondary">
+      <ion-card-header padding-vertical>
         <ion-item>
-          <ion-button class="marker-wrap" (click)="selectMarkerGroup(marker, $event)">
-            <ion-chip class="marker" color="primary" fill="solid">
+          <ion-button class="marker-wrap"  color="primary" (click)="selectMarkerGroup(marker, $event)">
+            <ion-chip class="marker"  color="primary" >
               <ion-icon name="pin" slot="start"></ion-icon>
               <ion-label>{{marker.seq+1}}</ion-label>
             </ion-chip>
           </ion-button>
           &nbsp;
-          <ion-label>
+          <ion-label color="primary" >
             <h3>
-              <ion-text color="primary">{{ marker.label || marker.seq+1 }}</ion-text>
+              <ion-text>{{ marker.label || marker.seq+1 }}</ion-text>
             </h3>
           </ion-label>
-          <ion-buttons slot="end">
+          <ion-buttons slot="end" >
             <ion-button color="primary" fill="outline" (click)="toggleFavorite()">
               <ion-icon [name]="stash.favorite ? 'heart' : 'heart-empty'" slot="icon-only" ></ion-icon>
             </ion-button>
-            <ion-button color="primary" fill="outline">
+            <!-- <ion-button color="primary" fill="outline">
               <ion-icon name="share" slot="icon-only" ></ion-icon>
-            </ion-button>
+            </ion-button> -->
           </ion-buttons>
         </ion-item>
       </ion-card-header>
@@ -186,7 +183,7 @@
 
   <!-- (UNUSED) mode='list': show markerItem details -->
   <ion-card *ngSwitchCase="'list'">
-    <ion-card-header color="secondary">
+    <ion-card-header>
       <ion-item>
         <ion-icon name="pin" slot="icon-only" color="primary"></ion-icon>
         <ion-label color="primary">{{ marker.label || obj2String(marker.position) }}</ion-label>
