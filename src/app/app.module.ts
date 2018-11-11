@@ -28,6 +28,8 @@ import { PhotoService } from './providers/photo/photo.service';
 import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
 // import { MappiImageComponent } from './mappi-image/mappi-image.component';
 import { ImgSrc, DataURLPipe } from './providers/photo/imgsrc.service';
+import { ServiceWorkerModule } from '@angular/service-worker';
+import { environment } from '../environments/environment';
 
 
 
@@ -37,6 +39,7 @@ import { ImgSrc, DataURLPipe } from './providers/photo/imgsrc.service';
     CommonModule,
     FormsModule,
     IonicModule,
+    ServiceWorkerModule.register('ngsw-worker.js', { enabled: environment.production }),
   ],
   declarations: [
     MarkerListComponent,
