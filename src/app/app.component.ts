@@ -50,7 +50,7 @@ export class AppComponent {
     this.initializeApp();
   }
 
-  async reset(raw:string){
+  async reset(raw?:string){
     Storage.clear();
     AppCache.for('ImgSrc').reset();
     AppCache.for('Cameraroll').reset();

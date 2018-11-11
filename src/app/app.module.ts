@@ -73,7 +73,8 @@ export class SharedComponentModule {}
     SplashScreen,
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     MappiService,
-    MockDataService, RestyService, SubjectiveService,
+    // RestyService, 
+    MockDataService, SubjectiveService,
     PhotoService, PhotoLibrary, ImgSrc
   ],
   bootstrap: [AppComponent]

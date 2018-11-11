@@ -107,7 +107,10 @@ export class GoogleMapsHostComponent implements OnInit {
         return GoogleMapsHostComponent.currentLoc = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
       }, 
       (err) => {
-        if (err.message.startsWith("Origin does not have permission to use Geolocation")) {
+        let isGeoLocationError = false;
+        if (err.message=="User denied Geolocation") isGeoLocationError=true;
+        if (err.message.startsWith("Origin does not have permission to use Geolocation")) isGeoLocationError=true;
+        if (isGeoLocationError) {
           console.warn("Geolocation error, using test data");
           const position = {latitude: 3.1581906, longitude: 101.7379296};
           GoogleMapsHostComponent.currentLoc = new google.maps.LatLng(position.latitude, position.longitude);

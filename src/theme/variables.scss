@@ -129,13 +129,17 @@
     top: var(--google-map-height);
   }
 
-  @at-root.landscape {
-    & ion-split-pane.content-right-if-mq-landscape {
-      top: var(--ion-safe-area-top);
-      left: var(--google-map-landscape-right);
-    }
-    & .ion-page ion-header ion-toolbar:first-child {
-      padding-top: 0px;
+  @media only screen 
+  and (max-width: 991px)
+  {  
+    @at-root.landscape {
+      & ion-split-pane.content-right-if-mq-landscape {
+        top: var(--ion-safe-area-top);
+        left: var(--google-map-landscape-right);
+      }
+      & .ion-page ion-header ion-toolbar:first-child {
+        padding-top: 0px;
+      }
     }
   }
 
