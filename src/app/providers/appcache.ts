@@ -3,27 +3,18 @@
  */
 import { Plugins } from '@capacitor/core';
 
-import { SubjectiveService } from './subjective.service';
-import {PhotoLibraryHelper } from './photo/photo.service';
-import {ImgSrc} from './photo/imgsrc.service';
-
-import { IPhoto, IMarker } from './mock-data.service';
-import { IImgSrc, IImgSrcItem } from './photo/imgsrc.service';
-import { IMappiLibraryItem, IMoment, IExifPhoto } from './photo/photo.service';
+import {
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
+  IImgSrc, IImgSrcItem,
+  IMappiLibraryItem, IMoment, IExifPhoto,
+  IMarkerSubject,
+} from './types';
 
 const { Storage } = Plugins;
 
 
-export interface IMarkerSubject {
-  uuid: string,
-  self: SubjectiveService<IMarker>;   // TODO: refactor, use siblings
-  child: SubjectiveService<IMarker>;  // TODO: refactor, use children
-}
-
 
 export class CacheByKey<T> {
-
-
 
   constructor(options:any){
     const {className, storage} = options;

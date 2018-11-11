@@ -5,116 +5,18 @@ import { Observable, BehaviorSubject } from 'rxjs';
 import * as Camera from '@ionic-native/camera/ngx';
 import { PhotoLibrary, LibraryItem, AlbumItem, GetLibraryOptions, GetThumbnailOptions } from '@ionic-native/photo-library/ngx';
 
-
-
+import { 
+  IPhoto, 
+  IMoment, IExifPhoto, IMappiLibraryItem, IMappiGetLibraryOptions, IMappiGetThumbnailOptions, IChoosePhotoOptions,
+} from '../types'
 import { AppConfig, ScreenDim } from '../helpers';
-import { MockDataService, RestyTrnHelper, IPhoto } from '../mock-data.service';
-import { SubjectiveService } from '../subjective.service';
+import { MockDataService, RestyTrnHelper } from '../mock-data.service';
 import { MappiMarker } from '../mappi/mappi.service';
-import { GoogleMapsHostComponent } from '../../google-maps/google-maps-host.component';
 import { AppCache } from '../appcache';
 
 // import * as PhotoLibraryCordova from '../../../../node_modules/cordova-plugin-photo-library/PhotoLibrary';
 
 let PhotoLibraryCordova:any = null;
-
-export interface IMoment extends AlbumItem {
-  locations: string[]; // comma delimited
-  startDate: Date;
-  endDate: Date;
-  itemIds: string[];
-}
-
-// export interface IPhotoLibraryMappi extends PhotoLibrary {
-//   getMoments:(from?:string, to?:string)=>Promise<IMoment[]>
-// }
-
-export interface IExifPhoto {
-  src: string,
-  orientation: number,
-  exif?: {
-    DateTimeOriginal: string,
-    PixelXDimension: number,
-    PixelYDimension: number,
-    [propName:string]: any,
-  },
-  gps?: {
-    lat: number,
-    lng: number,
-    speed?: number
-    [propName:string]: any,
-  },
-  tiff?: {
-    Orientation: number,
-    [propName:string]: any,
-  },
-
-  // TODO: move to _calcImgSrcDim(options)
-  targetWidth?: number,
-  targetHeight?: number,
-
-  [propName: string]: any;
-}
-
-export interface IThumbSrc {
-  width?:string;
-  height?:string;
-  src?: string;
-  style?: {'width.px':string, 'height.px':string};
-  title?: string;
-  alt?: string;
-  loading?: Promise<string>;
-}
-
-// update/extend interface definition
-export interface IMappiGetLibraryOptions extends GetLibraryOptions {
-  itemIds?: string[];         // get by LibraryItem.id
-  includeImages?: boolean;
-  includeCloudData?: boolean;
-  maxItems?: number;
-}
-
-export interface IMappiGetThumbnailOptions extends GetThumbnailOptions {
-  dataURL: boolean;
-  maxItems?: number;
-}
-
-
-
-export interface IMappiLibraryItem extends LibraryItem {
-  // e.g. "/Users/[...]/Devices/A11DA2A5-D033-40AA-BEE1-E2AA8281B774/data/Media/DCIM/100APPLE/IMG_0004.JPG"
-  orientation?:number,
-  '{Exif}'?:{
-    DateTimeOriginal:string,
-    PixelXDimension:number,
-    PixelYDimension:number,
-  },
-  '{GPS}'?:{
-    Altitude: number,
-    Latitude: number,
-    Longitude: number,
-    Speed: number,
-  },
-  '{TIFF}'?:{
-    Artist:string,
-    Copyright:string,
-    Orientation:number,
-  }
-  isFavorite?: boolean;
-  representsBurst?: boolean;
-  filePath?: string;
-  momentId?: string;        
-  _photo?: IPhoto;      // deprecate
-}
-
-export interface IChoosePhotoOptions {
-  moments?:IMoment[]; 
-  positions?:{lat:number, lng:number}[];
-  bounds?:google.maps.LatLngBounds; 
-  except?:string[];   // IMappiLibraryItem.id[] 
-  provider?: string;
-}
-
 
 
 const PHOTO_LIBRARY_WAIT_LIMIT = 100;   // PhotoLibrary elements to load before returning

@@ -3,24 +3,23 @@ import { Component, OnInit, ViewChild,
   ChangeDetectionStrategy, ChangeDetectorRef, ViewEncapsulation,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject, BehaviorSubject, Subscription } from 'rxjs';
+import { Observable, Subject, BehaviorSubject, } from 'rxjs';
 import { takeUntil, switchMap, skipWhile } from 'rxjs/operators';
 import { AlertController, ActionSheetController } from '@ionic/angular';
 import { Plugins } from '@capacitor/core';
 import { LaunchNavigator, LaunchNavigatorOptions } from '@ionic-native/launch-navigator/ngx';
 
+import {
+  IMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions,
+} from '../providers/types'
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, } from '../providers/mappi/mappi.service';
-import * as mappi from '../providers/mappi/mappi.types';
-import  { MockDataService, RestyTrnHelper, quickUuid,
-  IMarkerGroup, IPhoto, IMarker, IRestMarker, IMarkerList,
-} from '../providers/mock-data.service';
+import  { MockDataService, RestyTrnHelper, quickUuid, } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { PhotoService, IExifPhoto } from '../providers/photo/photo.service';
+import { PhotoService,  } from '../providers/photo/photo.service';
 import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
-import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
+import { GoogleMapsComponent,  } from '../google-maps/google-maps.component';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
 import { AppConfig, ScreenDim } from '../providers/helpers';
 
 const { App, Browser, Device } = Plugins;

@@ -2,8 +2,8 @@ import { Injectable } from '@angular/core';
 import { Observable, BehaviorSubject } from 'rxjs';
 import { takeUntil,  map } from 'rxjs/operators';
 
+import { IPhoto, } from './types';
 import { RestyService } from './resty.service';
-import { IPhoto } from './mock-data.service';
 import { AppCache } from './appcache';
 
 @Injectable({

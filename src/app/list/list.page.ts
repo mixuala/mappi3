@@ -7,14 +7,14 @@ import { List } from '@ionic/angular';
 import { Observable, BehaviorSubject, Subject, fromEventPattern } from 'rxjs';
 import { filter, skipWhile, takeUntil, switchMap, map, debounceTime } from 'rxjs/operators';
 
-import { IViewNavEvents } from "../app-routing.module";
+import {
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions,
+} from '../providers/types';
 import  { 
   MockDataService, RestyTrnHelper, quickUuid,
-  IMarker, IMarkerGroup, IPhoto, IMarkerList, IRestMarker,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { PhotoService, PhotoLibraryHelper, IMappiLibraryItem, } from '../providers/photo/photo.service';
-import { GoogleMapsComponent, IMapActions } from '../google-maps/google-maps.component';
+import { PhotoService, PhotoLibraryHelper, } from '../providers/photo/photo.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { AppConfig } from '../providers/helpers';

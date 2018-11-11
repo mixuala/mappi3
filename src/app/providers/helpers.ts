@@ -2,10 +2,9 @@ import { Observable, ReplaySubject } from 'rxjs';
 import { DeviceInfo } from '@capacitor/core';
 import { Platform } from '@ionic/angular';
 
-import { MockDataService, RestyTrnHelper,
-  IMarker, IRestMarker, IPhoto,
-} from './mock-data.service';
-import { IMappiMarker } from './mappi/mappi.types';
+import {
+  IMarker, IPhoto,
+} from './types'
 
 /**
  * stash App (mostly) constants here. 
@@ -143,23 +142,6 @@ export class ScreenDim {
 
 }
 
-
-export class Prompt {
-  static async getText(label:string, key:string, o:IRestMarker, dataService:MockDataService):Promise<IMarker[]>{
-    const resp =  window.prompt(`Enter ${label}:`);
-    if (!resp) return;
-    const subj = MockDataService.getSubjByUuid(o.uuid);
-    const found = subj.value().find(m=>m.uuid==o.uuid);
-    found[key] = resp;
-    found['_rest_action'] = found['_rest_action'] || 'put'; 
-    RestyTrnHelper.childComponentsChange({data:found, action:'update'}, subj);
-    if (!dataService) 
-      return Promise.resolve([o]);
-
-    const changed = await RestyTrnHelper.applyChanges('commit', subj, dataService);
-    return changed;
-  }
-}
 
 export class Humanize {
 

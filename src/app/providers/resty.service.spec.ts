@@ -9,7 +9,7 @@ describe('RestyService', () => {
     });
   });
 
-  it('should be created', inject([RestyService], (service: RestyService) => {
+  it('should be created', inject([RestyService], (service: RestyService<any>) => {
     expect(service).toBeTruthy();
   }));
 });

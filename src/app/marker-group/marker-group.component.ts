@@ -6,14 +6,17 @@ import { List } from '@ionic/angular';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-
-import { MockDataService, RestyTrnHelper, IMarkerGroup, IPhoto, IMarker, IRestMarker } from '../providers/mock-data.service';
+import {
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
+  IMoment, IChoosePhotoOptions,
+} from '../providers/types';
+import { MockDataService, RestyTrnHelper, Prompt, } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
-import { PhotoService, IMoment, IChoosePhotoOptions } from '../providers/photo/photo.service';
+import { PhotoService,  } from '../providers/photo/photo.service';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { AppConfig, ScreenDim, Humanize, Prompt } from '../providers/helpers';
+import { AppConfig, ScreenDim, Humanize } from '../providers/helpers';
 import { AppCache } from '../providers/appcache';
 
 

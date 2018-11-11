@@ -5,23 +5,18 @@ import { Observable, } from 'rxjs';
 import { DOCUMENT } from '@angular/platform-browser';
 import { Plugins } from '@capacitor/core';
 
-import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { ScreenDim, AppConfig } from '../providers/helpers';
 import { MappiService, ListenerWrapper, MappiMarker, } from '../providers/mappi/mappi.service';
-import * as mappi from '../providers/mappi/mappi.types';
 
-import  { MockDataService, IMarkerGroup,  IPhoto, IMarker, RestyTrnHelper } from '../providers/mock-data.service';
+import { 
+  IMarker, IMarkerGroup, 
+  IUuidMarker, IMappiMarker, IListenerController, IMapActions,
+} from '../providers/types';
+import  { MockDataService, RestyTrnHelper } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 
 
 const { Geolocation } = Plugins;
-
-export interface IMapActions {
-  dragend?: boolean;  //  ((m:IMarker)=>void);
-  click?:  boolean;  //  ((m:IMarker)=>void);
-  dblclick?:  boolean;  //  ((m:IMarker)=>void);
-  [propName: string]: any;
-}
 
 @Component({
   selector: 'app-google-maps',
@@ -33,11 +28,11 @@ export interface IMapActions {
 })
 export class GoogleMapsComponent implements OnInit {
 
-  @Input() items: mappi.IMappiMarker[];
+  @Input() items: IMappiMarker[];
   @Input() mode: IMapActions = {};
   @Input() selected:string;
 
-  @Output() itemChange: EventEmitter<{data:mappi.IMappiMarker,action:string}> = new EventEmitter<{data:mappi.IMappiMarker,action:string}>();
+  @Output() itemChange: EventEmitter<{data:IMappiMarker,action:string}> = new EventEmitter<{data:IMappiMarker,action:string}>();
   @Output() selectedChange: EventEmitter<string> = new EventEmitter<string>();
   
   public map: google.maps.Map;
@@ -149,7 +144,7 @@ export class GoogleMapsComponent implements OnInit {
     const hidden = MappiMarker.except(visible, AppConfig.map['id']);
     MappiMarker.hide(hidden);
     visible.forEach( (marker,i)=>{
-      this.addOneMarker(marker as mappi.IMappiMarker);
+      this.addOneMarker(marker as IMappiMarker);
     })
 
     if (visible.length) {
@@ -199,7 +194,7 @@ export class GoogleMapsComponent implements OnInit {
     setTimeout( ()=>{listen_zoom.remove()}, 1000)
   }
 
-  public addOneMarker(mm:mappi.IMappiMarker): void {
+  public addOneMarker(mm:IMappiMarker): void {
     const self = this;
     const position = MappiMarker.position(mm);
     const mapId = this.map['id'];
@@ -238,7 +233,7 @@ export class GoogleMapsComponent implements OnInit {
   }
  
 
-  public listen_Click(mm:mappi.IMappiMarker):mappi.IListenerController{
+  public listen_Click(mm:IMappiMarker):IListenerController{
     const click_Marker = ListenerWrapper.make( ()=>{
       return mm._marker.addListener('click',(ev)=>{
   
@@ -256,7 +251,7 @@ export class GoogleMapsComponent implements OnInit {
     return click_Marker;
   }  
 
-  public listen_DragEnd(mm:mappi.IMappiMarker):mappi.IListenerController{
+  public listen_DragEnd(mm:IMappiMarker):IListenerController{
     const dragend_Marker = ListenerWrapper.make( ()=>{
       return mm._marker.addListener('dragend',(ev)=>{
         console.log("marker dragged to", mm._marker.getPosition().toJSON());
@@ -281,7 +276,7 @@ export class GoogleMapsComponent implements OnInit {
   }
 
 
-  public click_AddMarker : mappi.IListenerController = (listen:boolean)=>{
+  public click_AddMarker : IListenerController = (listen:boolean)=>{
     // closure
     const self = this;
     const addMarkerOnClick:(e:any)=>void = (ev:any) => {
@@ -320,12 +315,12 @@ export class GoogleMapsComponent implements OnInit {
 
 
   // helper methods
-  private removeMarker (marker:mappi.IUuidMarker):void {
+  private removeMarker (marker:IUuidMarker):void {
     MappiMarker.hide([marker]);
     marker = null;
   }
 
-  private moveItem (item: mappi.IMappiMarker, marker: google.maps.Marker): {lat,lng} {
+  private moveItem (item: IMappiMarker, marker: google.maps.Marker): {lat,lng} {
       MappiMarker.moveItem(item, marker);
       return item.position;
   }

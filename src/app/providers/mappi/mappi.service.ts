@@ -1,6 +1,9 @@
 import { Injectable } from '@angular/core';
-import * as mappi from './mappi.types';
-import { IMarker } from '../mock-data.service';
+
+import {
+  IMarker, IUuidMarker, IMappiMarker, 
+  IListener, IListenerController
+} from '../types';
 
 /**
  * helper class for manipulating UuidMarkers
@@ -10,9 +13,9 @@ import { IMarker } from '../mock-data.service';
     const markers = MappiMarker.getWithin( bounds:google.maps.LatLngBounds );
  */
 export class MappiMarker {
-  static markers: mappi.IMappiMarker[] = [];
+  static markers: IMappiMarker[] = [];
 
-  static make (mm:mappi.IMappiMarker, o:google.maps.Marker | google.maps.MarkerOptions, map:google.maps.Map): mappi.IUuidMarker {
+  static make (mm:IMappiMarker, o:google.maps.Marker | google.maps.MarkerOptions, map:google.maps.Map): IUuidMarker {
     const uuid = mm.uuid;
     let m = (o instanceof google.maps.Marker) ? o : new google.maps.Marker(o);
     const found = MappiMarker.markers
@@ -22,17 +25,17 @@ export class MappiMarker {
       console.warn("warning: marker.uuid exists", found, MappiMarker.markers.length);
       return found._marker;
     }
-    // 'augment' google.maps.Marker => mappi.IUuidMarker
+    // 'augment' google.maps.Marker => IUuidMarker
     Object.assign(m, {
       'uuid': uuid,
       'mapId': map['id'],
     });
-    mm._marker =  m as mappi.IUuidMarker;
+    mm._marker =  m as IUuidMarker;
     MappiMarker.markers.push(mm);
     return mm._marker;
   }
 
-  static remove (map:google.maps.Map, list?:mappi.IMappiMarker[]):number {
+  static remove (map:google.maps.Map, list?:IMappiMarker[]):number {
     const toRemove:number[] = [];
     MappiMarker.markers.forEach( (o,i)=>{
       const marker = o._marker;
@@ -49,7 +52,7 @@ export class MappiMarker {
     let removed = 0;
     safeRemove.forEach( i=>{
       // const remove:google.maps.Marker = MappiMarker.markers.splice(found,1);
-      const remove:mappi.IMappiMarker = MappiMarker.markers.splice(i,1)[0];
+      const remove:IMappiMarker = MappiMarker.markers.splice(i,1)[0];
       const marker = remove._marker;
       marker.setMap(null);
       if (list){
@@ -64,7 +67,7 @@ export class MappiMarker {
     return removed;
   }  
 
-  static visible(mapId:string):mappi.IMappiMarker[] {
+  static visible(mapId:string):IMappiMarker[] {
     return MappiMarker.markers
       .filter( mm=>mm._marker['mapId']==mapId )
       .filter( mm=>mm._marker && mm._marker.getMap() && mm['_rest_action']!='delete');
@@ -74,7 +77,7 @@ export class MappiMarker {
    *  hide(): remove a list of markers from the google.map.Map
    *  WARNING: does not delete the marker, still referenced by IMappiMarker._marker
    */ 
-  static hide (list:mappi.IUuidMarker[]=[]):number {
+  static hide (list:IUuidMarker[]=[]):number {
     let found = 0;
     const notFound = [];
     list.forEach( (m)=>{
@@ -93,11 +96,11 @@ export class MappiMarker {
     MappiMarker.hide(MappiMarker.markers.map(mm=>mm._marker));
   }
 
-  static findByUuid( uuids:string[], mapId:string ) : mappi.IUuidMarker[] {
+  static findByUuid( uuids:string[], mapId:string ) : IUuidMarker[] {
     return MappiMarker.markers.filter( mm=>uuids.includes(mm.uuid))
     .filter( mm=>mm._marker['mapId']==mapId ).map( mm=>mm._marker );  
   }
-  static find( markers:mappi.IUuidMarker[], mapId:string ) : mappi.IUuidMarker[] {
+  static find( markers:IUuidMarker[], mapId:string ) : IUuidMarker[] {
     return MappiMarker.markers.filter( mm=>{
       if (!markers) return true;
       return markers.includes(mm._marker);
@@ -109,15 +112,15 @@ export class MappiMarker {
    * @param markers markers to exclude
    * @param mapId 
    */
-  static except( markers: IMarker[], mapId:string) : mappi.IUuidMarker[] {
+  static except( markers: IMarker[], mapId:string) : IUuidMarker[] {
     const excludeUuids = markers.map(mm=>mm.uuid);
     const remainingUuids = MappiMarker.markers.filter( mm=>!excludeUuids.includes(mm.uuid))
     .filter( mm=>mm._marker['mapId']==mapId ).map(mm=>mm.uuid);
     return MappiMarker.findByUuid(remainingUuids, mapId);
   }
 
-  static findWithin (bounds: google.maps.LatLngBounds, items: mappi.IMappiMarker[], mapId:string): mappi.IUuidMarker[] {
-    const find = items.reduce( (res:string[], o:mappi.IMappiMarker) => {
+  static findWithin (bounds: google.maps.LatLngBounds, items: IMappiMarker[], mapId:string): IUuidMarker[] {
+    const find = items.reduce( (res:string[], o:IMappiMarker) => {
       const position = {
         lat: o.loc[0] + o.locOffset[0],
         lng: o.loc[1] + o.locOffset[1],
@@ -130,7 +133,7 @@ export class MappiMarker {
     return found;
   }
 
-  static getBounds ( items: mappi.IMappiMarker[] ): google.maps.LatLngBounds {
+  static getBounds ( items: IMappiMarker[] ): google.maps.LatLngBounds {
     const bounds = new google.maps.LatLngBounds();
     items.forEach( m => {
       const position = {
@@ -236,7 +239,7 @@ export class MappiService {
  **********************************************************************************************/
 export class ListenerWrapper {
   constructor(){ }
-  static instances: mappi.IListenerController[] = [];
+  static instances: IListenerController[] = [];
   /**
    * 
    * wraps a listener/handler to call with listen/stop/'toggle' param
@@ -252,9 +255,9 @@ export class ListenerWrapper {
    * @param addListener ()=>{  return xxx.addListener('[event]', handler); }
    * @returns (listen:boolean)=>void
    */
-  static make( addListener:()=>mappi.IListener ) : mappi.IListenerController {
-    let listener: mappi.IListener;
-    const retval = (listen:boolean|string): mappi.IListenerController => {
+  static make( addListener:()=>IListener ) : IListenerController {
+    let listener: IListener;
+    const retval = (listen:boolean|string): IListenerController => {
       if (listen==='toggle'){
         listen = !!listener;
       }

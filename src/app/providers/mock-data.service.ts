@@ -2,11 +2,14 @@ import { Injectable } from '@angular/core';
 import { Plugins } from '@capacitor/core';
 import { Observable, ReplaySubject } from 'rxjs';
 
+import {
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
+  IMarkerSubject,
+} from './types';
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
 import { MappiMarker, } from './mappi/mappi.service';
-import { ImgSrc, IImgSrc, IImgSrcItem } from './photo/imgsrc.service';
-import { AppCache, IMarkerSubject } from './appcache';
+import { AppCache,  } from './appcache';
 
 const { SplashScreen, Storage } = Plugins;
 
@@ -14,56 +17,6 @@ export function quickUuid() {
   // re-export
   return _quickUuid();
 };
-
-export interface IMarker {
-  uuid: string,
-  loc: [number,number],
-  locOffset: [number,number], 
-  position?: {    //new google.maps.LatLng(position);
-    lat: number,
-    lng: number,
-  },
-  seq?: number,
-  placeId?: string,
-}
-
-
-export interface IRestMarker extends IMarker {
-  className?: string;
-  _rest_action?: string;
-  _commit_child_items?: IMarker[];
-  _loc_was_map_center?: boolean;
-  _detectChanges?:boolean;
-}
-
-export interface IMarkerGroup extends IMarker {
-  label?: string,  
-  // MarkerGroup hasMany MarkerItems, use Photos for now.
-  markerItemIds: string[],  // uuid[]
-  [propName: string]: any;
-}
-
-export interface IPhoto extends IMarker {
-  dateTaken: string,
-  orientation: number,
-  src: string,
-  width?: number,
-  height?: number,
-  label?: string
-  camerarollId?: string,          // LibraryItem.id
-  _imgSrc$?: Observable<IImgSrc>;
-}
-
-
-export interface IMarkerList extends IMarker {
-  label: string;
-  zoom?: number;
-  markerGroupIds: string[];
-  count_markers?: number;
-  count_items?: number;
-  created?: Date;
-  modified?: Date;
-}
 
 
 
@@ -329,6 +282,26 @@ export const PHOTOS: IPhoto[] = [
   {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?image={id}" , width:0, height:0 },    
 ]
 
+
+/**
+ * DEV: temp class for getting user input for labels
+ */
+export class Prompt {
+  static async getText(label:string, key:string, o:IRestMarker, dataService:MockDataService):Promise<IMarker[]>{
+    const resp =  window.prompt(`Enter ${label}:`);
+    if (!resp) return;
+    const subj = MockDataService.getSubjByUuid(o.uuid);
+    const found = subj.value().find(m=>m.uuid==o.uuid);
+    found[key] = resp;
+    found['_rest_action'] = found['_rest_action'] || 'put'; 
+    RestyTrnHelper.childComponentsChange({data:found, action:'update'}, subj);
+    if (!dataService) 
+      return Promise.resolve([o]);
+
+    const changed = await RestyTrnHelper.applyChanges('commit', subj, dataService);
+    return changed;
+  }
+}
 
 
 /**

@@ -1,12 +1,8 @@
-import { Injectable } from '@angular/core';
 import { Plugins } from '@capacitor/core';
 import { Observable, from } from 'rxjs';
 
 const { Storage } = Plugins;
 
-// @Injectable({
-//   providedIn: 'root'
-// })
 export class RestyService<T> {
 
   public debug:boolean = false;

@@ -3,11 +3,14 @@ import { Component, OnDestroy, OnInit, AfterViewInit,
   ChangeDetectionStrategy, SimpleChange,
 } from '@angular/core';
 
+import {
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
+  IImgSrc,
+} from '../providers/types';
 import * as PhotoSwipe from 'photoswipe';  
-import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
-import { SubjectiveService } from '../providers/subjective.service';
-import { AppCache, IMarkerSubject } from '../providers/appcache';
-import { MockDataService, IMarker, IPhoto } from '../providers/mock-data.service';
+import { ImgSrc,  } from '../providers/photo/imgsrc.service';
+import { AppCache, } from '../providers/appcache';
+import { MockDataService, } from '../providers/mock-data.service';
 import { AppConfig, ScreenDim } from '../providers/helpers';
 
 declare const PhotoSwipeUI_Default: any;

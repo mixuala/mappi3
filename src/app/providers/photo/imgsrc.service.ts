@@ -8,13 +8,12 @@ import { Platform } from '@ionic/angular';
 import { Observable, BehaviorSubject, Subject } from 'rxjs';
 import { map, take, skipWhile }  from 'rxjs/operators'
 
-import { MockDataService, IPhoto } from '../mock-data.service';
+import {
+  IPhoto, IImgSrc, IImgSrcItem,
+} from '../types'
 import { PhotoLibraryHelper } from './photo.service';
 import { AppConfig, ScreenDim } from '../helpers';
-import { SubjectiveService } from '../subjective.service';
 import { AppCache } from '../appcache';
-
-const { Storage } = Plugins;
 
 /**
  * 
@@ -28,22 +27,6 @@ export class DataURLPipe implements PipeTransform {
   transform(url: string) {
     return url && url.startsWith('data:image/') ? this.sanitizer.bypassSecurityTrustUrl(url) : url;
   }
-}
-
-export interface IImgSrc {
-  key?: string
-  src?: string;
-  style?: {'width.px':string, 'height.px':string};
-  title?: string;
-  alt?: string;
-  loading?: Promise<string>;
-}
-
-export interface IImgSrcItem {
-  key: string; // use [dim,uuid].join(':')
-  imgSrc: IImgSrc;
-  imgSrc$: Observable<IImgSrc>;  // use async pipe in view to render IMG.src=imgSrc.src
-  subj: Subject<IImgSrc>;
 }
 
 const CACHE_MIN = 100;

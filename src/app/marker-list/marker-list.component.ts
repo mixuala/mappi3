@@ -6,14 +6,14 @@ import { Router } from '@angular/router';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
-import { IViewNavEvents } from "../app-routing.module";
+import {
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
+} from '../providers/types';
 import  { 
-  MockDataService, RestyTrnHelper,
-  IMarker, IMarkerGroup, IPhoto, IMarkerList, IRestMarker,
+  MockDataService, RestyTrnHelper, Prompt,
 } from '../providers/mock-data.service';
-import { MappiMarker, MappiService, } from '../providers/mappi/mappi.service';
 import { SubjectiveService } from '../providers/subjective.service';
-import { ScreenDim, Humanize, Prompt } from '../providers/helpers';
+import { ScreenDim, Humanize } from '../providers/helpers';
 
 @Component({
   selector: 'app-marker-list',

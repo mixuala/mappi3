@@ -3,10 +3,12 @@ import { Component, EventEmitter, OnInit, OnChanges, Input, Output, SimpleChange
 } from '@angular/core';
 import { Observable, Subscription, BehaviorSubject } from 'rxjs';
 
-import { MappiMarker } from '../providers/mappi/mappi.service';
-import { MockDataService, IPhoto, IMarker } from '../providers/mock-data.service';
-import { ImgSrc, IImgSrc } from '../providers/photo/imgsrc.service';
-import { ScreenDim, Humanize, Prompt } from '../providers/helpers';
+import {
+  IMarker, IRestMarker, IPhoto,
+} from '../providers/types';
+import { MockDataService, } from '../providers/mock-data.service';
+import { ImgSrc, } from '../providers/photo/imgsrc.service';
+import { ScreenDim, Humanize } from '../providers/helpers';
 
 
 

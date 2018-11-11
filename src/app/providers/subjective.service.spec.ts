@@ -9,7 +9,7 @@ describe('Subjective.Service', () => {
     });
   });
 
-  it('should be created', inject([SubjectiveService], (service: SubjectiveService) => {
+  it('should be created', inject([SubjectiveService], (service: SubjectiveService<any>) => {
     expect(service).toBeTruthy();
   }));
 });

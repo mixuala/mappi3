@@ -9,7 +9,7 @@ import { ScreenDim, AppConfig } from './providers/helpers';
 import { MockDataService } from './providers/mock-data.service';
 import { SubjectiveService } from './providers/subjective.service';
 import { ImgSrc } from './providers/photo/imgsrc.service';
-import { PhotoService, PhotoLibraryHelper, IMappiLibraryItem } from './providers/photo/photo.service';
+import { PhotoService, PhotoLibraryHelper,  } from './providers/photo/photo.service';
 import { AppCache, } from './providers/appcache';
 
 
