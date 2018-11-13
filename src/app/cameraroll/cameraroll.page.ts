@@ -9,7 +9,7 @@ import {
 } from '../providers/types'
 import { PhotoService, PhotoLibraryHelper, } from '../providers/photo/photo.service';
 import { ImgSrc, } from '../providers/photo/imgsrc.service';
-import  { MockDataService, RestyTrnHelper } from '../providers/mock-data.service';
+import  { MockDataService, RestyTrnHelper, quickUuid } from '../providers/mock-data.service';
 import { AppCache } from '../providers/appcache';
 import { ModalController } from '@ionic/angular';
 
@@ -27,12 +27,15 @@ export class CamerarollPage implements OnInit {
    * see: https://github.com/ionic-team/ionic/tree/master/core/src/components/nav
    * @param options 
    */
-  static async navPush(options?:any){
+  static async navPush(options?:any):Promise<IPhoto[]>{
     const nav = document.querySelector('ion-nav');
     await nav.componentOnReady();
     nav.classList.add('activated');
     options = Object.assign( {isNav:true}, options );
-    return nav.push(CamerarollPage, options);
+    return new Promise<IPhoto[]>( resolve=>{
+      nav.push(CamerarollPage, options);
+
+    });
   }
 
   /**
@@ -40,13 +43,18 @@ export class CamerarollPage implements OnInit {
    * @param modalCtrl 
    * @param options 
    */
-  static async presentModal(modalCtrl:ModalController, options?:any){
-    options = Object.assign( {isModal:true}, options );
-    modalCtrl.create({
+  static async presentModal(modalCtrl:ModalController, options?:any):Promise<IPhoto[]>{
+    return new Promise<IPhoto[]>( resolve=>{
+      options = Object.assign( {isModal:true}, options );
+      modalCtrl.create({
         component: CamerarollPage,
         componentProps: options,
-    }).then((modal) => {
+      }).then((modal) => {
         modal.present();
+        modal.onDidDismiss().then( results=>{
+          resolve(results.data as IPhoto[]);
+        })
+      });
     });
   }
 
@@ -56,8 +64,8 @@ export class CamerarollPage implements OnInit {
   layout:string = "cameraroll"; // enum=[gallery, list, edit, focus-marker-group]
   stash:any = {};
 
-  public miSubject: ReplaySubject<IPhoto[]> = new ReplaySubject<IPhoto[]>(1);
-  public miCollection$: Observable<IPhoto[]> = this.miSubject.asObservable();
+  public miSubject: ReplaySubject<IPhoto[]>;
+  public miCollection$: Observable<IPhoto[]>;
 
   @Input() items:IPhoto[] | IMappiLibraryItem[];
 
@@ -67,27 +75,57 @@ export class CamerarollPage implements OnInit {
   ) { }
 
   async ngOnInit() {
+    this.miSubject = new ReplaySubject<IPhoto[]>(1);
+    this.miCollection$ = this.miSubject.asObservable();
+
     const options = {};
     let photos = await this.photoService.getCamerarollAsPhotos(options);
     if (photos.length==0) {
       // load mock cameraroll, direct assignment, does not use ngOnChanges();
-      // photos = await this.mockCameraroll(options);
-      const items = AppCache.for('Photo').items();
+      const moments = await this.mockCamerarollAsMoments(options);
+      photos = moments.reduce( (r,o)=>r.concat(o.photos as IPhoto[]), []);
+
+      // photos = AppCache.for('Photo').items();
+
       const dim = "x160";  // height==160
-      items.forEach( mi=>{
+      photos.forEach( mi=>{
         if (!mi._imgSrc$){
-          mi.imgSrc$ = ImgSrc.getImgSrc$(mi, dim);
+          mi['imgSrc$']= ImgSrc.getImgSrc$(mi, dim);
+          mi['_isSelected'] = false;
+          mi['_isFavorite'] = false;
         }
       })
-      this.miSubject.next(items);
+      this.miSubject.next(photos);
     }
   }
 
-  async close() {
-    if (this.isModal || this["modal"] ) this["modal"].dismiss();
+  async commit():Promise<IPhoto[]> {
+    this.miSubject.complete();
+    const selected = await this.miSubject.toPromise().then( items=>{
+      const selected = items.filter(o=>o['_isSelected']);
+      console.log("Cameraroll selected=", selected);
+      return selected;
+    });
+    setTimeout( ()=>this.close(selected),0);
+    return Promise.resolve(selected);
+  }
+
+  close(selected:IPhoto[]=[]) {
+    this.miSubject.complete();
+    if (this.isModal || this["modal"] ) {
+      this["modal"].dismiss(selected);
+    }
+
     if (this.isNav) {
+      // reset view, not required for modal
+      this.miSubject = new ReplaySubject<IPhoto[]>(1);
+      this.miCollection$ = this.miSubject.asObservable();
+      this.miSubject.next([]);
+      this.miSubject.complete();
+
       const nav = document.querySelector('ion-nav');
       nav.classList.remove('activated');
+      nav.pop();
     }
   }
 
@@ -102,19 +140,55 @@ export class CamerarollPage implements OnInit {
     console.log("Cameraroll selected, item=", item);
   }
 
+  toggle(ev:Event, item:IPhoto, action:string){
+    ev.stopImmediatePropagation();
+    switch (action){
+      case 'favorite': return item['_isFavorite'] = !item['_isFavorite'];
+      case 'selected': return item['_isSelected'] = !item['_isSelected']; 
+    }
+  }
+
 
   /**
    * add location/dateTaken data to emulate moments
    * @param options 
    */
-  mockCameraroll(options:any={}):Promise<IPhoto[]>{
-    const CAMERAROLL_COUNT = 20;
-    const photos = Array.from(Array(CAMERAROLL_COUNT).keys()).map( i=>{
-      const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo');
-      const p = MockDataService.inflatePhoto(emptyPhoto, i, i);
-      // add loc and dateTaken
-      return p;
+  mockCamerarollAsMoments(options:any={}):Promise<IMoment[]>{
+    let index = 0;
+    const skip_ids = [47,48,49,50,452,55] // bad ids for picsum
+    const moments:IMoment[] = [BANGKOK_LOCATIONS, SIEMREAP_LOCATIONS]
+    .map( o=>JSON.parse(o))
+    .map( locs=>{
+      return locs.map( loc=>{
+
+        do {index++} while (skip_ids.includes(index))
+
+        const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo',{loc});
+        const p = MockDataService.inflatePhoto(emptyPhoto, index, index+10);
+        // add loc and dateTaken
+        return p;
+      })
     })
+    .map( (photos:IPhoto[])=>{
+      const bounds = new google.maps.LatLngBounds(null);
+      photos.forEach( (p:IPhoto)=>{
+        bounds.extend( new google.maps.LatLng(p.loc[0], p.loc[1]));
+        p['_isSelected'] = false;
+        p['_isFavorite'] = false;
+      });
+      const id = quickUuid();
+      const title = "";
+      const locations:string[] = [];
+      const dates = photos.map(o=>o.dateTaken).sort();
+      const startDate = new Date(dates[0]);
+      const endDate = new Date(dates.pop());
+      const itemIds = photos.map(o=>o.uuid);
+      return { id, title, locations, startDate, endDate, itemIds, photos, bounds,}
+    });
+
+    // manually patch locations
+    moments[0].locations = ["Bangkok", "Thailand"];
+    moments[1].locations = ["Siem Reap", "Cambodia"];
 
     // filter bounds/dateTaken
     if (options.from || options.to) {
@@ -125,7 +199,11 @@ export class CamerarollPage implements OnInit {
     }
 
     // convert to IPhoto for display
-    return Promise.resolve(photos);
+    return Promise.resolve(moments);
   }
 
 }
+
+
+const BANGKOK_LOCATIONS = "[[13.741533333333333,100.51091166666667],[13.741596666666666,100.51078],[13.741283333333334,100.51111666666667],[13.74233,100.50996333333333],[13.741521666666667,100.51093333333333],[13.74085,100.50882833333333],[13.73978,100.51091666666667],[13.742338333333333,100.51007833333334],[13.739928333333333,100.51108666666667],[13.742363333333333,100.50982],[13.740555,100.50953666666666],[13.741346666666667,100.51113833333334],[13.740146666666666,100.51078833333334],[13.741533333333333,100.51091166666667],[13.740136666666666,100.51077166666667],[13.741728333333333,100.51064166666667]]";
+const SIEMREAP_LOCATIONS = "[[13.446105,103.87355833333334],[13.598763333333334,103.96305833333334],[13.412071666666666,103.866395],[13.412621666666666,103.867295],[13.3496,103.85703333333333],[13.426683333333333,103.855995],[13.44587,103.87310833333333],[13.598863333333334,103.96443],[13.412308333333334,103.866775],[13.412413333333333,103.86676666666666],[13.434846666666667,103.88944166666667],[13.412071666666666,103.86640833333334],[13.434608333333333,103.88921333333333],[13.349453333333333,103.85739166666667],[13.419921666666667,103.863],[13.412738333333333,103.86358666666666],[13.598936666666667,103.96396666666666],[13.427303333333333,103.84525333333333],[13.349496666666667,103.85738333333333],[13.598845,103.96324166666666],[13.43477,103.88894666666667],[13.412353333333334,103.86615833333333],[13.43482,103.88952],[13.350228333333334,103.863755],[13.426766666666667,103.85607166666667],[13.598905,103.96357],[13.46458,103.91323833333334],[13.441028333333334,103.84664166666667],[13.4267,103.85952833333333]]";

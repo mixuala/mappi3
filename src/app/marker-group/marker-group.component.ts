@@ -67,7 +67,24 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   ) {
     this.dataService.ready();
     // this.dataService.Photos.debug = true;
-   }
+  }
+
+
+  /**
+   * uncommitted data is LOST when you call childSubj.reload$() or .get$()
+   * - use childSubj.watch$()
+   * @param mg 
+   */
+  inflateUncommittedMarker(mg:IMarkerGroup):boolean{
+    // recurse through tree, add IMarkers which have not been committed to DB
+    if (mg['_rest_action'] != 'post') return false;
+
+    const mis = mg['_commit_child_items'] || [];
+    const childSubj = MockDataService.getSubjByParentUuid(mg.uuid) ||  
+          MockDataService.getSubjByParentUuid(mg.uuid, new SubjectiveService(this.dataService.Photos));
+    childSubj.next(mis);
+    return true;
+  } 
 
   ngOnInit() {
     this.layout = this.layout || 'gallery';
@@ -95,17 +112,19 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
           delete mg._detectChanges;
           // console.info("MG.ngOnChanges():",mg.uuid);
 
+          const isUncomittedMarker = this.inflateUncommittedMarker(this.mg);
           // configure subjects and cache
           const mgSubj = MockDataService.getSubjByUuid(mg.uuid) ||
-            MockDataService.getSubjByUuid(mg.uuid, new SubjectiveService(this.dataService.MarkerGroups));
+                MockDataService.getSubjByUuid(mg.uuid, new SubjectiveService(this.dataService.MarkerGroups));
           // console.warn("*** MarkerGroup.ngOnChanges: mgSubj", mgSubj.value());
           const childSubj = MockDataService.getSubjByParentUuid(mg.uuid) || 
-            MockDataService.getSubjByParentUuid(mg.uuid, new SubjectiveService(this.dataService.Photos));  
-
+                MockDataService.getSubjByParentUuid(mg.uuid, new SubjectiveService(this.dataService.Photos));  
+          
           this.dataService.ready()
           .then( ()=>{
             // this._miSub[mg.uuid] = childSubj as SubjectiveService<IPhoto>;
-            this.miCollection$[mg.uuid] = (childSubj as SubjectiveService<IPhoto>).get$(mg.markerItemIds);
+            const photoSubj = (childSubj as SubjectiveService<IPhoto>);
+            this.miCollection$[mg.uuid] =  isUncomittedMarker ? photoSubj.watch$() : photoSubj.get$(mg.markerItemIds);
             this.mgSubject.next(this.mg); // set value for view
 
             // const check = MockDataService.subjectCache;

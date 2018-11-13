@@ -26,7 +26,11 @@ export function quickUuid() {
 export class MockDataService {
 
   // random sample of image sizes for placeholder photos
-  static sizes:any[] = [[640,480],[480,640], [960,640], [640,960]];
+  static sizes:any[] = [
+    [480,720],[480,720],[480,720],[480,720],[480,720],[480,720],[480,720],[480,720]
+    , [720,480],[720,480],[720,480],[720,480]
+    , [960,480]
+  ];
   static photo_baseurl: string = "https://picsum.photos/80?image=";
 
   public MarkerLists:RestyService<IMarkerList>;
@@ -390,17 +394,17 @@ export class RestyTrnHelper {
   static setFKfromChild (parent:any, child:IRestMarker) {
     const hasMany_Keys = RestyTrnHelper.objectHierarchy.hasMany;
     const found = Object.keys(parent).filter( k=>hasMany_Keys.includes(k))
-    switch (found[0]) {
-      case 'markerItemIds': parent['markerItemIds'] = [child.uuid]; break;
-      case 'markerGroupIds': parent['markerGroupIds'] = [child.uuid]; break;
-    }
+    if (!found) throw new Error("ERROR: Expecting parent instanceof IMarkerList or IMarkerGroup");
+
+    const key = found[0];
+    if (parent[key] instanceof Array) parent[key].push(child.uuid);
+    else parent[key] = [child.uuid];
+
     parent._commit_child_items = parent._commit_child_items || [];
     parent._commit_child_items.push(child);
-    const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
-
     child['_rest_action'] = 'post';
-    // BUG: somehow calling childSubj.next([child]) stops code execution;
-    // RestyTrnHelper.childComponentsChange({data:child, action:'add'}, childSubj);
+
+    // call XXX.inflateUncommittedMarker() to render uncommitted data
     return;
   }
   static setLocFromChild (data:any, child:IRestMarker) {

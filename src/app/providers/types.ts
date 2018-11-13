@@ -133,6 +133,7 @@ export interface IMoment extends AlbumItem {
   startDate: Date;
   endDate: Date;
   itemIds: string[];
+  [propName:string]: any,
 }
 
 // export interface IPhotoLibraryMappi extends PhotoLibrary {

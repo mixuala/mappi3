@@ -2,7 +2,10 @@
   <ion-toolbar>
     <ion-title>Camera Roll</ion-title>
     <ion-buttons slot="end">
-      <ion-button *ngIf="isModal || isNav" (click)="close()">
+      <ion-button  color="secondary" fill="outline"  (click)="commit()">
+        <ion-icon name="checkmark" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button color="danger" fill="outline" *ngIf="isModal || isNav"  d (click)="close()">
         <ion-icon name="close" slot="icon-only"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -13,8 +16,19 @@
   <!-- see: http://w3bits.com/flexbox-masonry/ -->
   <div class="masonry-wrap">
     <ng-container *ngFor="let mi of miCollection$ | async">
-      <div class="img-wrap masonry-brick" *ngIf="(mi.imgSrc$ | async) as imgSrc">
+      <div class="img-wrap masonry-brick" *ngIf="(mi.imgSrc$ | async) as imgSrc"
+        (click)="toggle($event, mi, 'selected')"
+        >
         <img [src]="imgSrc.src">
+        <div class="overlay" [ngClass]="{selected:mi._isSelected}">
+            <ion-icon [name]="mi._isFavorite ? 'heart' : 'heart-empty'"  
+            [color]="mi._isFavorite ? 'secondary' : 'dark'" 
+            (click)="toggle($event, mi, 'favorite')"
+            ></ion-icon>
+            <ion-icon [name]="mi._isSelected ? 'checkmark-circle' : 'checkmark-circle-outline'" 
+            [color]="mi._isSelected ? 'primary' : 'dark'" 
+            ></ion-icon>
+        </div>
       </div>
     </ng-container>
   </div>

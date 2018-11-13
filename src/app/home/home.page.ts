@@ -119,6 +119,22 @@ export class HomePage implements OnInit, IViewNavEvents {
     return found && found.watch$();
   }
 
+  /**
+   * uncommitted data is LOST when you call childSubj.reload$() or .get$()
+   * - use childSubj.watch$()
+   * @param mL 
+   */
+  inflateUncommittedMarker(mL:IMarkerList):boolean{
+    // recurse through tree, add IMarkers which have not been committed to DB
+    if (mL['_rest_action'] != 'post') return false;
+
+    const mgs = mL['_commit_child_items'] || [];
+    const childSubj = MockDataService.getSubjByParentUuid(mL.uuid) || 
+          MockDataService.getSubjByParentUuid(mL.uuid, new SubjectiveService(this.dataService.MarkerGroups));
+    childSubj.next(mgs);
+    return true;
+  }
+
   async ngOnInit() {
 
     this.layout = "default";
@@ -155,6 +171,7 @@ export class HomePage implements OnInit, IViewNavEvents {
           }
         })
     }
+    this.inflateUncommittedMarker(this.parent);
     
     // detectChanges if in `edit` mode
     const layout = this.route.snapshot.queryParams.layout;
@@ -504,8 +521,10 @@ export class HomePage implements OnInit, IViewNavEvents {
    * @param action 
    */
   async applyChanges(action: string): Promise<IMarker[]> {
-    
     const parent = this.parent as IRestMarker;
+    if (!parent) return;
+
+
     const layout = this.route.snapshot.queryParams.layout;
     const mListSubj = MockDataService.getSubjByUuid(this.parent.uuid);
     const mGroupSubj = this._mgSub;
