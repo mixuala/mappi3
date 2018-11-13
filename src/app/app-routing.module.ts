@@ -17,7 +17,11 @@ const routes: Routes = [
   },
   { path: 'home',   redirectTo: 'list',   pathMatch: 'full' },  
   { path: 'map/:uuid', loadChildren: './share/share.module#SharePageModule' },
-  { path: 'map',   redirectTo: 'list',   pathMatch: 'full' }, 
+  { path: 'map',   redirectTo: 'list',   pathMatch: 'full' },   
+  { 
+    path: 'cameraroll', 
+    loadChildren: './cameraroll/cameraroll.module#CamerarollPageModule', 
+  },
 ];
 
 // see: https://forum.ionicframework.com/t/ionic-4-event-to-trigger-navigation-back-to-page/141676/2

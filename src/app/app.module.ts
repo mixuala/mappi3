@@ -30,6 +30,7 @@ import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
 import { ImgSrc, DataURLPipe } from './providers/photo/imgsrc.service';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
+import { CamerarollPage } from './cameraroll/cameraroll.page';
 
 
 
@@ -48,7 +49,10 @@ import { environment } from '../environments/environment';
     GoogleMapsComponent, GoogleMapsHostComponent,
     PhotoswipeComponent,
     DataURLPipe,
-    // MappiImageComponent,
+    CamerarollPage,
+  ],
+  entryComponents: [
+    CamerarollPage,
   ],
   exports: [
     MarkerListComponent,
@@ -56,7 +60,7 @@ import { environment } from '../environments/environment';
     MarkerItemComponent,
     GoogleMapsComponent, GoogleMapsHostComponent,
     PhotoswipeComponent,  
-    // MappiImageComponent,
+    CamerarollPage,
   ],
 })
 export class SharedComponentModule {}

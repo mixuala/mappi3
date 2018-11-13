@@ -3,7 +3,7 @@ import { Component, OnInit, Input, Output, ViewChild,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
-import { List } from '@ionic/angular';
+import { List, ModalController } from '@ionic/angular';
 import { Observable, BehaviorSubject, Subject, fromEventPattern } from 'rxjs';
 import { filter, skipWhile, takeUntil, switchMap, map, debounceTime } from 'rxjs/operators';
 
@@ -20,6 +20,8 @@ import { MappiMarker } from '../providers/mappi/mappi.service';
 import { AppConfig } from '../providers/helpers';
 import { ImgSrc,  } from '../providers/photo/imgsrc.service';
 import { AppCache } from '../providers/appcache';
+
+import { CamerarollPage } from '../cameraroll/cameraroll.page';
 
 
 
@@ -60,6 +62,7 @@ export class ListPage implements OnInit {
     public dataService: MockDataService,
     public photoService: PhotoService,
     private router: Router,
+    private modalCtrl: ModalController,
     private cd: ChangeDetectorRef,
   ){
     this.dataService.ready()
@@ -97,6 +100,7 @@ export class ListPage implements OnInit {
     );
 
     this.stash.activeView = true;
+    // this.stash.CamerarollPage = CamerarollPage;
     
     // for map marker rendering
     this.markerCollection$ = this.mListCollection$
@@ -195,7 +199,12 @@ export class ListPage implements OnInit {
   }
 
 
-  createOpenMarkerList(ev:any={}){
+  async createOpenMarkerList(ev:any={}){
+    const options = {};
+    return CamerarollPage.navPush(options);
+    return CamerarollPage.presentModal(this.modalCtrl);
+
+
     return this.createMarkerList(undefined)
     .then( mL=>{ 
       this.nav('home', mL, {

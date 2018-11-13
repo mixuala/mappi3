@@ -7,18 +7,23 @@
       Maps
     </ion-title>
     <ion-buttons slot="end">
+      <!-- <ion-nav-push component="stash.CamerarollPage" component-props="{isModal:true}" *ngIf="layout!='edit'">
+          <ion-button fill="solid">
+            <ion-icon name="add" slot="icon-only"></ion-icon>
+          </ion-button>
+      </ion-nav-push> -->
       <ion-button fill="outline" (click)="createOpenMarkerList($event)" *ngIf="layout!='edit'">
         <ion-icon name="add" slot="icon-only"></ion-icon>
       </ion-button>
-        <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
-          <ion-icon name="list" slot="icon-only"></ion-icon>
-        </ion-button>
-        <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='edit'">
-          <ion-icon name="checkmark" slot="icon-only"></ion-icon>
-        </ion-button>
-        <ion-button  color="danger" fill="outline" (click)="toggleEditMode('rollback')" *ngIf="layout=='edit'">
-          <ion-icon name="close" slot="icon-only"></ion-icon>
-        </ion-button>         
+      <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
+        <ion-icon name="list" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='edit'">
+        <ion-icon name="checkmark" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button  color="danger" fill="outline" (click)="toggleEditMode('rollback')" *ngIf="layout=='edit'">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>         
     </ion-buttons> 
   </ion-toolbar>
 </ion-header>

@@ -1,0 +1,21 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Camera Roll</ion-title>
+    <ion-buttons slot="end">
+      <ion-button *ngIf="isModal || isNav" (click)="close()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content no-padding>
+  <!-- see: http://w3bits.com/flexbox-masonry/ -->
+  <div class="masonry-wrap">
+    <ng-container *ngFor="let mi of miCollection$ | async">
+      <div class="img-wrap masonry-brick" *ngIf="(mi.imgSrc$ | async) as imgSrc">
+        <img [src]="imgSrc.src">
+      </div>
+    </ng-container>
+  </div>
+</ion-content>

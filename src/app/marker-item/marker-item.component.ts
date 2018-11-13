@@ -20,7 +20,7 @@ import { ScreenDim, Humanize } from '../providers/helpers';
 })
 export class MarkerItemComponent implements OnInit , OnChanges {
 
-  public layout: string;  // enum=['gallery', 'edit']
+  public layout: string;  // enum=['gallery', 'edit', 'cameraroll']
 
   // PARENT Subject/Observable
   public miSubject: BehaviorSubject<IPhoto> = new BehaviorSubject<IPhoto>(null);

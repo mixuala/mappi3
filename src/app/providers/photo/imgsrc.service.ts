@@ -84,8 +84,8 @@ export class ImgSrc {
   }
 
 
-  static getEmptyImgSrc(dim:string='80x80'):IImgSrc {
-    const [imgW, imgH] = dim.split('x');
+  static getEmptyImgSrc(dim:string ='80x80', exact?:[string,string]):IImgSrc {
+    const [imgW, imgH] = exact ? exact : dim.split('x');
     return {
       key: dim,
       src: null,
@@ -110,6 +110,19 @@ export class ImgSrc {
     })
   }
 
+  private static _scaleWxH (photo:IPhoto, dim:string):[string,string] {
+    let [imgW, imgH] = dim.split('x');
+    if (imgW && imgH) return [imgW, imgH];
+
+    let scale: number;
+    if (!imgW) {
+      imgW = Math.round(photo.width * (parseInt(imgH)/photo.height)) +'';
+    } else if (!imgH){
+      imgH = Math.round(photo.height * (parseInt(imgW)/photo.width)) +'';
+    }
+    return [imgW, imgH];
+  }
+
   /**
    * 
    * use with:  <ion-thumbnail *ngIf="(photo._imgSrc$ | async) as imgSrc">
@@ -122,7 +135,7 @@ export class ImgSrc {
    */
   static getImgSrc$(photo:IPhoto, dim:string='80x80', force:boolean=false):Observable<IImgSrc> {
 
-    const [imgW, imgH] = dim.split('x');
+    const [imgW, imgH] = ImgSrc._scaleWxH(photo, dim);
     let cacheItem:IImgSrcItem;
 
     // check cache
@@ -154,7 +167,7 @@ export class ImgSrc {
       const imgSrcSubject = new BehaviorSubject<IImgSrc>({});
       cacheItem = {
         key: [dim,photo.uuid].join(':') as string,
-        imgSrc: ImgSrc.getEmptyImgSrc(dim),
+        imgSrc: ImgSrc.getEmptyImgSrc(dim, [imgW, imgH] ),
         subj: imgSrcSubject,
         imgSrc$: imgSrcSubject.asObservable(),
       };
@@ -168,7 +181,7 @@ export class ImgSrc {
     const loadImgSrc = (cacheItem:IImgSrcItem):Promise<void> => {
       if (photo.camerarollId == 'fake'){
         // set in MockDataService.inflatePhoto()
-        cacheItem['loading'] = DEV_async_getSrc(photo, dim)
+        cacheItem['loading'] = DEV_async_getSrc(photo, [imgW, imgH].join('x'))
         .then( imgSrc=>{
           cacheItem.imgSrc.src = imgSrc;
           delete cacheItem['loading'];  // wait for promise to complete

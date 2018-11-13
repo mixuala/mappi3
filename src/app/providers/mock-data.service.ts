@@ -227,9 +227,9 @@ export class MockDataService {
     return o;
   }
 
-  static inflatePhoto(o:IPhoto, seq?:number){
+  static inflatePhoto(o:IPhoto, seq?:number, index?: number){
     const random = Math.min( Math.floor(Math.random() *  99))
-    const thumbSrc = MockDataService.photo_baseurl + random;
+    const thumbSrc = MockDataService.photo_baseurl + (index || random);
     o.seq = seq;
     o.position = MappiMarker.position(o);
     let size = MockDataService.sizes[ random % MockDataService.sizes.length];

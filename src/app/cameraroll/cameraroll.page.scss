@@ -1,0 +1,40 @@
+// see: http://w3bits.com/flexbox-masonry/
+
+.masonry-wrap {
+    --portrait-aspect: 1.5;
+    --portrait-col: 4;
+    --masonry-row-h: 160px;
+    --masonry-min-w: 100px;
+    --masonry-gutter: 4px;
+
+    display: flex;
+    flex-flow: row wrap;
+    /* Adjustment for the gutter */
+    margin-top: var(--masonry-gutter);
+    margin-left: var(--masonry-gutter);
+    width: 100%;
+}
+
+@media only screen 
+and (max-width: 425px)
+{
+    .masonry-wrap {
+        --masonry-row-h: calc( ( 100vw / var(--portrait-col) * var(--portrait-aspect) ) - (var(--masonry-gutter) * 2) );
+        --masonry-min-w: 20vw;
+    }
+}
+  
+.masonry-brick {
+
+    height: var(--masonry-row-h);
+    // gutter
+    margin: 0px;
+    margin-right: var(--masonry-gutter);
+    margin-bottom: var(--masonry-gutter);
+    object-position: left;
+    img {
+        height:100%;
+    }
+}
+
+

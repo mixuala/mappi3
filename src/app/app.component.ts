@@ -28,9 +28,9 @@ export class AppComponent {
       icon: 'list'
     },
     {
-      title: 'Maps',
-      url: '/home',
-      icon: 'map'
+      title: 'Cameraroll',
+      url: '/cameraroll',
+      icon: 'images'
     },
   ];
 

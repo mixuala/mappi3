@@ -123,7 +123,16 @@
   --google-map-lg-left: var(--split-pane-side-max-width);
 
 
-
+  /**
+   * for ion-nav-push/pop navigation ABOVE .content-fixed
+   */
+  ion-nav {
+    z-index: -1; 
+    &.activated {
+      // stack above .content-fixed
+      z-index: 9;
+    }
+  }
 
   ion-split-pane {
     top: var(--google-map-height);
