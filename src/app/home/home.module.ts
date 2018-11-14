@@ -20,7 +20,6 @@ import { ConfirmChangesRouteGuard } from './helpers';
         canDeactivate: [ConfirmChangesRouteGuard],
       }
     ]),
-    // QRCodeModule,
     SharedComponentModule,
   ],
   declarations: [HomePage,

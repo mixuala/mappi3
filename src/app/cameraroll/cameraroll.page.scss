@@ -13,6 +13,9 @@
     margin-top: var(--masonry-gutter);
     margin-left: var(--masonry-gutter);
     width: 100%;
+
+    align-items: center;
+    justify-content: center;
 }
 
 @media only screen 
@@ -41,14 +44,13 @@ and (max-width: 425px)
         font-size: 1.8em;
         width: 100%;
         height: 1em;
-        text-align: right;
+        padding: 0 8px;
         background-color: rgba(0,0,0,0.3);
         &.selected {
             background-color: rgba(0,0,0,0.5);
         }
-        ion-icon {
-            margin-left:4px;
-            // background-color: rgba(0,0,0,0.3);
+        ion-icon.select {
+            float:right;
         }
     }
 }

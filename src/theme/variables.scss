@@ -78,7 +78,7 @@
 
 
 
-  // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
+  
 
   // ionic component overrides
   --toolbar-min-height: 44px;
@@ -99,6 +99,16 @@
     --thumbnail-size:56px;
     ion-thumbnail {
       --thumbnail-size: 56px;
+    }
+  }
+
+      
+  ion-modal {
+    top: var(--google-map-bottom);
+    height: calc( 100vh - var(--google-map-bottom) );
+    @at-root.plt-mobile ion-modal {
+      top: 0px;
+      height: 100vh;
     }
   }
 
@@ -242,14 +252,13 @@
     }
   }
 
+  // $grid-breakpoints	(  xs: 0,  sm: 576px,  md: 768px,  lg: 992px,  xl: 1200px )
   // sidemenu open overrides
   @media only screen 
-  and (min-width: 992px)
+  and (min-width: 1200px)
   {
-  
-    .google-maps-host-wrap {
-      left: var(--split-pane-side-max-width) !important;
-      width: calc(100vw - var(--split-pane-side-max-width)) !important;
+    .DEV {
+      display: none;
     }
   
     .photoswipe-host-wrap .pswp {
@@ -257,11 +266,11 @@
       width: calc(100vw - var(--split-pane-side-max-width));
     }
 
-    ion-split-pane.split-pane {
-      top: 0px;
-      ion-router-outlet ion-content {
-        top: calc( var(--google-map-bottom) - var(--toolbar-min-height) ); 
-      }
+    ion-modal {
+      top: var(--google-map-bottom);
+      left: var(--split-pane-side-max-width) !important;
+      width: calc(100vw - var(--split-pane-side-max-width)) !important;
+      height: calc( 100vh - var(--google-map-bottom) );
     }
   }
 

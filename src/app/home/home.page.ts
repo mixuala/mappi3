@@ -126,7 +126,7 @@ export class HomePage implements OnInit, IViewNavEvents {
    */
   inflateUncommittedMarker(mL:IMarkerList):boolean{
     // recurse through tree, add IMarkers which have not been committed to DB
-    if (mL['_rest_action'] != 'post') return false;
+    if (!mL || mL['_rest_action'] != 'post') return false;
 
     const mgs = mL['_commit_child_items'] || [];
     const childSubj = MockDataService.getSubjByParentUuid(mL.uuid) || 
@@ -189,6 +189,7 @@ export class HomePage implements OnInit, IViewNavEvents {
   viewWillEnter(){
     try {
       // this.mapSettings = Object.assign({}, this.mapSettings);
+      this.stash.activeView = true;
       this._mgSub.repeat();
       console.warn(`viewWillEnter: HOMEPage`);
     } catch (err) {console.warn(err)}
@@ -371,6 +372,9 @@ export class HomePage implements OnInit, IViewNavEvents {
 
     // push changes
     this._mgSub.next(RestyTrnHelper.getCachedMarkers(this._mgSub.value()) as IMarkerGroup[]);
+
+    // see: https://github.com/ionic-team/ionic/tree/master/core/src/components/reorder-group
+    ev.detail.complete && ev.detail.complete();
   }
 
   async mappiMarkerChange(change:{data:IMarker, action:string}){

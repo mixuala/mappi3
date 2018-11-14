@@ -31,7 +31,7 @@
 <ion-header class="google-maps-wrap hide">
     <app-google-maps #gmap *ngIf="markerCollection$ | async as items"
     [items]="items"
-    [mode]="mapSettings"
+    [mode]="mapSettings" [activeView]="stash.activeView"
     [selected]="selectedMarkerList"
     (selectedChange)="handle_MapMarkerSelected($event)"
     ></app-google-maps>

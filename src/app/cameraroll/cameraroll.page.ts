@@ -12,6 +12,7 @@ import { ImgSrc, } from '../providers/photo/imgsrc.service';
 import  { MockDataService, RestyTrnHelper, quickUuid } from '../providers/mock-data.service';
 import { AppCache } from '../providers/appcache';
 import { ModalController } from '@ionic/angular';
+import { AppConfig } from '../providers/helpers';
 
 @Component({
   selector: 'app-cameraroll',
@@ -64,7 +65,10 @@ export class CamerarollPage implements OnInit {
   layout:string = "cameraroll"; // enum=[gallery, list, edit, focus-marker-group]
   stash:any = {};
 
-  public miSubject: ReplaySubject<IPhoto[]>;
+  public momSubject: BehaviorSubject<IMoment[]>;
+  public momCollection$: Observable<IMoment[]>;
+
+  public miSubject: BehaviorSubject<IPhoto[]>;
   public miCollection$: Observable<IPhoto[]>;
 
   @Input() items:IPhoto[] | IMappiLibraryItem[];
@@ -72,61 +76,88 @@ export class CamerarollPage implements OnInit {
   constructor(
     private route: ActivatedRoute,
     public photoService: PhotoService,
+    private router: Router,
   ) { }
 
-  async ngOnInit() {
-    this.miSubject = new ReplaySubject<IPhoto[]>(1);
-    this.miCollection$ = this.miSubject.asObservable();
 
-    const options = {};
-    let photos = await this.photoService.getCamerarollAsPhotos(options);
-    if (photos.length==0) {
-      // load mock cameraroll, direct assignment, does not use ngOnChanges();
-      const moments = await this.mockCamerarollAsMoments(options);
-      photos = moments.reduce( (r,o)=>r.concat(o.photos as IPhoto[]), []);
-
-      // photos = AppCache.for('Photo').items();
-
-      const dim = "x160";  // height==160
-      photos.forEach( mi=>{
-        if (!mi._imgSrc$){
-          mi['imgSrc$']= ImgSrc.getImgSrc$(mi, dim);
-          mi['_isSelected'] = false;
-          mi['_isFavorite'] = false;
-        }
-      })
-      this.miSubject.next(photos);
+  async loadCameraroll(){
+    const dim = "x160";  // height==160
+    switch (AppConfig.device.platform) {
+      case "ios":
+        const options = {};
+        let photos = await this.photoService.getCamerarollAsPhotos(options);
+        if (photos.length) break;
+      case "web":
+      case "android":
+        // load mock cameraroll, direct assignment, does not use ngOnChanges();
+        const moments = await this.mockCamerarollAsMoments(options);
+        const allPhotos: IPhoto[] = [];
+        moments.forEach(m=>{
+          this.humanize(m);
+          m.photos.forEach( mi=>{
+            allPhotos.push(mi);
+            if (!mi._imgSrc$){
+              mi['imgSrc$']= ImgSrc.getImgSrc$(mi, dim);
+              mi['_isSelected'] = false;
+              mi['_isFavorite'] = false;
+            }
+          })
+        });
+        this.momSubject.next(moments);
+        this.miSubject.next(allPhotos);
+        break;
     }
   }
 
-  async commit():Promise<IPhoto[]> {
-    this.miSubject.complete();
-    const selected = await this.miSubject.toPromise().then( items=>{
-      const selected = items.filter(o=>o['_isSelected']);
-      console.log("Cameraroll selected=", selected);
-      return selected;
-    });
-    setTimeout( ()=>this.close(selected),0);
-    return Promise.resolve(selected);
+  async ngOnInit() {
+    this.momSubject = new BehaviorSubject<IMoment[]>([]);
+    this.momCollection$ = this.momSubject.asObservable();
+
+    this.miSubject = new BehaviorSubject<IPhoto[]>([]);
+    this.miCollection$ = this.miSubject.asObservable();
+
+    this.loadCameraroll();
   }
 
-  close(selected:IPhoto[]=[]) {
-    this.miSubject.complete();
+  async viewWillEnter(){
+    this.loadCameraroll();
+  }
+
+  viewWillLeave(){
+    // is NOT called by this["modal"].dismiss(selected)
+    console.log("CamerarollPage ViewWillLeave");
+    // reset all selected
+    this.miSubject.value.forEach(o=>o['_isSelected']=false);
+  }
+
+
+  async commit():Promise<IPhoto[]> {
+    const selected = this.miSubject.value.filter(o=>o['_isSelected']);
+
     if (this.isModal || this["modal"] ) {
-      this["modal"].dismiss(selected);
+      return this["modal"].dismiss(selected);  // pass selected back to opener
+    }
+    if (this.isNav) {
+      // ???: how to do pass `selected` back to the listener?
+      return Promise.resolve(selected);
+    }
+    this.close();
+  }
+
+
+  async close() {
+    if (this.isModal || this["modal"] ) {
+      this["modal"].dismiss([]);
     }
 
     if (this.isNav) {
-      // reset view, not required for modal
-      this.miSubject = new ReplaySubject<IPhoto[]>(1);
-      this.miCollection$ = this.miSubject.asObservable();
-      this.miSubject.next([]);
-      this.miSubject.complete();
-
+      this.miSubject.next([]);  // reset view, not required for modal
       const nav = document.querySelector('ion-nav');
       nav.classList.remove('activated');
-      nav.pop();
+      if (nav.canGoBack()) 
+        return nav.pop();
     }
+    return this.router.navigate(['/list']);
   }
 
   /**
@@ -146,6 +177,22 @@ export class CamerarollPage implements OnInit {
       case 'favorite': return item['_isFavorite'] = !item['_isFavorite'];
       case 'selected': return item['_isSelected'] = !item['_isSelected']; 
     }
+  }
+
+
+
+
+
+
+  /**
+   * helpers
+   */
+  humanize(moment:IMoment):IMoment{
+    moment['label'] = moment.locations.join(', ');
+    moment['begins'] = moment.startDate.toDateString();
+    moment['days'] = Math.ceil( (moment.endDate.valueOf() - moment.startDate.valueOf()) / (24*3600*1000) );
+    moment['count'] = moment.itemIds.length;
+    return moment;
   }
 
 

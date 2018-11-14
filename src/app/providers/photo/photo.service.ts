@@ -107,6 +107,26 @@ export class PhotoService {
    */
 
 
+  // INCOMPLETE
+  async getCamerarollAsPhotos(options:any={}):Promise<IPhoto[]>{
+    // TODO: when do we update cache?
+    let items:IMappiLibraryItem[] = AppCache.for('Cameraroll').items();
+
+    // filter bounds/dateTaken
+    if (options.from || options.to) {
+      // filter by dateTaken
+    }
+    if (options.bounds) {
+      // filter by bounds
+    }
+
+    // convert to IPhoto for display
+    const photos = items.map( item=>{
+      return this._libraryItem2Photo(item, true);
+    });
+    return Promise.resolve(photos);
+  }
+
   /**
    * 
    * @param seq 

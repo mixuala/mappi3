@@ -109,10 +109,10 @@ export class ListPage implements OnInit {
      * search for MarkerLists by mapBounds, or city, or category, etc. 
      * */ 
     this._mListSub.get$();
-    setTimeout( ()=>this.queryOnMapMove(), 1000);
+    setTimeout( ()=>this.handleMapMoved(), 1000);
   }
 
-  queryOnMapMove() {
+  handleMapMoved() {
     let lastBounds = AppConfig.map.getBounds();
 
     const _searchWhenMapMoves = ()=>{
@@ -138,6 +138,7 @@ export class ListPage implements OnInit {
       }
     ).pipe( 
       takeUntil(this.unsubscribe$),
+      skipWhile( ()=>!this.stash.activeView),
       debounceTime(500),
     ).subscribe( ()=>{
       _searchWhenMapMoves()
@@ -277,7 +278,6 @@ export class ListPage implements OnInit {
       // create MarkerGroup
       const child:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup',{seq:i});
       child.label = `Marker created ${child.created.toISOString()}`;
-      child.seq = 0;
       if (p && p['className']=='Photo') {
         RestyTrnHelper.setFKfromChild(child, p);
         RestyTrnHelper.setFKfromChild(item, child);

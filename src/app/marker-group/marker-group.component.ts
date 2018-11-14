@@ -77,7 +77,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
    */
   inflateUncommittedMarker(mg:IMarkerGroup):boolean{
     // recurse through tree, add IMarkers which have not been committed to DB
-    if (mg['_rest_action'] != 'post') return false;
+    if (!mg || mg['_rest_action'] != 'post') return false;
 
     const mis = mg['_commit_child_items'] || [];
     const childSubj = MockDataService.getSubjByParentUuid(mg.uuid) ||  
@@ -290,13 +290,16 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
     // push changes
     MockDataService.getSubjByParentUuid(this.mg.uuid).next(this._getCachedMarkerItems(mg));
+
+    // see: https://github.com/ionic-team/ionic/tree/master/core/src/components/reorder-group
+    ev.detail.complete && ev.detail.complete();
   }
 
   async getTitle(ev:MouseEvent){
     const target = ev.target && ev.target['tagName'];
     if (target!='H3') return;
     const changes = await Prompt.getText('label', 'label', this.mg, null);
-    console.log("Prompt for title, mg=", changes.pop() );
+    if (changes) console.log("Prompt for title, mg=", changes.pop() );
     ev.preventDefault();
   }
 

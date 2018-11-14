@@ -31,13 +31,16 @@ export class GoogleMapsHostComponent implements OnInit {
     promise:  Promise<google.maps.Map>, 
     resolve:  (o:google.maps.Map)=>void, 
     reject:   (err:any)=>void
-  }; 
+  };
+  private _waitFor:Promise<any>[] = [];
 
   constructor(
     private renderer: Renderer2, 
     private element: ElementRef, 
     @Inject(DOCUMENT) private _document,
   ) {
+    this._waitFor.push( GoogleMapsHostComponent._getCurrentPosition() );
+    
     // prepare Promise<google.map.Maps> for resolve in ngOnInit()
     this._mapDeferred = (()=>{
       let resolve;
@@ -52,7 +55,9 @@ export class GoogleMapsHostComponent implements OnInit {
 
   ngOnInit() {
     // inject google maps SDK
-    new GoogleMapsReady(this.apiKey, this.renderer, this._document).init()
+    this._waitFor.push( new GoogleMapsReady(this.apiKey, this.renderer, this._document).init() );
+    
+    Promise.all( this._waitFor)
     .then( ()=>this._loadMap() )
     .then( 
       (map)=>{
@@ -70,19 +75,19 @@ export class GoogleMapsHostComponent implements OnInit {
   }
 
   // get current position as mapCenter and create map
-  private _loadMap(): Promise<google.maps.Map> { 
+  private async _loadMap(): Promise<google.maps.Map> { 
     // get map center before rendering first Map
-    return GoogleMapsHostComponent.getCurrentPosition()
-    .then ( (position)=>{
-      const mapOptions:google.maps.MapOptions = {
-        zoom: AppConfig.initialMapZoom || INITIAL_MAP_ZOOM,
-        center: position,
-      };
-      this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
-      const mapIdle = this._waitForMapIdle();
-      this.map['id'] = this.map['id'] || `gmap-${Date.now() % 99}`;
-      return mapIdle;
-    });
+    const center = AppConfig.currentLoc || await GoogleMapsHostComponent._getCurrentPosition();
+
+    const mapOptions:google.maps.MapOptions = {
+      zoom: AppConfig.initialMapZoom || INITIAL_MAP_ZOOM,
+      center: center,
+    };
+    this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
+    const mapIdle = this._waitForMapIdle();
+    this.map['id'] = this.map['id'] || `gmap-${Date.now() % 99}`;
+    return mapIdle;
+
   }
 
   /**
@@ -96,15 +101,19 @@ export class GoogleMapsHostComponent implements OnInit {
     });
   }
 
-  static getCurrentPosition():Promise<google.maps.LatLng> {
-    if (GoogleMapsHostComponent.currentLoc)
-      return Promise.resolve(GoogleMapsHostComponent.currentLoc);
-
+  /**
+   * GoogleMapsHostComponent._getCurrentPosition() 
+   *  - call in constructor, set AppConfig.currentLoc ASAP
+   */
+  private static _getCurrentPosition():Promise<{lat:number, lng:number}> {
     return Geolocation.getCurrentPosition()
     .then(
       (position) => {
         console.log(position);
-        return GoogleMapsHostComponent.currentLoc = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+        return {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        }
       }, 
       (err) => {
         let isGeoLocationError = false;
@@ -112,13 +121,22 @@ export class GoogleMapsHostComponent implements OnInit {
         if (err.message.startsWith("Origin does not have permission to use Geolocation")) isGeoLocationError=true;
         if (isGeoLocationError) {
           console.warn("Geolocation error, using test data");
-          const position = {latitude: 3.1581906, longitude: 101.7379296};
-          GoogleMapsHostComponent.currentLoc = new google.maps.LatLng(position.latitude, position.longitude);
-          return Promise.resolve(GoogleMapsHostComponent.currentLoc);
+          const position = {lat: 3.1581906, lng: 101.7379296};
+          return Promise.resolve(position);
         }
         console.error(err);
         Promise.reject('GoogleMapsHostComponent: Could not get current location.');
     })
+    .then( pos=>AppConfig.currentLoc=pos)
+  }
+
+  static async getCurrentPosition():Promise<google.maps.LatLng> {
+    if (GoogleMapsHostComponent.currentLoc)
+      return Promise.resolve(GoogleMapsHostComponent.currentLoc);
+
+    const position = AppConfig.currentLoc ||  await GoogleMapsHostComponent._getCurrentPosition();
+    GoogleMapsHostComponent.currentLoc = new google.maps.LatLng(position.lat, position.lng);
+    return Promise.resolve(GoogleMapsHostComponent.currentLoc);
   }
 
   ngOnDestroy() {

@@ -31,13 +31,13 @@ export class GoogleMapsComponent implements OnInit {
   @Input() items: IMappiMarker[];
   @Input() mode: IMapActions = {};
   @Input() selected:string;
+  @Input() activeView:boolean = false;
 
   @Output() itemChange: EventEmitter<{data:IMappiMarker,action:string}> = new EventEmitter<{data:IMappiMarker,action:string}>();
   @Output() selectedChange: EventEmitter<string> = new EventEmitter<string>();
   
   public map: google.maps.Map;
   public markers: any[] = [];
-  public activeView:boolean = false;   
   private _stash:any={};
 
   /**
@@ -122,6 +122,8 @@ export class GoogleMapsComponent implements OnInit {
           break;
         case 'items':
           await AppConfig.mapReady.then( map=>this.map=map);
+          if (this.activeView==false) 
+            return; // pause updates
 
           let items:IMarker[] = change.currentValue;
           this.renderMarkers(items);
@@ -135,8 +137,6 @@ export class GoogleMapsComponent implements OnInit {
    * @param items IMarker[], if null, then skip rendering step
    */
   renderMarkers(items:IMarker[]) {
-    // if (this.activeView==false) return; // pause updates
-
     var gm = AppConfig.map;
     items.forEach( (m,i)=>m.seq=i);  // reindex for labels
     // ignore markers that are marked for delete pending commit
@@ -155,6 +155,18 @@ export class GoogleMapsComponent implements OnInit {
   }
 
   public setMapBoundsWithMinZoom(markers:IMarker[], defaultMinZoom=15){
+
+    const skipBoundsChange = ():boolean=>{
+      // if the marker className has not changed, do not change bounds
+      // ListPage is listening to 'bounds_change' when activeView==true;
+      // TODO: solved by checking for this.activeView in renderMarkers()????
+      const shouldSkip = this._stash.markerClassName == markers[0]['className'];
+      this._stash.markerClassName = markers[0]['className'];
+      return shouldSkip;
+    }
+    if (skipBoundsChange() )
+      return;
+
 
     // This is needed to set the zoom after fitbounds, 
     // begin with zoom=15
