@@ -74,11 +74,17 @@
   --ion-color-dark-contrast-rgb: 255,255,255;
   --ion-color-dark-shade: #1e1e1e;
   --ion-color-dark-tint: #383838;
-
-
-
-
   
+
+
+
+
+  // patch: undefined for build --prod, 
+  --ion-safe-area-top: var(--ion-statusbar-padding, 0px);
+
+
+
+
 
   // ionic component overrides
   --toolbar-min-height: 44px;
@@ -119,7 +125,7 @@
   // baseline (portrait)
   --google-map-size: 40vh;
   --google-map-landscape-right: 40vw;
-  --google-map-top: var(--ion-safe-area-top);
+  --google-map-top: var(--ion-safe-area-top, 0px);
   --google-map-height: calc(var(--google-map-size) - var(--google-map-top));
   --google-map-bottom: var(--google-map-size);
   --google-map-width: 100vw;
