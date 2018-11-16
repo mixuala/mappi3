@@ -1,8 +1,8 @@
 import { Component, OnInit, Input, Output, ViewChild,
-  OnChanges,  SimpleChange,
-  ChangeDetectionStrategy, ChangeDetectorRef,
+  ChangeDetectionStrategy, ChangeDetectorRef, 
 } from '@angular/core';
-import { Router, NavigationStart } from '@angular/router';
+import { Location, } from '@angular/common';
+import { ActivatedRoute, Router, NavigationStart } from '@angular/router';
 import { List, ModalController } from '@ionic/angular';
 import { Observable, BehaviorSubject, Subject, fromEventPattern } from 'rxjs';
 import { filter, skipWhile, takeUntil, switchMap, map, debounceTime } from 'rxjs/operators';
@@ -13,6 +13,7 @@ import {
 import  { 
   MockDataService, RestyTrnHelper, quickUuid,
 } from '../providers/mock-data.service';
+import { IViewNavEvents } from "../app-routing.module";
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService, PhotoLibraryHelper, } from '../providers/photo/photo.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
@@ -30,7 +31,7 @@ import { CamerarollPage } from '../cameraroll/cameraroll.page';
   templateUrl: 'list.page.html',
   styleUrls: ['list.page.scss']
 })
-export class ListPage implements OnInit {
+export class ListPage implements OnInit, IViewNavEvents {
   
   public layout: string;
   public mapSettings: IMapActions = {
@@ -62,6 +63,8 @@ export class ListPage implements OnInit {
     public dataService: MockDataService,
     public photoService: PhotoService,
     private router: Router,
+    private route: ActivatedRoute,
+    private location: Location,
     private modalCtrl: ModalController,
     private cd: ChangeDetectorRef,
   ){
@@ -94,7 +97,6 @@ export class ListPage implements OnInit {
     // for async binding in view
     this.mListCollection$ = this._mListSub.watch$()
     .pipe( 
-      debounceTime(1000),
       skipWhile( (arr)=>!this.stash.activeView ),
       _filterByMapBounds,
     );
@@ -109,7 +111,6 @@ export class ListPage implements OnInit {
      * search for MarkerLists by mapBounds, or city, or category, etc. 
      * */ 
     this._mListSub.get$();
-    setTimeout( ()=>this.handleMapMoved(), 1000);
   }
 
   handleMapMoved() {
@@ -123,8 +124,8 @@ export class ListPage implements OnInit {
       lastBounds = mapBounds;
 
       // const items = this._mListSub.resty.get( {bounds: mapBounds} );  // query Resty with mapBounds
-      let items = this._mListSub.value();  // DEV hack
-      this._mListSub.next(items);
+      // DEV hack, triggers: this.mListCollection$ = watch$().pipe(_filterByMapBounds()) to modify results
+      this._mListSub.repeat();  // debounceTime(500)
       this.cd.detectChanges();
     }
     // use Observable.fromEventPattern() so we can use debounceTime
@@ -146,13 +147,42 @@ export class ListPage implements OnInit {
   }
 
 
-  viewWillEnter(){
+  async viewWillEnter(){
+    console.warn("viewWillEnter: ListPage");
+    await AppConfig.mapReady;
+    setTimeout( async ()=>{
+      // wait 1000ms to let initial map render complete before activating _filterByMapBounds()
+      this.handleMapMoved();
+      const visible = MappiMarker.visible(AppConfig.map['id']);
+      if (visible.length==0) {
+        let nextZoom:number;
+        do {
+          await GoogleMapsHostComponent.waitForMapIdle(AppConfig.map)
+          .then( map=>{
+
+            nextZoom = Math.max(map.getZoom()-4, 4);
+            map.setZoom( nextZoom ); 
+            
+          })
+        } while (nextZoom>5 && visible.length==0)
+      }
+    }, 1000);
+    
     try {
       this.stash.activeView = true;
-      if ( this.stash.mapPosition ) 
+      // const mapCenter = this.route.snapshot.params['map-center'];
+      const snapshot = this.route.snapshot;
+      const mapCenter = this.route.snapshot.params['map-center'];
+      if (mapCenter) {
+        const loc = mapCenter.split(',');
+        this.stash.mapPosition = Object.assign( this.stash.mapPosition || {}, {center: new google.maps.LatLng( loc[0], loc[1])} );
+        this.location.replaceState(this.location.path().split(';').shift());
+        // if (this.route.snapshot.queryParams) this.router.navigate([], {relativeTo: this.route, replaceUrl:true} )
+      }
+      if ( this.stash.mapPosition ) {
         AppConfig.map.setOptions( this.stash.mapPosition );
-      this._mListSub.repeat();
-      console.warn("viewWillEnter: ListPage");
+      }
+      this._mListSub.reload();
     } catch (err) {console.warn(err)}    
   }
 
@@ -203,20 +233,24 @@ export class ListPage implements OnInit {
   async createOpenMarkerList(ev:any={}){
 
     if ("use CamerarollPage") {
-      const options = {};
+      const options = {
+        onDismiss: async (selected:IPhoto[]=[]):Promise<void> => {
+          if (!selected.length) return;
+          console.log( "Create MarkerList from selected=", selected);
+          await this.createMarkerList_from_Cameraroll(undefined, selected)
+          .then( mL=>{ 
+            this.nav('home', mL, {
+              queryParams:{
+                layout:'edit'
+              }
+            });
+          })
+          return;
+        },
+      };
       // return CamerarollPage.navPush(options);
-      const selected = await CamerarollPage.presentModal(this.modalCtrl);
-      console.log( "Create MarkerList from selected=", selected);
-
-      if (!selected.length) return;
-      return this.createMarkerList_from_Cameraroll(undefined, selected)
-      .then( mL=>{ 
-        this.nav('home', mL, {
-          queryParams:{
-            layout:'edit'
-          }
-        });
-      })
+      const selected = await CamerarollPage.presentModal(this.modalCtrl, options);
+      return;
     }
 
     return this.createMarkerList_from_Camera(undefined)

@@ -14,7 +14,7 @@
 
 <ion-content no-padding>
 
-  <ion-list no-padding no-margin *ngFor="let moment of momCollection$ | async">
+  <ion-list class="camera-roll" no-padding no-margin *ngFor="let moment of momCollection$ | async">
     <ion-item-divider color="secondary">
       <ion-label>
         <h2>Moment: {{moment['label']}}</h2>
@@ -22,25 +22,25 @@
         <p>{{moment['count']}} photos</p>
       </ion-label>
     </ion-item-divider>
-  <!-- see: http://w3bits.com/flexbox-masonry/ -->
-  <div class="masonry-wrap">
-    <ng-container *ngFor="let mi of moment.photos">
-      <div class="img-wrap masonry-brick" *ngIf="(mi.imgSrc$ | async) as imgSrc"
-        (click)="toggle($event, mi, 'selected')"
-        >
-        <img [src]="imgSrc.src">
-        <div class="overlay" [ngClass]="{selected:mi._isSelected}">
-            <ion-icon [name]="mi._isFavorite ? 'heart' : 'heart-empty'"  
-            [color]="mi._isFavorite ? 'secondary' : 'dark'" 
-            (click)="toggle($event, mi, 'favorite')"
-            ></ion-icon>
-            <ion-icon class="select" [name]="mi._isSelected ? 'checkmark-circle' : 'checkmark-circle-outline'" 
-            [color]="mi._isSelected ? 'primary' : 'dark'" 
-            ></ion-icon>
+    <!-- see: http://w3bits.com/flexbox-masonry/ -->
+    <div class="masonry-wrap">
+      <ng-container *ngFor="let mi of moment.photos">
+        <div class="img-wrap masonry-brick" *ngIf="(mi.imgSrc$ | async) as imgSrc"
+          (click)="toggle($event, mi, 'selected')"
+          >
+          <img [src]="imgSrc.src">
+          <div class="overlay" [ngClass]="{selected:mi._isSelected}">
+              <ion-icon [name]="mi._isFavorite ? 'heart' : 'heart-empty'"  
+              [color]="mi._isFavorite ? 'secondary' : 'dark'" 
+              (click)="toggle($event, mi, 'favorite')"
+              ></ion-icon>
+              <ion-icon class="select" [name]="mi._isSelected ? 'checkmark-circle' : 'checkmark-circle-outline'" 
+              [color]="mi._isSelected ? 'primary' : 'dark'" 
+              ></ion-icon>
+          </div>
         </div>
-      </div>
-    </ng-container>
-  </div>
+      </ng-container>
+    </div>
 </ion-list>
 
 

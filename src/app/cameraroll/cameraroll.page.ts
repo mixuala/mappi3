@@ -42,21 +42,24 @@ export class CamerarollPage implements OnInit {
   /**
    * launch as Modal
    * @param modalCtrl 
-   * @param options 
+   * @param options options.onDismiss:(selected:IPhoto[])=>Promise<void>
    */
-  static async presentModal(modalCtrl:ModalController, options?:any):Promise<IPhoto[]>{
-    return new Promise<IPhoto[]>( resolve=>{
+  static async presentModal(modalCtrl:ModalController, options?:any):Promise<any>{
       options = Object.assign( {isModal:true}, options );
-      modalCtrl.create({
+      return modalCtrl.create({
         component: CamerarollPage,
         componentProps: options,
-      }).then((modal) => {
+      })
+      .then( async (modal) => {
         modal.present();
-        modal.onDidDismiss().then( results=>{
-          resolve(results.data as IPhoto[]);
+        await modal.onWillDismiss().then( async (resp)=>{
+          if (resp.data.length){
+            // commit before dismissing modal
+            return options.onDismiss && options.onDismiss(resp.data);
+          }
         })
+        return modal.onDidDismiss();
       });
-    });
   }
 
   // detect launch mode to set appropriate dismiss()
@@ -135,7 +138,7 @@ export class CamerarollPage implements OnInit {
     const selected = this.miSubject.value.filter(o=>o['_isSelected']);
 
     if (this.isModal || this["modal"] ) {
-      return this["modal"].dismiss(selected);  // pass selected back to opener
+      await this["modal"].dismiss(selected);  // pass selected back to opener
     }
     if (this.isNav) {
       // ???: how to do pass `selected` back to the listener?
@@ -157,7 +160,7 @@ export class CamerarollPage implements OnInit {
       if (nav.canGoBack()) 
         return nav.pop();
     }
-    return this.router.navigate(['/list']);
+    return
   }
 
   /**

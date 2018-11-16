@@ -556,7 +556,9 @@ export class HomePage implements OnInit, IViewNavEvents {
           this.parent = found;
           done && done.unsubscribe();
           if ( layout=='edit' ){
-            this.router.navigateByUrl('list');
+            const data = {'map-center': this.parent.loc.join(',')};
+            // this.router.navigate(['/list'], {queryParams:data} );  // queryParams not working
+            this.router.navigate(['/list', data ]);
           }
         });
         return Promise.resolve(committed);

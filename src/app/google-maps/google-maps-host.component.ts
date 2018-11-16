@@ -84,7 +84,7 @@ export class GoogleMapsHostComponent implements OnInit {
       center: center,
     };
     this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
-    const mapIdle = this._waitForMapIdle();
+    const mapIdle = GoogleMapsHostComponent.waitForMapIdle(this.map);
     this.map['id'] = this.map['id'] || `gmap-${Date.now() % 99}`;
     return mapIdle;
 
@@ -93,10 +93,10 @@ export class GoogleMapsHostComponent implements OnInit {
   /**
    * the map is first rendered and ready to use on `idle`
    */
-  private _waitForMapIdle():Promise<google.maps.Map> {
+  public static waitForMapIdle(map:google.maps.Map):Promise<google.maps.Map> {
     return new Promise<google.maps.Map>( (resolve, reject)=>{
-      google.maps.event.addListenerOnce(this.map, 'idle', (event)=> {
-        resolve(this.map);
+      google.maps.event.addListenerOnce(map, 'idle', (event)=> {
+        resolve(map);
       });
     });
   }
