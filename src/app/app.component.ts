@@ -60,7 +60,7 @@ export class AppComponent {
     menu.close();
     this.cd.detectChanges();
     setTimeout(  ()=>{
-      this.router.navigate(['/list']);
+      this.router.navigate(['/list'], {replaceUrl: true});
     }, 500 )
   }
 

@@ -357,7 +357,6 @@ export class RestyTrnHelper {
           width: null,
           height: null,
           camerarollId: null,   
-          _thumbSrc: {},    // do NOT save to Resty
         }
         break;
       case 'MarkerGroup':
@@ -588,9 +587,9 @@ export class RestyTrnHelper {
           else changed.push(o);
         });
         // TODO: reload all subjects together, after COMMIT complete
-        const reloadUuids = RestyTrnHelper.getCachedMarkers( changes, 'visible').map( o=>o.uuid);
-        subj.reload( reloadUuids , false);  // do NOT re-sort, preserve m.seq values
-        console.warn( "> RestyTrnHelper COMMIT, className=", subj.className, reloadUuids )
+        // const reloadUuids = RestyTrnHelper.getCachedMarkers( changes, 'visible').map( o=>o.uuid);
+        subj.reload( undefined , true);  // do NOT re-sort, preserve m.seq values
+        console.warn( "> RestyTrnHelper COMMIT, className=", subj.className, changes.filter(o=>o.className==subj.className) )
         return changed as IMarker[];
       }
       ,(err)=>{

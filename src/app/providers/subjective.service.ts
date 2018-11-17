@@ -45,8 +45,8 @@ export class SubjectiveService<T> {
     else {
       this.resty.get(uuid)
       .then(arr=>{
-        if (['MarkerList', 'MarkerGroup'].includes(this.resty.className)){
-          this.sortBy = 'label';
+        if (['MarkerList'].includes(this.resty.className)){
+          this.sortBy = 'label'; // TODO: this doesn't work if a user reorders. 
         } else {
           this.sortBy = 'seq';
         }
@@ -98,8 +98,7 @@ export class SubjectiveService<T> {
     if (this.className != 'Photo') return;
     (items as any as IPhoto[]).forEach( o=>{
       AppCache.for('Photo').set(o)
-      if (!SubjectiveService.photoCache[o.uuid])
-        SubjectiveService.photoCache[o.uuid] = o;
+      SubjectiveService.photoCache[o.uuid] = o;
     });
   }
 
