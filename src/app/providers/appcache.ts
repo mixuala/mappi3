@@ -29,7 +29,12 @@ export class CacheByKey<T> {
   set(item:T, key?:string):T { 
     // const className = item.className   // TODO: guard for className?
     key = key || item['uuid'] || item['id'];
-    this._cache[key] = item;
+    if (!key) {
+      console.error("AppCache, cache key not found", item);
+      return;
+    }
+    // this._cache[key] = item;
+    this._cache[key] = Object.assign({},item);
     if (this.storage){
       const cleanForJSON = AppCache.cleanProperties(item);
       cleanForJSON['className'] = `cache-${this.className}`;
@@ -41,7 +46,7 @@ export class CacheByKey<T> {
   items():T[] {
     // const itemKeys = Object.keys(this._cache).filter(k=>k.length==43);
     // return itemKeys.map(k=>this._cache[k]);
-    return Object.values(this._cache);
+    return Object.values(this._cache) as T[];
   }
 }
 

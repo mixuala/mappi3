@@ -82,6 +82,12 @@ export class GoogleMapsHostComponent implements OnInit {
     const mapOptions:google.maps.MapOptions = {
       zoom: AppConfig.initialMapZoom || INITIAL_MAP_ZOOM,
       center: center,
+      zoomControl: true,
+      mapTypeControl: false,
+      scaleControl: false,
+      streetViewControl: false,
+      rotateControl: false,
+      fullscreenControl: false, 
     };
     this.map = new google.maps.Map(this.element.nativeElement, mapOptions);
     const mapIdle = GoogleMapsHostComponent.waitForMapIdle(this.map);
