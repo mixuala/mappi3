@@ -14,22 +14,29 @@
 
 <ion-content no-padding>
 
-  <ion-list class="camera-roll" no-padding no-margin *ngFor="let moment of momCollection$ | async">
-    <ion-item-divider color="secondary">
+  <!-- use ion-virtual-scroll with thumbnail grid layout -->
+  <ion-virtual-scroll                        *ngIf="stash.useVirtualScroll"
+    class="camera-roll moments" no-margin
+    [approxItemHeight]="stash.rowHeight"
+    [approxHeaderHeight]="stash.headerHeight"
+    [items]="miRowCollection$ | async" 
+    [headerFn]="renderMomentAsHeaderFn">
+    <ion-item-divider class="header" color="primary" *virtualHeader="let moment">
       <ion-label>
         <h2>Moment: {{moment['label']}}</h2>
         <p>{{moment['begins']}} - {{moment['days']}} days</p>
         <p>{{moment['count']}} photos</p>
       </ion-label>
     </ion-item-divider>
-    <!-- see: http://w3bits.com/flexbox-masonry/ -->
-    <div class="masonry-wrap">
-      <ng-container *ngFor="let mi of moment._items$ | async">
-        <div class="img-wrap masonry-brick" *ngIf="(mi._imgSrc$ | async) as imgSrc"
-          (click)="toggle($event, mi, 'selected')"
-          >
-          <img [src]="imgSrc.src" *ngIf="imgSrc.src">
-          <div class="overlay" [ngClass]="{selected:mi._isSelected}">
+    <div *virtualItem="let row">
+      <div class="row">
+        <ng-container *ngFor="let mi of row">
+          <div class="img-wrap" [ngStyle]="stash.imgStyle"
+            *ngIf="(mi._imgSrc$ | async) as imgSrc"
+            (click)="toggle($event, mi, 'selected')">
+            <ion-img [src]="imgSrc.src" [ngStyle]="stash.imgStyle"  (ionImgDidLoad)="ionImgLoaded($event)"></ion-img>
+            <!-- <ion-spinner></ion-spinner> -->
+            <div class="overlay" [ngClass]="{selected:mi._isSelected}">
               <ion-icon [name]="mi._isFavorite ? 'heart' : 'heart-empty'"  
               [color]="mi._isFavorite ? 'secondary' : 'dark'" 
               (click)="toggle($event, mi, 'favorite')"
@@ -37,11 +44,49 @@
               <ion-icon class="select" [name]="mi._isSelected ? 'checkmark-circle' : 'checkmark-circle-outline'" 
               [color]="mi._isSelected ? 'primary' : 'dark'" 
               ></ion-icon>
+            </div>
           </div>
-        </div>
-      </ng-container>
+        </ng-container>
+      </div>
     </div>
-</ion-list>
+  </ion-virtual-scroll>
+
+  <!-- use masonry layout -->
+  <ng-container                         *ngIf="stash.useVirtualScroll==false">
+    <ion-list class="camera-roll" no-padding no-margin 
+      *ngFor="let moment of momCollection$ | async">
+      <ion-item-divider color="secondary">
+        <ion-label>
+          <h2>Moment: {{moment['label']}}</h2>
+          <p>{{moment['begins']}} - {{moment['days']}} days</p>
+          <p>{{moment['count']}} photos</p>
+        </ion-label>
+      </ion-item-divider>
+      <!-- see: http://w3bits.com/flexbox-masonry/ -->
+      <div class="masonry-wrap">
+        <ng-container *ngFor="let mi of moment._items$ | async">
+          <div class="img-wrap masonry-brick" *ngIf="(mi._imgSrc$ | async) as imgSrc"
+            (click)="toggle($event, mi, 'selected')"
+            [ngStyle]="imgSrc.style"
+            >
+            <!-- <img [src]="imgSrc.src" *ngIf="imgSrc.src"> -->
+            <ion-img [src]="imgSrc.src" (ionImgDidLoad)="ionImgLoaded($event)"
+            ></ion-img>
+            <ion-spinner></ion-spinner>
+            <div class="overlay" [ngClass]="{selected:mi._isSelected}">
+                <ion-icon [name]="mi._isFavorite ? 'heart' : 'heart-empty'"  
+                [color]="mi._isFavorite ? 'secondary' : 'dark'" 
+                (click)="toggle($event, mi, 'favorite')"
+                ></ion-icon>
+                <ion-icon class="select" [name]="mi._isSelected ? 'checkmark-circle' : 'checkmark-circle-outline'" 
+                [color]="mi._isSelected ? 'primary' : 'dark'" 
+                ></ion-icon>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+    </ion-list>
+  </ng-container>
 
 
 </ion-content>

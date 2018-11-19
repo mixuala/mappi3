@@ -237,7 +237,7 @@ export class ListPage implements OnInit, IViewNavEvents {
         onDismiss: async (resp:any={}):Promise<void> => {
           if (!resp.selected || !resp.selected.length) return;
           console.log( "Create MarkerList from selected=", resp.selected);
-          await this.createMarkerList_from_Cameraroll(undefined, resp)
+          await this.createMarkerList_from_Cameraroll(resp)
           .then( mL=>{ 
             this.nav('home', mL, {
               queryParams:{
@@ -264,100 +264,60 @@ export class ListPage implements OnInit, IViewNavEvents {
     
   }
 
+  /**
+   * create a new MarkerList from CamerarollPage Modal
+   * @param data {selected:IPhoto[]}, expecting IPhoto._moment: IMoment
+   */
+  async createMarkerList_from_Cameraroll(data:any={}):Promise<IMarkerList>{
+    const {selected} = data;
+    return CamerarollPage.createMarkerList_from_Cameraroll(selected, this._mListSub);
+  }
+
+  
 
   /**
-   * create a new MarkerList from 
-   *    1) a map click/location (set the map center) or 
-   *    2) CamerarollPage Modal
-   * @param ev 
-   * @param data {selected:string[], mapping:{[uuid:string]:IMoment}}
+   * create a new MarkerList from the create button,
+   *  specifying either a selected image or mapCenter as the marker location
+   * use this.photoService.choosePhoto(0) to select photo
+   * @param data IMarker properties, specifically [loc | seq]
+   * @param ev click event
+   * 
    */
-  // TODO: move to MarkerList.createMarkerList_from_Cameraroll()
-  async createMarkerList_from_Cameraroll(ev:any={}, data:any={}):Promise<IMarkerList>{
-
-    // function _getMomentsFromPhoto(photos):{[uuid:string]:IMoment}{
-    //   return photos.reduce( (res,p)=>{
-    //     const found = AppCache.for('Moment').items().find( m=>m.itemIds.includes( p.uuid) );
-    //     if (found) res[p.uuid] = found;
-    //     return res;
-    //   }, {});
-    // }
-
-    const {selected, mapping} = data;
-
+  async createMarkerList_from_Camera(ev:any={}):Promise<IMarkerList>{
     const target = ev.target && ev.target.tagName;
     const count = this._mListSub.value().length;
     const item:IMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
     item.label = `Map created ${item.created.toISOString()}`;
     item.seq = count;
-
-    // create from selected photos
-    let photos: IPhoto[] = [];
-    if (selected instanceof Array) {
-      photos = selected;
-      const bounds = new google.maps.LatLngBounds(null);
-      photos.forEach( (p:IPhoto)=>{
-        bounds.extend( new google.maps.LatLng(p.loc[0], p.loc[1]));
-      });
-      // ???: why are we adding to data here? what are we expecting?
-      data = {loc: MappiMarker.getBoundsLoc(bounds)};
-    } 
-    if (data.loc) data['_loc_was_map_center']==false;
-
-    if (!photos && target=='ION-BUTTON') {
-      const photo = await this.photoService.choosePhoto(0);
-      photos.push(photo);
-    }
-
-    // get position for MarkerList
-    let position = await Promise.resolve(data.loc)
-    .then(loc=>{
-      if (loc) return {lat:loc[0], lng:loc[1]};
-      if (AppConfig.map) return AppConfig.map.getCenter().toJSON();
-      return AppConfig.currentLoc;
-    });
-
-    // create MarkerGroups from each IPhoto[]
-    photos.forEach( async (p,i)=>{
-      // create MarkerGroup
-      const child:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup',{seq:i});
-
-      const moment = mapping[p.uuid];
-      if (moment) {
-        if (i==0) item.label = moment.title || moment.locations;
-        child.label = moment.title || moment.locations;
-      } 
-      else child.label = `Marker created ${child.created.toISOString()}`;
-      
-      if (p && p['className']=='Photo') {
-        RestyTrnHelper.setFKfromChild(child, p);
-        RestyTrnHelper.setFKfromChild(item, child);
-      }
-
+    const child:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
+    child.label = `Marker created ${child.created.toISOString()}`;
+    child.seq = 0;
+    return this.photoService.choosePhoto(0)
+    .then( (p:IPhoto)=>{
+      // create IPhoto < IMarkerGroup < IMarkerList
+      console.log( "### ListPage.choosePhoto, photo=",p, AppCache.for('Cameraroll').get(p.camerarollId));
+      RestyTrnHelper.setFKfromChild(child, p);
+      RestyTrnHelper.setFKfromChild(item, child);
       if (MappiMarker.hasLoc(p)) {
         RestyTrnHelper.setLocFromChild(child, p);
+        RestyTrnHelper.setLocFromChild(item, child);
+        return;
       }
-      else { 
+      else return Promise.reject('continue');
+    })
+    .catch( async (err)=>{
+      if (err=='continue') {
+        let latlng = AppConfig.map && AppConfig.map.getCenter();
+        if (!latlng) 
+          latlng = await GoogleMapsHostComponent.getCurrentPosition();
+        const position = latlng.toJSON();
+        RestyTrnHelper.setLocToDefault(item, position);
         RestyTrnHelper.setLocToDefault(child, position);
+        return Promise.resolve();
       }
-    });
-
-    // set position of MarkerList
-    if (data.loc){ 
-      // set by markerClick or selected boundsCenter
-      RestyTrnHelper.setLocToDefault(item, position);
-      item['_loc_was_map_center'] = false;
-    }
-    else if (photos && photos[0]) {
-      // set by photo with position
-      RestyTrnHelper.setLocFromChild(item, photos[0]);
-    }
-    else RestyTrnHelper.setLocToDefault(item, position);
-
-    // finish up
-    RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
-    MockDataService.getSubjByUuid(item.uuid, this._mListSub); // back reference to mListSubj
-    return Promise.resolve(item)
+      // possible error from this.photoService.choosePhoto()
+      console.warn('ListPage.createMarkerList_from_Camera()',err);
+    })
     .then( ()=>{
       RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
       MockDataService.getSubjByUuid(item.uuid, this._mListSub); // back reference to mListSubj
@@ -366,65 +326,31 @@ export class ListPage implements OnInit, IViewNavEvents {
   }
 
   /**
-   * create a new MarkerList from 
-   *    1) a map click/location (set the map center) or 
-   *    2) from the create button,
-   *  specifying either a selected image or mapCenter as the marker location
-   * use this.photoService.choosePhoto(0) to select photo
+   * create a new MarkerList from a map click/location (set the map center)
+   * see: app-google-maps[(itemChange)] => mappiMarkerChange({action:'add})
    * @param data IMarker properties, specifically [loc | seq]
-   * @param ev click event
    * 
    */
-  async createMarkerList_from_Camera(ev:any={}, data:any={}):Promise<IMarkerList>{
-    const target = ev.target && ev.target.tagName;
+  async createMarkerList_from_Loc(data:any={}):Promise<IMarkerList>{
     const count = data.seq || this._mListSub.value().length;
     const item:IMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
     item.label = `Map created ${item.created.toISOString()}`;
     item.seq = count;
     const child:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
     child.label = `Marker created ${child.created.toISOString()}`;
-    child.seq = 0;
     return Promise.resolve(true)
-    .then ( ()=>{
-      if (target=='ION-BUTTON') {
-        return this.photoService.choosePhoto(0)
-        .then( (p:IPhoto)=>{
-
-          console.log( "### ListPage.choosePhoto, photo=",p, AppCache.for('Cameraroll').get(p.camerarollId))
-
-          RestyTrnHelper.setFKfromChild(child, p);
-          RestyTrnHelper.setFKfromChild(item, child);
-          if (MappiMarker.hasLoc(p)) {
-            RestyTrnHelper.setLocFromChild(child, p);
-            RestyTrnHelper.setLocFromChild(item, child);
-            return;
-          }
-          // WARN: selected photo does not include GPS loc
-          return Promise.reject("continue");
-        })
+    .then( async ()=>{
+      let latlng = AppConfig.map && AppConfig.map.getCenter();
+      if (!latlng) 
+        latlng = await GoogleMapsHostComponent.getCurrentPosition();
+      const position = latlng.toJSON();
+      RestyTrnHelper.setLocToDefault(item, position);
+      RestyTrnHelper.setLocToDefault(child, position);
+      if (data.loc){ 
+        item['_loc_was_map_center'] = false;
       }
-      return Promise.reject('continue');
+      return item;
     })
-    .catch( (err)=>{
-      if (err=='continue') {
-        // no IPhoto returned, get a placeholder
-        return Promise.resolve(true)
-        .then( async ()=>{
-          let position = AppConfig.map && AppConfig.map.getCenter();
-          if (position) 
-            return position;
-          else 
-            return GoogleMapsHostComponent.getCurrentPosition();
-        })
-        .then( (latlng:google.maps.LatLng)=>{
-          const position = latlng.toJSON();
-          RestyTrnHelper.setLocToDefault(item, position);
-          RestyTrnHelper.setLocToDefault(child, position);
-          return item;
-        })
-      }
-      console.warn('ListPage.createMarkerGroup()',err);
-    }) 
     .then( ()=>{
       RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
       MockDataService.getSubjByUuid(item.uuid, this._mListSub); // back reference to mListSubj

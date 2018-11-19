@@ -397,11 +397,18 @@ export class RestyTrnHelper {
     if (!found) throw new Error("ERROR: Expecting parent instanceof IMarkerList or IMarkerGroup");
 
     const key = found[0];
-    if (parent[key] instanceof Array) parent[key].push(child.uuid);
-    else parent[key] = [child.uuid];
-
     parent._commit_child_items = parent._commit_child_items || [];
-    parent._commit_child_items.push(child);
+    if (parent[key] instanceof Array) {
+      if (parent[key].includes(child.uuid)==false){
+        parent[key].push(child.uuid);
+        parent._commit_child_items.push(child);
+      }
+      // else duplicate
+    }
+    else {
+      parent[key] = [child.uuid];
+      parent._commit_child_items.push(child);
+    }
     child['_rest_action'] = 'post';
 
     // call XXX.inflateUncommittedMarker() to render uncommitted data

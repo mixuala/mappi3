@@ -3,7 +3,7 @@
   <ng-container *ngSwitchCase="'gallery'">
     <ion-thumbnail class="gallery"  slot="start"
       *ngIf="(photo._imgSrc$ | async) as imgSrc">
-      <img [src]="imgSrc.src">
+      <img [src]="imgSrc.src"  *ngIf="imgSrc.src">
       <!-- <app-mappi-image [thumbSrc]="photo._imgSrc$ | async" [dim]="thumbDim"></app-mappi-image> -->
     </ion-thumbnail>
   </ng-container>
