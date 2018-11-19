@@ -240,6 +240,7 @@ export class MockDataService {
     o.src = thumbSrc.replace("80", size.join('/'));
     o.width = size[0];
     o.height = size[1];
+    o.dateTaken = new Date( Date.now() - ((90-seq)*24*3600*1000) ).toISOString();
 
     function patchCameraroll(o){
       o.camerarollId = "fake";

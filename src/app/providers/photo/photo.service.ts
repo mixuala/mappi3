@@ -29,12 +29,12 @@ export class PhotoService {
     public dataService: MockDataService,
     private platform: Platform,
     private photoLibrary: PhotoLibrary,
-  ) { 
-    
-    this.platform.ready().then( async ()=>{
+  ) {
+
+    this.platform.ready().then(async () => {
       if (typeof cordova != 'undefined')
-      PhotoLibraryCordova = cordova.plugins['photoLibrary']; // ['photoLibrary'];
-    })    
+        PhotoLibraryCordova = cordova.plugins['photoLibrary']; // ['photoLibrary'];
+    })
   }
 
 
@@ -122,7 +122,7 @@ export class PhotoService {
 
     // convert to IPhoto for display
     const photos = items.map( item=>{
-      return this._libraryItem2Photo(item, true);
+      return PhotoLibraryHelper.libraryItem2Photo(item, true);
     });
     return Promise.resolve(photos);
   }
@@ -219,7 +219,7 @@ export class PhotoService {
           // found valid moment and item
         } else item = checkItem;
         AppCache.for('Moment').set(moment, item.id);  // back ref
-        photo = this._libraryItem2Photo(item, true);
+        photo = PhotoLibraryHelper.libraryItem2Photo(item, true);
         photo.seq = seq;
         return Promise.resolve( photo );
         // continue
@@ -251,7 +251,7 @@ export class PhotoService {
         // WARNING: not using PhotoLibrary, so no direct access to moments
         // check if item is cached by matching exif.DateTimeOriginal
         item = AppCache.findItemByFingerprint(exifData);
-        photo = this._exif2Photo(exifData, item);
+        photo = PhotoLibraryHelper._exif2Photo(exifData, item);
         AppCache.for('Photo').set(photo);   // cache picked photo with unique p.uuid
         if (photo.camerarollId) {
           moment = AppCache.findMomentByItemId(photo.camerarollId);
@@ -300,7 +300,7 @@ export class PhotoService {
     if (pick.hasOwnProperty('camerarollId')) {
       return pick as IPhoto;
     }
-    return this._libraryItem2Photo(pick as IMappiLibraryItem, true);
+    return PhotoLibraryHelper.libraryItem2Photo(pick as IMappiLibraryItem, true);
   };
 
   _pickRandomMomentAndItem(moments:IMoment[], except:string[]=[], attempts:number=5):[IMoment, IMappiLibraryItem |string]{
@@ -437,10 +437,25 @@ export class PhotoService {
    * - Storage:         AppCache.storeByClassName('Moment')
    * @param options 
    */
-  async scan_moments_PhotoLibrary_Cordova(options:any={}):Promise<IMoment[]>
-  {
-    function _daysAgo (n:number):Date {
-       return new Date(Date.now() - 24 * 3600 * 1000 * n);
+  async scan_moments_PhotoLibrary_Cordova(options: any = {}): Promise<IMoment[]> {
+    function _daysAgo(n: number): Date {
+      return new Date(Date.now() - 24 * 3600 * 1000 * n);
+    }
+    async function _getCenter(moment: IMoment): Promise<[number, number]> {
+      const bounds = new google.maps.LatLngBounds(null);
+      moment.itemIds.forEach(async (uuid) => {
+        let found: IPhoto | IMappiLibraryItem;
+        found = AppCache.for('Cameraroll').get(uuid);
+        if (!found) found = AppCache.for('Photo').items().find(o => o.camerarollId == uuid);
+        if (!found) {
+          console.warn("TODO: load itemId from cameraRoll")
+          return;
+        }
+        const lat = (found['{GPS}'] && found['{GPS}'].Latitude) || (found['loc'] && found['loc'][0]) || null;
+        const lng = (found['{GPS}'] && found['{GPS}'].Longitude) || (found['loc'] && found['loc'][1]) || null;
+        if (lat && lng) bounds.extend(new google.maps.LatLng(lat, lng));
+      })
+      return MappiMarker.getBoundsLoc(bounds);
     }
 
     const cached:IMoment[] = AppCache.for('Moment').items();
@@ -454,15 +469,19 @@ export class PhotoService {
     const HOW_MANY_DAYS_AGO = 90;
     if (!from && !to) options.from = _daysAgo(daysAgo || HOW_MANY_DAYS_AGO).toISOString();
     const added = [];
-    const moments = await new Promise<IMoment[]>( (resolve,reject)=>{
+    return new Promise<IMoment[]>( (resolve,reject)=>{
       PhotoLibraryCordova.getMoments( 
-        (moments)=>{
-          console.log(">>> PhotoLibraryCordova.getMoments():", moments.slice(-5));
-          moments.forEach( m=>{
+        async (moments)=>{
+          await moments.forEach( async (m,i,l)=>{
             const found = AppCache.for('Moment').get(m.id);
             if (!found) added.push(m);
+            await _getCenter(m).then( loc=>{
+              m.loc = loc;
+            });
             AppCache.for('Moment').set(m);  // update cached value regardless
           });
+          AppCache.storeByClassName('Moment'); // save to Storage
+          console.log(`###Cameraroll Moments, count=${moments.length}, new=${added.length}`, JSON.stringify(options), added)
           resolve(moments);
         },    
         (err)=>{
@@ -471,9 +490,6 @@ export class PhotoService {
         },
         options)
     });
-    AppCache.storeByClassName('Moment');
-    console.log(`###Cameraroll Moments, count=${moments.length}, new=${added.length}`, JSON.stringify(options), added)
-    return moments;
   }
 
   /**
@@ -544,7 +560,7 @@ export class PhotoService {
         thumbnailHeight: 80,
         dataURL: true,
       };
-      await this.photoLibrary.requestAuthorization();
+      await this.photoLibrary.requestAuthorization({read:true,write:true});
       const photolib = await this.photoLibrary.getLibrary(photolib_options);
       if (!photolib){
         console.warn("IonicNative PhotoLibrary: not available with this Device")
@@ -567,47 +583,6 @@ export class PhotoService {
     }
   }
 
-
-
-  /**
-   * read jpeg data from NativeURI and get Exif metadata
-   * @param item 
-   * @param options 
-   */
-  private _libraryResp2Exif( item:IMappiLibraryItem, options?:any ): IExifPhoto {
-
-    const exif = item['{Exif}'] || {};
-    const gps = item['{GPS}'] || {};
-    const tiff = item['{TIFF}'] || {};
-
-    const exifData:IExifPhoto = {  
-      
-
-      // TODO: this src doesn't work with WKWebView
-      src: item.filePath,
-
-
-      orientation: tiff['Orientation'] || item.orientation,
-      exif: {
-        DateTimeOriginal: exif['DateTimeOriginal'],
-        PixelXDimension: item.width, 
-        PixelYDimension: item.height,
-      },       
-      gps: {
-        Altitude: gps['Altitude'],
-        lat: gps['Latitude'],
-        lng: gps['Longitude'],
-        speed: gps['Speed'],
-      },
-      tiff: {
-        Artist: tiff['Artist'],
-        Copyright: tiff['Copyright'],
-        Orientation: tiff['Orientation'],
-      }
-    }
-    
-    return exifData;
-  }
 
   /**
    * parse Exif meta data from Camera.getPicture(FILE_URL) response
@@ -651,81 +626,6 @@ export class PhotoService {
   }
 
 
-  /**
-   * convert cameraroll LibraryItem to IPhoto for rendering in <app-marker-item>, 
-   * 
-   * @param exifData 
-   * @param itemData 
-   * @param thumbDim   optionally configure thumbSrc$ observer for thumbnails, e.g. 80x80 thumbnails 
-   */
-  private _exif2Photo(exifData:IExifPhoto, itemData?:IMappiLibraryItem):IPhoto {
-    const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo', {seq:Date.now()});
-    function _exifDate2ISO(s) {
-      let parts = s.split(' ');
-      return `${parts[0].replace(/\:/g,"-")}T${parts[1]}`;
-    }
-
-    const exif:any = exifData.exif || {};
-    const tiff:any = exifData.tiff || {};
-    const gps:any = exifData.gps || {};
-    const gpsLoc:[number,number] = gps.lat && gps.lng ? [gps.lat, gps.lng] : [0,0];
-    let localTime:string;
-    try {
-      // localTime = PhotoService.localTimeAsDate( _exifDate2ISO(exif.DateTimeOriginal) ).toISOString();
-      localTime = new Date( _exifDate2ISO(exif.DateTimeOriginal) ).toISOString();
-    } catch (err) {
-      localTime = null;
-    }
-    const pickFromExif = {
-      src: exifData.src,                    // is this the correct IMG.src for the fullsize photo?
-      dateTaken: localTime,
-      orientation: tiff.Orientation || 1,
-      loc: gpsLoc,
-      width: exif.PixelXDimension,
-      height: exif.PixelYDimension,
-    }
-    
-    const pickFromItem = !itemData ? {} : {
-      camerarollId: itemData.id,
-      src: itemData.photoURL,               // override exifData.src
-      loc: [itemData.latitude, itemData.longitude],
-      label: itemData.fileName,
-      dateTaken: itemData.creationDate,
-      width: itemData.width,
-      height: itemData.height,
-    }
-    const photo:IPhoto = Object.assign(emptyPhoto, pickFromExif, pickFromItem);
-    // # final adjustments
-    photo.position = MappiMarker.position(photo);
-    if (AppConfig.device.platform != "ios"){
-      Array.from([null, 'thumbSrc']).forEach(o=>{
-        PhotoLibraryHelper.rotateDimByOrientation(photo, o);
-      })
-    }
-    if (MappiMarker.hasLoc(photo)==false) photo["_loc_was_map_center"] = true;
-
-    console.log(`>>> _exif2Photo:IPhoto.camerarollId=${photo.camerarollId} `, photo.src, itemData && itemData.fileName);
-    return photo;
-  }
-
-  /**
-   * return IPhoto ready for view rendering, 
-   * - each uncached response gets unique uuid
-   * @param item 
-   * @param cache
-   * @param force
-   */
-  private _libraryItem2Photo(item:IMappiLibraryItem, cache:boolean=false, force:boolean=false):IPhoto {
-    if (cache && !force) {
-      const found:IPhoto = AppCache.for('Photo').items().find(p=>p.camerarollId==item.id);
-      if (found) return found;
-    }
-    // generates new IPhoto.uuid for each photo, does NOT cache
-    const exifData = this._libraryResp2Exif(item);
-    const photo = this._exif2Photo(exifData, item);
-    if (cache) AppCache.for('Photo').set(photo);   // cache picked photo with unique p.uuid
-    return photo;
-  }
 
   private _getRandomPhoto(seq:number):Promise<IPhoto> {
     return this.dataService.Photos.get()
@@ -793,84 +693,21 @@ export class PhotoLibraryHelper {
     return false;
   }
 
-  // /**
-  //  * 
-  //  * lazyload IMG.src from IPhoto. only fetch dataURLs when called.
-  //  * 
-  //  * use with: <app-mappi-image [photo]="photo"></app-mappi-image>
-  //  * 
-  //  * @param photo 
-  //  * @param dim
-  //  * @returns IThumbSrc, res !== photo._thumbSrc when src CHANGED
-  //  */
-  // static lazySrc( photo:IPhoto, dim:string='80x80'):IThumbSrc{
-  //   const [imgW, imgH] = dim.split('x');
-  //   const cached = SubjectiveService.photoCache[photo.uuid];
-  //   const emptyThumbSrc = PhotoLibraryHelper.getEmptyThumbSrc();
-
-  //   // init defaults
-  //   photo._thumbSrc = photo._thumbSrc || emptyThumbSrc;
-  //   photo._imgCache = photo._imgCache || {};
-
-  //   emptyThumbSrc['when'] = parseInt((Math.random()+"").slice(-3));
-
-  //   if (cached && cached._imgCache && cached._imgCache[dim]){
-  //     // assume all Storage.get() photos are restored && cached
-  //     if (cached._imgCache[dim] === photo._thumbSrc.src){
-  //       console.log(" --- 1. no change, same as cached value ---", emptyThumbSrc['when']);
-  //       return photo._thumbSrc; // return same value, avoid changeDetection
-  //     }
-
-  //     // use immutable value for changeDetection
-  //     emptyThumbSrc.src = cached._imgCache[dim];
-  //     return emptyThumbSrc;
-  //   }
-
-  //   SubjectiveService.photoCache[photo.uuid] = photo;
-
-  //   if (photo.camerarollId){
-  //     if (photo._thumbSrc['loading']) {
-  //       console.log(" --- 3. no change, waiting on Promise ---", emptyThumbSrc['when']);
-  //       return photo._thumbSrc;
-  //     }  
-  //     // load dataURL from cameraroll using use PhotoLibrary.getThumbnail( {dataURL:true})
-  //     // cache value and return
-  //     const options = { 
-  //       thumbnailWidth: parseInt(imgW), 
-  //       thumbnailHeight: parseInt(imgH),
-  //       dataURL: true,
-  //     }
-  //     photo._thumbSrc['loading'] = PhotoLibraryHelper.getDataURLFromCameraRoll(photo, options)
-  //     .then( imgSrc=>{
-  //       // use immutable value for changeDetection
-  //       emptyThumbSrc.src = photo._imgCache[dim] = imgSrc;
-  //       console.warn(`@@@ cameraroll CHANGED src.length=${imgSrc.length}, `, photo.uuid,  imgSrc && imgSrc.slice(0,25));
-  //       return imgSrc; // resolve
-  //     });
-  //     // return same value, avoid changeDetection until ready
-  //     console.log(" --- 2. no change, init Promise ---", emptyThumbSrc['when']);  
-  //     photo._thumbSrc['when'] = Date.now()
-  //     return photo._thumbSrc;  
-  //   } 
-  //   else {
-  //     // photo in cloud, but not cached, fetch src with proper size spec
-  //     const _getSrcUrlBySize = (photo:IPhoto, dim:string='80x80'):string => {
-  //       // only works for demo data on https://picsum.photos
-  //       return photo.src.replace(/\d+\/\d+/, dim.replace('x','/'));
-  //     }
-  //     emptyThumbSrc.src = photo._imgCache[dim] = _getSrcUrlBySize(photo, dim);
-  //     // use immutable value for changeDetection
-  //     return emptyThumbSrc;
-  //   }
-  // }
+  static getLibraryItemFromCameraRoll( camerarollId: string):Promise<IMappiLibraryItem> {
+    // TODO: should be able to get LibraryItem directly,
+    // currently requires a scan, PhotoLibraryCordova.getLibrary()
+    const found = AppCache.for('Cameraroll').get(camerarollId);
+    if (!found) 
+      console.warn( "TODO: should be able to get LibraryItem directly. id=", camerarollId );
+    return Promise.resolve(found);
+  }
 
   static getDataURLFromCameraRoll(photo:IPhoto, options:IMappiGetThumbnailOptions):Promise<string> {
-    const dim = options['dim'] || '80x80';
     return new Promise( (resolve, reject)=>{
       if (photo.camerarollId=="fake"){
         setTimeout( ()=>{
           console.warn(  "@@ >> fake CameraRoll delay for id=", photo.uuid)
-          const src = photo.src.replace(/\d+\/\d+/, dim.replace('x','/'))
+          const src = photo.src.replace(/\d+\/\d+/,[options.thumbnailWidth,options.thumbnailHeight].join('/') )
           resolve(  src  );
         },100)
         return "fake cameraroll delay"
@@ -883,8 +720,10 @@ export class PhotoLibraryHelper {
             const errMsg = "PhotoLibraryHelper._assignDataURL() not configured for Blob data yet";
             console.error(errMsg);
             reject(errMsg);
-          } else 
+          } else {
+            console.warn(`1. @@@ cameraroll PLUGIN resp, size=${data.length}`, options['cache_key']);
             resolve(  data  );
+          }
         },
         function (err) {
           console.log('PhotoLibraryHelper._assignDataURL(): Error occured', err);
@@ -893,4 +732,133 @@ export class PhotoLibraryHelper {
         options);
     })
   }
+
+
+
+
+  /**
+   * return IPhoto ready for view rendering, 
+   * - each uncached response gets unique uuid
+   * @param item 
+   * @param cache
+   * @param force
+   */
+  static libraryItem2Photo(item:IMappiLibraryItem, cache:boolean=false, force:boolean=false):IPhoto {
+    if (!item) return null;
+    if (cache && !force) {
+      const found:IPhoto = AppCache.for('Photo').items().find(p=>p.camerarollId==item.id);
+      if (found) return found;
+    }
+    // generates new IPhoto.uuid for each photo, does NOT cache
+    const exifData = PhotoLibraryHelper._libraryResp2Exif(item);
+    const photo = PhotoLibraryHelper._exif2Photo(exifData, item);
+    if (cache) AppCache.for('Photo').set(photo);   // cache picked photo with unique p.uuid
+    return photo;
+  }
+
+
+
+
+  /**
+   * convert cameraroll LibraryItem to IPhoto for rendering in <app-marker-item>, 
+   * 
+   * @param exifData 
+   * @param itemData 
+   * @param thumbDim   optionally configure thumbSrc$ observer for thumbnails, e.g. 80x80 thumbnails 
+   */
+  static _exif2Photo(exifData:IExifPhoto, itemData?:IMappiLibraryItem):IPhoto {
+    const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo', {seq:Date.now()});
+    function _exifDate2ISO(s) {
+      let parts = s.split(' ');
+      return `${parts[0].replace(/\:/g,"-")}T${parts[1]}`;
+    }
+
+    const exif:any = exifData.exif || {};
+    const tiff:any = exifData.tiff || {};
+    const gps:any = exifData.gps || {};
+    const gpsLoc:[number,number] = gps.lat && gps.lng ? [gps.lat, gps.lng] : [0,0];
+    let localTime:string;
+    try {
+      // localTime = PhotoService.localTimeAsDate( _exifDate2ISO(exif.DateTimeOriginal) ).toISOString();
+      localTime = new Date( _exifDate2ISO(exif.DateTimeOriginal) ).toISOString();
+    } catch (err) {
+      localTime = null;
+    }
+    const pickFromExif = {
+      src: exifData.src,                    // is this the correct IMG.src for the fullsize photo?
+      dateTaken: localTime,
+      orientation: tiff.Orientation || 1,
+      loc: gpsLoc,
+      width: exif.PixelXDimension,
+      height: exif.PixelYDimension,
+    }
+    
+    const pickFromItem = !itemData ? {} : {
+      camerarollId: itemData.id,
+      src: itemData.photoURL,               // override exifData.src
+      loc: [itemData.latitude, itemData.longitude],
+      label: itemData.fileName,
+      dateTaken: itemData.creationDate,
+      width: itemData.width,
+      height: itemData.height,
+      _isFavorite: itemData.isFavorite,
+    }
+    const photo:IPhoto = Object.assign(emptyPhoto, pickFromExif, pickFromItem);
+    // # final adjustments
+    photo.position = MappiMarker.position(photo);
+    PhotoLibraryHelper.rotateDimByOrientation(photo);
+    // if (AppConfig.device.platform != "ios"){
+    //   Array.from([null, 'thumbSrc']).forEach(o=>{
+    //     PhotoLibraryHelper.rotateDimByOrientation(photo, o);
+    //   })
+    // }
+    if (MappiMarker.hasLoc(photo)==false) photo["_loc_was_map_center"] = true;
+
+    console.log(`>>> _exif2Photo:IPhoto.camerarollId=${photo.camerarollId} `, photo.src, itemData && itemData.fileName);
+    return photo;
+  }
+
+
+
+  /**
+   * read jpeg data from NativeURI and get Exif metadata
+   * @param item 
+   * @param options 
+   */
+  static _libraryResp2Exif( item:IMappiLibraryItem, options?:any ): IExifPhoto {
+
+    const exif = item['{Exif}'] || {};
+    const gps = item['{GPS}'] || {};
+    const tiff = item['{TIFF}'] || {};
+
+    const exifData:IExifPhoto = {  
+      
+
+      // TODO: this src doesn't work with WKWebView
+      src: item.filePath,
+
+
+      orientation: tiff['Orientation'] || item.orientation,
+      exif: {
+        DateTimeOriginal: exif['DateTimeOriginal'],
+        PixelXDimension: item.width, 
+        PixelYDimension: item.height,
+      },       
+      gps: {
+        Altitude: gps['Altitude'],
+        lat: gps['Latitude'],
+        lng: gps['Longitude'],
+        speed: gps['Speed'],
+      },
+      tiff: {
+        Artist: tiff['Artist'],
+        Copyright: tiff['Copyright'],
+        Orientation: tiff['Orientation'],
+      }
+    }
+    
+    return exifData;
+  }
+
+
 }

@@ -8,7 +8,7 @@ import { Observable, BehaviorSubject, Subject, fromEventPattern } from 'rxjs';
 import { filter, skipWhile, takeUntil, switchMap, map, debounceTime } from 'rxjs/operators';
 
 import {
-  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions,
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions, IMoment,
 } from '../providers/types';
 import  { 
   MockDataService, RestyTrnHelper, quickUuid,
@@ -234,10 +234,10 @@ export class ListPage implements OnInit, IViewNavEvents {
 
     if ("use CamerarollPage") {
       const options = {
-        onDismiss: async (selected:IPhoto[]=[]):Promise<void> => {
-          if (!selected.length) return;
-          console.log( "Create MarkerList from selected=", selected);
-          await this.createMarkerList_from_Cameraroll(undefined, selected)
+        onDismiss: async (resp:any={}):Promise<void> => {
+          if (!resp.selected || !resp.selected.length) return;
+          console.log( "Create MarkerList from selected=", resp.selected);
+          await this.createMarkerList_from_Cameraroll(undefined, resp)
           .then( mL=>{ 
             this.nav('home', mL, {
               queryParams:{
@@ -265,15 +265,26 @@ export class ListPage implements OnInit, IViewNavEvents {
   }
 
 
-
   /**
    * create a new MarkerList from 
    *    1) a map click/location (set the map center) or 
    *    2) CamerarollPage Modal
    * @param ev 
-   * @param data 
+   * @param data {selected:string[], mapping:{[uuid:string]:IMoment}}
    */
+  // TODO: move to MarkerList.createMarkerList_from_Cameraroll()
   async createMarkerList_from_Cameraroll(ev:any={}, data:any={}):Promise<IMarkerList>{
+
+    // function _getMomentsFromPhoto(photos):{[uuid:string]:IMoment}{
+    //   return photos.reduce( (res,p)=>{
+    //     const found = AppCache.for('Moment').items().find( m=>m.itemIds.includes( p.uuid) );
+    //     if (found) res[p.uuid] = found;
+    //     return res;
+    //   }, {});
+    // }
+
+    const {selected, mapping} = data;
+
     const target = ev.target && ev.target.tagName;
     const count = this._mListSub.value().length;
     const item:IMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
@@ -282,15 +293,14 @@ export class ListPage implements OnInit, IViewNavEvents {
 
     // create from selected photos
     let photos: IPhoto[] = [];
-    if (data instanceof Array) {
-      photos = data;
+    if (selected instanceof Array) {
+      photos = selected;
       const bounds = new google.maps.LatLngBounds(null);
       photos.forEach( (p:IPhoto)=>{
         bounds.extend( new google.maps.LatLng(p.loc[0], p.loc[1]));
       });
-      const {south, west, north, east} = bounds.toJSON();
-      const boundsCenter = [(south+north)/2, (west+east)/2];
-      data = {loc: boundsCenter};
+      // ???: why are we adding to data here? what are we expecting?
+      data = {loc: MappiMarker.getBoundsLoc(bounds)};
     } 
     if (data.loc) data['_loc_was_map_center']==false;
 
@@ -311,7 +321,14 @@ export class ListPage implements OnInit, IViewNavEvents {
     photos.forEach( async (p,i)=>{
       // create MarkerGroup
       const child:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup',{seq:i});
-      child.label = `Marker created ${child.created.toISOString()}`;
+
+      const moment = mapping[p.uuid];
+      if (moment) {
+        if (i==0) item.label = moment.title || moment.locations;
+        child.label = moment.title || moment.locations;
+      } 
+      else child.label = `Marker created ${child.created.toISOString()}`;
+      
       if (p && p['className']=='Photo') {
         RestyTrnHelper.setFKfromChild(child, p);
         RestyTrnHelper.setFKfromChild(item, child);
@@ -340,7 +357,12 @@ export class ListPage implements OnInit, IViewNavEvents {
     // finish up
     RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
     MockDataService.getSubjByUuid(item.uuid, this._mListSub); // back reference to mListSubj
-    return Promise.resolve(item);
+    return Promise.resolve(item)
+    .then( ()=>{
+      RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
+      MockDataService.getSubjByUuid(item.uuid, this._mListSub); // back reference to mListSubj
+      return item;
+    });
   }
 
   /**

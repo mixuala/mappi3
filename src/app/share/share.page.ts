@@ -192,10 +192,9 @@ export class SharePage implements OnInit, IViewNavEvents {
       case 'Map':
         const marker = this._mgSub.value().find(o=>o.uuid==uuid);
         console.log( "Launch Google Maps to marker.loc=", marker.loc)
-        const calcDistanceBetween = google.maps.geometry.spherical.computeDistanceBetween;
         const {lat, lng} = marker.position;
         const here = new google.maps.LatLng(AppConfig.currentLoc.lat, AppConfig.currentLoc.lng);
-        const dist = calcDistanceBetween( here, new google.maps.LatLng(lat,lng));
+        const dist = MappiMarker.getDistanceBetween( here, new google.maps.LatLng(lat,lng));
         // console.log("distance from marker=", dist, marker.position, GoogleMapsComponent.currentLoc.toJSON());
         const MAX_NAVIGATION_DISTANCE = 500000;  // meters
         if (dist < MAX_NAVIGATION_DISTANCE && AppConfig.platform.is('cordova')){

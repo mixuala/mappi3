@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 
 import {
-  IMarker, IUuidMarker, IMappiMarker, 
+  IMarker, IUuidMarker, IMappiMarker, IPoint,
   IListener, IListenerController
 } from '../types';
 
@@ -143,6 +143,27 @@ export class MappiMarker {
       bounds.extend(position);
     })
     return bounds;
+  }
+
+
+  /**
+   * 
+   * additional helper functions
+   */
+  static getBoundsLoc(bounds:google.maps.LatLngBounds):[number,number]{
+    const {south, west, north, east} = bounds.toJSON();
+    return [(south+north)/2, (west+east)/2];
+  }
+
+  
+
+  static getDistanceBetween(here:IPoint, there:IPoint):number{
+    const [a, b] = [here, there].map( (p:IPoint)=>{
+      if (p instanceof google.maps.LatLng) return p;
+      if (p instanceof Array) return new google.maps.LatLng(p[0], p[1]);
+      return new google.maps.LatLng(p.lat, p.lng);
+    });
+    return google.maps.geometry.spherical.computeDistanceBetween(a,b);
   }
 
   

@@ -31,7 +31,7 @@ export interface IMarkerGroup extends IMarker {
 }
 
 export interface IPhoto extends IMarker {
-  dateTaken: string,
+  dateTaken: string,  // Date.toISOString()
   orientation: number,
   src: string,
   width?: number,
@@ -76,7 +76,7 @@ export interface IMapActions {
   [propName: string]: any;
 }
 
-
+export type IPoint = [number, number] | {lat:number, lng:number} | google.maps.LatLng;
 
 
 /**********************************************************************************************
@@ -123,16 +123,19 @@ export interface IMarkerSubject {
 }
 
 
-/**
+/******************************************************************
  * cameraroll types
  */
 import { PhotoLibrary, LibraryItem, AlbumItem, GetLibraryOptions, GetThumbnailOptions } from '@ionic-native/photo-library/ngx';
 
 export interface IMoment extends AlbumItem {
-  locations: string[]; // comma delimited
-  startDate: Date;
-  endDate: Date;
+  locations: string;  // comma delimited
+  startDate: string;  // Date.toISOString()
+  endDate: string;    // Date.toISOString()
   itemIds: string[];
+  loc?: [number,number];
+  _itemSubj?: Subject<IPhoto[]>;
+  _items$?: Observable<IPhoto[]>;
   [propName:string]: any,
 }
 
@@ -166,16 +169,6 @@ export interface IExifPhoto {
 
   [propName: string]: any;
 }
-
-// export interface IThumbSrc {
-//   width?:string;
-//   height?:string;
-//   src?: string;
-//   style?: {'width.px':string, 'height.px':string};
-//   title?: string;
-//   alt?: string;
-//   loading?: Promise<string>;
-// }
 
 // update/extend interface definition
 export interface IMappiGetLibraryOptions extends GetLibraryOptions {

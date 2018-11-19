@@ -13,6 +13,7 @@ import  { MockDataService, RestyTrnHelper, quickUuid } from '../providers/mock-d
 import { AppCache } from '../providers/appcache';
 import { ModalController } from '@ionic/angular';
 import { AppConfig } from '../providers/helpers';
+import { MappiMarker } from '../providers/mappi/mappi.service';
 
 @Component({
   selector: 'app-cameraroll',
@@ -42,7 +43,7 @@ export class CamerarollPage implements OnInit {
   /**
    * launch as Modal
    * @param modalCtrl 
-   * @param options options.onDismiss:(selected:IPhoto[])=>Promise<void>
+   * @param options options.onDismiss:(resp:{selected:IPhoto[], mapping:{[uuid:string]:IMoment}})=>Promise<void>
    */
   static async presentModal(modalCtrl:ModalController, options?:any):Promise<any>{
       options = Object.assign( {isModal:true}, options );
@@ -53,8 +54,9 @@ export class CamerarollPage implements OnInit {
       .then( async (modal) => {
         modal.present();
         await modal.onWillDismiss().then( async (resp)=>{
-          if (resp.data.length){
+          if (resp.data.selected && resp.data.selected.length){
             // commit before dismissing modal
+            // console.log(resp);
             return options.onDismiss && options.onDismiss(resp.data);
           }
         })
@@ -73,6 +75,7 @@ export class CamerarollPage implements OnInit {
 
   public miSubject: BehaviorSubject<IPhoto[]>;
   public miCollection$: Observable<IPhoto[]>;
+  public photos2moments:{[uuid:string]:IMoment};
 
   @Input() items:IPhoto[] | IMappiLibraryItem[];
 
@@ -84,32 +87,135 @@ export class CamerarollPage implements OnInit {
 
 
   async loadCameraroll(){
-    const dim = "x160";  // height==160
+    const dim = "x100";  // height==100
+
+    let moments: IMoment[];
+    this.photos2moments = {};  // reset
+    const allPhotos:IPhoto[] = []
+    const options = {};
     switch (AppConfig.device.platform) {
       case "ios":
-        const options = {};
-        let photos = await this.photoService.getCamerarollAsPhotos(options);
-        if (photos.length) break;
+        moments = await this.ios_loadMoments(500*1000, 3);
+        moments = moments.sort( (a,b)=>a.startDate > b.startDate ? 1 : -1).reverse();
+        moments.forEach(m=>{
+          this.humanize(m);
+          const notFound = [];
+
+          // from `ios` cameraRoll
+          const photos = m.itemIds.reduce( (res,id)=>{
+            const item = AppCache.for('Cameraroll').get(id);
+            if (!item) {
+              notFound.push(id);
+              return res;
+            }
+            // TODO: not sure we should cache Photos from Cameraroll
+            const p = PhotoLibraryHelper.libraryItem2Photo(item, true);
+            p['_isSelected'] = false;
+            p['_isFavorite'] = p['_isFavorite'] || false;
+            this.photos2moments[p.uuid] = m;
+            res.push(p);
+            allPhotos.push(p);
+            return res; 
+          },[]);
+
+          m._itemSubj = new BehaviorSubject<IPhoto[]>(photos);
+          m._items$ = m._itemSubj.asObservable();
+  
+          function _dontWait(){
+            // dont wait for requests to Cameraroll
+            const waitFor:Promise<IPhoto>[] = notFound
+            .slice(0,10)
+            .map( (id)=>{
+              return PhotoLibraryHelper.getLibraryItemFromCameraRoll(id)
+              .then( item=>{
+                if (!item) return;
+                const p = PhotoLibraryHelper.libraryItem2Photo(item, true);
+                p['_isSelected'] = false;
+                p['_isFavorite'] = p['_isFavorite'] || false;
+                this.photos2moments[p.uuid] = m;
+                return p;
+              });
+            });
+            Promise.all(waitFor).then((photos)=>{
+              const found = photos.filter( p=>!!p );
+              if (!found.length) return;
+
+              const cached = AppCache.for('Photo').items();
+              const ready = m.itemIds.map( id=>cached.find(o=>o.camerarollId==id) );
+              m._itemSubj.next( ready.filter(o=>!!o) );
+            });
+            return;
+          }
+
+          _dontWait();  // end forEach
+          return;
+        });
+
+        // load ImgSrc by Observable
+        allPhotos.slice(0,99).forEach( p=>{
+          /**
+           * needs rate control or lazy loading for cameraroll
+           * otherwise too slow
+           */
+          setTimeout( ()=>p._imgSrc$=ImgSrc.getImgSrc$(p, dim, false) ,10 );
+
+        }); 
+        break;
       case "web":
       case "android":
         // load mock cameraroll, direct assignment, does not use ngOnChanges();
-        const moments = await this.mockCamerarollAsMoments(options);
-        const allPhotos: IPhoto[] = [];
+        moments = await this.mockCamerarollAsMoments(options);
         moments.forEach(m=>{
           this.humanize(m);
-          m.photos.forEach( mi=>{
-            allPhotos.push(mi);
-            if (!mi._imgSrc$){
-              mi['imgSrc$']= ImgSrc.getImgSrc$(mi, dim);
-              mi['_isSelected'] = false;
-              mi['_isFavorite'] = false;
-            }
-          })
+          const notFound = [];
+          let photos = m['photos'] as IPhoto[];  // for view rendering
+          if (photos){
+            // from mockCamerarollAsMoments()
+            m._itemSubj = new BehaviorSubject<IPhoto[]>(photos);
+            m._items$ = m._itemSubj.asObservable();
+            photos.forEach( p=>{
+              p['_isSelected'] = false;
+              p['_isFavorite'] = p['_isFavorite'] || false;
+              p._imgSrc$=ImgSrc.getImgSrc$(p, dim, false);
+              this.photos2moments[p.uuid] = m;
+              allPhotos.push(p);
+            })
+          }
+          AppCache.for('Moment').set(m);
         });
-        this.momSubject.next(moments);
-        this.miSubject.next(allPhotos);
         break;
+      }
+
+      /**
+       * show cameraroll
+       */
+      this.miSubject.next(allPhotos);
+      this.momSubject.next(moments);
+  }
+
+  /**
+   * get moments from cameraroll, 
+   * @param minDist , filter by minimum distance in meters
+   * @param minCount , filter by minimum items in moment
+   */
+  async ios_loadMoments(minDist?:number, minCount?:number):Promise<IMoment[]>{
+    if (AppConfig.device.platform != 'ios') return [];
+
+    let moments = await this.photoService.scan_moments_PhotoLibrary_Cordova({daysAgo:180});
+    if (moments.length==0){
+      console.warn(`&&& cordova.Plugin.PhotoLibrary is not returning correctly`)
+      moments = AppCache.for('Moment').items();
     }
+    if (minCount) moments = moments.filter( m=>{
+      return m.itemIds.length >= minCount;
+      return (m._itemSubj as BehaviorSubject<IPhoto[]>).value.length >= minCount;
+    });
+    if (minDist) {
+      moments = moments.filter( m=>{
+        return m.loc && MappiMarker.getDistanceBetween(m.loc, AppConfig.currentLoc)>=minDist;
+      });
+    }
+    return Promise.resolve(moments);
   }
 
   async ngOnInit() {
@@ -134,15 +240,20 @@ export class CamerarollPage implements OnInit {
   }
 
 
-  async commit():Promise<IPhoto[]> {
+  async commit():Promise<{selected:IPhoto[], mapping:{[uuid:string]:IPhoto[]}}> {
     const selected = this.miSubject.value.filter(o=>o['_isSelected']);
-
+    const mapping =  selected.reduce( (res,p)=>{ 
+      res[p.uuid] = this.photos2moments[p.uuid];
+      return res;
+    }, {});
+    const data = {selected, mapping};
+    
     if (this.isModal || this["modal"] ) {
-      await this["modal"].dismiss(selected);  // pass selected back to opener
+      await this["modal"].dismiss(data);  // pass selected back to opener
     }
     if (this.isNav) {
       // ???: how to do pass `selected` back to the listener?
-      return Promise.resolve(selected);
+      return Promise.resolve(data);
     }
     this.close();
   }
@@ -151,6 +262,7 @@ export class CamerarollPage implements OnInit {
   async close() {
     if (this.isModal || this["modal"] ) {
       this["modal"].dismiss([]);
+      return;
     }
 
     if (this.isNav) {
@@ -160,7 +272,7 @@ export class CamerarollPage implements OnInit {
       if (nav.canGoBack()) 
         return nav.pop();
     }
-    return
+    return this.router.navigate(['/list'])
   }
 
   /**
@@ -191,9 +303,9 @@ export class CamerarollPage implements OnInit {
    * helpers
    */
   humanize(moment:IMoment):IMoment{
-    moment['label'] = moment.locations.join(', ');
-    moment['begins'] = moment.startDate.toDateString();
-    moment['days'] = Math.ceil( (moment.endDate.valueOf() - moment.startDate.valueOf()) / (24*3600*1000) );
+    moment['label'] = moment.title || moment.locations;
+    moment['begins'] = new Date(moment.startDate).toDateString();
+    moment['days'] = Math.ceil( (new Date(moment.endDate).valueOf() - new Date(moment.startDate).valueOf()) / (24*3600*1000) );
     moment['count'] = moment.itemIds.length;
     return moment;
   }
@@ -228,17 +340,17 @@ export class CamerarollPage implements OnInit {
       });
       const id = quickUuid();
       const title = "";
-      const locations:string[] = [];
+      const locations:string = "";
       const dates = photos.map(o=>o.dateTaken).sort();
-      const startDate = new Date(dates[0]);
-      const endDate = new Date(dates.pop());
+      const startDate = dates[0];
+      const endDate = dates.pop();
       const itemIds = photos.map(o=>o.uuid);
       return { id, title, locations, startDate, endDate, itemIds, photos, bounds,}
     });
 
     // manually patch locations
-    moments[0].locations = ["Bangkok", "Thailand"];
-    moments[1].locations = ["Siem Reap", "Cambodia"];
+    moments[0].locations = ["Bangkok", "Thailand"].join(', ');
+    moments[1].locations = ["Siem Reap", "Cambodia"].join(', ');
 
     // filter bounds/dateTaken
     if (options.from || options.to) {

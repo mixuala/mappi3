@@ -139,7 +139,8 @@ export class ImgSrc {
     let cacheItem:IImgSrcItem;
 
     // check cache
-    const cached:IImgSrcItem = AppCache.for('ImgSrc').get([dim,photo.uuid].join(':'));
+    const cache_key = [dim,photo.uuid].join(':');
+    const cached:IImgSrcItem = AppCache.for('ImgSrc').get(cache_key);
     if (cached && !force) {
       if (cached['loading'] || cached.imgSrc.src){
         // good or still loading...
@@ -160,7 +161,7 @@ export class ImgSrc {
     else {
       if (cached) {
         // force==true, delete from cache
-        delete AppCache.for('ImgSrc')._cache[cached.key];
+        delete AppCache.for('ImgSrc')._cache[cache_key];
       }
 
       // start fresh
@@ -185,6 +186,7 @@ export class ImgSrc {
         .then( imgSrc=>{
           cacheItem.imgSrc.src = imgSrc;
           delete cacheItem['loading'];  // wait for promise to complete
+          AppCache.for('ImgSrc').set(cacheItem, cache_key);
           return;
         })
       }
@@ -193,15 +195,18 @@ export class ImgSrc {
         const options = { 
           thumbnailWidth: parseInt(imgW), 
           thumbnailHeight: parseInt(imgH),
-          quality: 85,
+          quality: 85, 
           dataURL: true,
+          cache_key: cache_key,
         }
+        console.warn(`0. @@@ cameraroll PREPARE, key=`, cache_key);
         cacheItem['loading'] = PhotoLibraryHelper.getDataURLFromCameraRoll(photo, options)
         .then( 
           imgSrc=>{
             cacheItem.imgSrc.src = imgSrc;
             delete cacheItem['loading'];  // wait for promise to complete
-            // console.warn(`@@@ cameraroll CHANGED src.length=${imgSrc.length}, `, cacheItem.key, imgSrc.slice(0,50));
+            console.warn(`2. @@@ cameraroll CHANGED size=${imgSrc.length}, `, cache_key );
+            AppCache.for('ImgSrc').set(cacheItem, cache_key);
             return;
           }
           ,(err)=>{
@@ -218,6 +223,7 @@ export class ImgSrc {
         .then( imgSrc=>{
           cacheItem.imgSrc.src = imgSrc; 
           delete cacheItem['loading'];  // wait for promise to complete
+          AppCache.for('ImgSrc').set(cacheItem, cache_key);
           return;
         })
       }
@@ -227,7 +233,7 @@ export class ImgSrc {
       // push result to Observers
       cacheItem.subj.next(cacheItem.imgSrc);
     });
-    AppCache.for('ImgSrc').set(cacheItem);
+    AppCache.for('ImgSrc').set(cacheItem, cache_key );
     return cacheItem.imgSrc$;
   }
   

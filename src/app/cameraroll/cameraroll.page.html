@@ -24,11 +24,11 @@
     </ion-item-divider>
     <!-- see: http://w3bits.com/flexbox-masonry/ -->
     <div class="masonry-wrap">
-      <ng-container *ngFor="let mi of moment.photos">
-        <div class="img-wrap masonry-brick" *ngIf="(mi.imgSrc$ | async) as imgSrc"
+      <ng-container *ngFor="let mi of moment._items$ | async">
+        <div class="img-wrap masonry-brick" *ngIf="(mi._imgSrc$ | async) as imgSrc"
           (click)="toggle($event, mi, 'selected')"
           >
-          <img [src]="imgSrc.src">
+          <img [src]="imgSrc.src" *ngIf="imgSrc.src">
           <div class="overlay" [ngClass]="{selected:mi._isSelected}">
               <ion-icon [name]="mi._isFavorite ? 'heart' : 'heart-empty'"  
               [color]="mi._isFavorite ? 'secondary' : 'dark'" 
