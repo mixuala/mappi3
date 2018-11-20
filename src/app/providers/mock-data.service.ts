@@ -48,17 +48,29 @@ export class MockDataService {
    * helper functions
    */
   static getSubjByUuid(uuid:string, subj?:SubjectiveService<IMarker>){
-    const empty:IMarkerSubject = {uuid, self: null, child:null};
-    const markerSubj:IMarkerSubject = AppCache.for('IMarker').get(uuid) || AppCache.for('IMarker').set(empty);
-    if (subj) markerSubj.self = subj;
-    return markerSubj.self || null;
+    let markerSubj:IMarkerSubject = AppCache.for('IMarker').get(uuid);
+    if (markerSubj){
+      if (subj) return markerSubj.sibling = subj;
+      return markerSubj.sibling;
+    } 
+
+    const empty:IMarkerSubject = {uuid, sibling: null, child:null};
+    markerSubj = AppCache.for('IMarker').set(empty);
+    if (subj) return markerSubj.sibling = subj;
+    return null;
   }
 
   static getSubjByParentUuid(uuid:string, subj?:SubjectiveService<IMarker>){
-    const empty:IMarkerSubject = {uuid, self: null, child:null};
-    const markerSubj:IMarkerSubject = AppCache.for('IMarker').get(uuid) || AppCache.for('IMarker').set(empty);
-    if (subj) markerSubj.child = subj;
-    return markerSubj.child || null;
+    let markerSubj:IMarkerSubject = AppCache.for('IMarker').get(uuid);
+    if (markerSubj){
+      if (subj) return markerSubj.child = subj;
+      return markerSubj.child;
+    }
+
+    const empty:IMarkerSubject = {uuid, sibling: null, child:null};
+    markerSubj = AppCache.for('IMarker').set(empty);
+    if (subj) return markerSubj.child = subj;
+    return null;
   }
 
 

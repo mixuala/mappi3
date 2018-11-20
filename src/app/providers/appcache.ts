@@ -34,14 +34,14 @@ export class CacheByKey<T> {
       return;
     }
     // this._cache[key] = item;
-    this._cache[key] = Object.assign({},item);
+    this._cache[key] = Object.assign({},item);  // copy of item
     if (this.storage){
       const cleanForJSON = AppCache.cleanProperties(item);
       cleanForJSON['className'] = `cache-${this.className}`;
       const storageKey = `${key}-${cleanForJSON['className']}`;
       Storage.set({key:storageKey, value:JSON.stringify(cleanForJSON)});
     }
-    return item
+    return this._cache[key];
   }
   items():T[] {
     // const itemKeys = Object.keys(this._cache).filter(k=>k.length==43);

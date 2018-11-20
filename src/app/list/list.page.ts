@@ -271,8 +271,7 @@ export class ListPage implements OnInit, IViewNavEvents {
    * @param data {selected:IPhoto[]}, expecting IPhoto._moment: IMoment
    */
   async createMarkerList_from_Cameraroll(data:any={}):Promise<IMarkerList>{
-    const {selected} = data;
-    return CamerarollPage.createMarkerList_from_Cameraroll(selected, this._mListSub);
+    return CamerarollPage.createMarkerList_from_Cameraroll(data.selected, this._mListSub);
   }
 
   
