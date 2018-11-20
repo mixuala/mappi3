@@ -283,4 +283,18 @@
 }
 
 
+/**
+ * utility classes
+ */
+.center-wrap {
+  text-align: center;
+  & > * {
+    margin: 0 auto;
+  }
+}
+.hide {
+  display: none;
+}
+
+
 

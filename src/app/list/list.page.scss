@@ -3,6 +3,10 @@
   display: none;
 }
 
+.center-wrap.move-map{
+  margin-top: calc( 50% - var(--toolbar-min-height) - 26px);
+}
+
 ion-grid {
   padding: 5px 0;
 

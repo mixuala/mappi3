@@ -140,12 +140,26 @@ export class ListPage implements OnInit, IViewNavEvents {
     ).pipe( 
       takeUntil(this.unsubscribe$),
       skipWhile( ()=>!this.stash.activeView),
-      debounceTime(500),
+      debounceTime(200),
     ).subscribe( ()=>{
       _searchWhenMapMoves()
     });
   }
 
+  async zoomOutUntilMarkerVisible() {
+    const MIN_ZOOM = 2;
+    const ZOOM_STEP = 3;
+    let visible = MappiMarker.visible(AppConfig.map['id']);
+    if (visible.length==0) {
+      let nextZoom:number;
+      do {
+        nextZoom = Math.max(AppConfig.map.getZoom()-ZOOM_STEP, MIN_ZOOM);
+        setTimeout( ()=>AppConfig.map.setZoom( nextZoom ), 250 ); 
+        const ready = await GoogleMapsHostComponent.waitForMapIdle(AppConfig.map);
+        visible = MappiMarker.visible(AppConfig.map['id']);
+      } while (nextZoom>MIN_ZOOM && visible.length==0)
+    }    
+  }
 
   async viewWillEnter(){
     console.warn("viewWillEnter: ListPage");
@@ -153,19 +167,7 @@ export class ListPage implements OnInit, IViewNavEvents {
     setTimeout( async ()=>{
       // wait 1000ms to let initial map render complete before activating _filterByMapBounds()
       this.handleMapMoved();
-      const visible = MappiMarker.visible(AppConfig.map['id']);
-      if (visible.length==0) {
-        let nextZoom:number;
-        do {
-          await GoogleMapsHostComponent.waitForMapIdle(AppConfig.map)
-          .then( map=>{
-
-            nextZoom = Math.max(map.getZoom()-4, 4);
-            map.setZoom( nextZoom ); 
-            
-          })
-        } while (nextZoom>5 && visible.length==0)
-      }
+      // this.zoomOutUntilMarkerVisible();
     }, 1000);
     
     try {
