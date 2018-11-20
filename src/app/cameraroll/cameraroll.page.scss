@@ -1,13 +1,90 @@
 // see: http://w3bits.com/flexbox-masonry/
 
+
+ion-virtual-scroll.camera-roll.moments {
+    --screen-w: 414px;
+    --cameraroll-row-h: 100px;
+    --img-dim: var(--cameraroll-row-h);
+    --cameraroll-gutter: 4px;
+}
+
+@media only screen 
+and (max-width: 413px)
+{
+    ion-virtual-scroll.camera-roll.moments {
+        --screen-w: 375px;
+        --cameraroll-row-h: 90px;
+        --img-dim: var(--cameraroll-row-h);
+        --cameraroll-gutter: 4px;
+    }
+}
+
+
+ion-virtual-scroll.camera-roll.moments {
+    margin: 0px;
+    padding: 0px;
+    .header {
+        margin-bottom: var(--cameraroll-gutter);
+        height: 80px !important;
+        border-bottom: 0px;
+    }
+    .row {
+        // padding-top: var(--cameraroll-gutter);
+        // margin-left: var(--cameraroll-margin-h);
+        // margin-right: var(--cameraroll-margin-h);
+        margin: 0 auto;
+        margin-bottom: var(--cameraroll-gutter);
+        text-align: center;
+        height: var(--cameraroll-row-h) !important;
+        .img-wrap {
+            position: relative;
+            display: inline-block;
+            &:not(:last-child) {
+                // gutter
+                margin-right: var(--cameraroll-gutter);
+            }
+            ion-img:not(.img-loaded){
+                border: 0.5px dotted black;
+            }
+            .overlay {
+                position: absolute;
+                font-size: 1.8em;
+                background-color: rgba(0,0,0,0.3);
+                bottom: 0px;
+                width: 100%;
+                height: 1em;
+                text-align: left;
+                // padding: 0 8px;
+                &.selected {
+                    background-color: rgba(0,0,0,0.5);
+                }
+                ion-icon.select {
+                    float:right;
+                }
+            }
+            ion-spinner {
+                position: absolute;
+                top:calc( 50% - 14px );
+                left:calc( 50% - 14px );
+                z-index: -1;
+            }
+            .img-loaded + ion-spinner {
+                display:none;
+            }
+        } 
+    }   
+}
+
+
 .list.camera-roll {
     background-color: darkgrey;
+
 }
 
 .masonry-wrap {
     --portrait-aspect: 1.5;
     --portrait-col: 4;
-    --masonry-row-h: 160px;
+    --masonry-row-h: 100px;
     --masonry-min-w: 100px;
     --masonry-gutter: 4px;
 
@@ -29,6 +106,7 @@ and (max-width: 425px)
         --masonry-row-h: calc( ( 100vw / var(--portrait-col) * var(--portrait-aspect) ) - (var(--masonry-gutter) * 2) );
         --masonry-min-w: 20vw;
     }
+
 }
   
 .masonry-brick {
@@ -42,13 +120,22 @@ and (max-width: 425px)
     img {
         height:100%;
     }
+    ion-spinner {
+        position: absolute;
+        top:calc( 50% - 14px );
+        left:calc( 50% - 14px );
+        z-index: -1;
+    }
+    .img-loaded + ion-spinner {
+        display:none;
+    }
     .overlay {
         position: absolute;
         bottom: 0px;
         font-size: 1.8em;
         width: 100%;
         height: 1em;
-        padding: 0 8px;
+        // padding: 0 8px;
         background-color: rgba(0,0,0,0.3);
         &.selected {
             background-color: rgba(0,0,0,0.5);
