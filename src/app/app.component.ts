@@ -48,6 +48,7 @@ export class AppComponent {
     private cd: ChangeDetectorRef,
   ) {
     this.initializeApp();
+    this.patch_PWA_bootstrap();
   }
 
   async reset(raw?:string){
@@ -84,6 +85,24 @@ export class AppComponent {
 
   }
 
+  async patch_PWA_bootstrap(){
+    const TIMEOUT = 1000
+    const RELOAD_LIMIT = 5000
+    const el = document.getElementsByTagName('HTML')[0];
+    if (el.classList.contains('plt-pwa')){
+      const resp = await Storage.get({key:'PWA_RELOAD'});
+      if (Date.now()-JSON.parse(resp.value) < RELOAD_LIMIT) 
+        return;  // wait at  before next reload
+
+      const cancel = setTimeout( async ()=>{
+        // pwa reload required. why?
+        console.log("PWA reload()");
+        await Storage.set({key:'PWA_RELOAD', value:JSON.stringify(Date.now())});
+        window.location.reload();
+      },TIMEOUT)
+    }
+  }
+
   async listenAppState(){
     const device = await Device.getInfo();
     AppConfig.device = device;
@@ -91,6 +110,7 @@ export class AppComponent {
     switch (device.platform){
       case 'ios':
       case 'android':
+        this.patch_PWA_bootstrap();
         // reset caches, currently not put in Storage
         App.addListener('appStateChange', (state: AppState) => {
           // state.isActive contains the active state
@@ -103,7 +123,6 @@ export class AppComponent {
 
   async initializeApp() {
     AppCache.init();
-
     await this.platform.ready().then( async() => {
       AppConfig.platform = this.platform;
       this.statusBar.styleDefault();

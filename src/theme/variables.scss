@@ -80,6 +80,9 @@
 
 
   // patch: undefined for build --prod, 
+  @at-root.plt-ios.plt-pwa.plt-pwa {
+    --ion-statusbar-padding: 0px;
+  }
   --ion-safe-area-top: var(--ion-statusbar-padding, 0px);
 
 
