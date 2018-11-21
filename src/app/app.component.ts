@@ -86,20 +86,19 @@ export class AppComponent {
   }
 
   async patch_PWA_bootstrap(){
-    const TIMEOUT = 1000
     const RELOAD_LIMIT = 5000
     const el = document.getElementsByTagName('HTML')[0];
+    const now = Date.now();
     if (el.classList.contains('plt-pwa')){
       const resp = await Storage.get({key:'PWA_RELOAD'});
-      if (Date.now()-JSON.parse(resp.value) < RELOAD_LIMIT) 
+      if ( now - JSON.parse(resp.value) < RELOAD_LIMIT) 
         return;  // wait at  before next reload
 
       const cancel = setTimeout( async ()=>{
-        // pwa reload required. why?
-        console.log("PWA reload()");
-        await Storage.set({key:'PWA_RELOAD', value:JSON.stringify(Date.now())});
+        // something not bootstrapping correctly with pwa.  reload() fixes
+        await Storage.set({key:'PWA_RELOAD', value:JSON.stringify(now)});
         window.location.reload();
-      },TIMEOUT)
+      },100)
     }
   }
 
