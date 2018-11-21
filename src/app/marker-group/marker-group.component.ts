@@ -172,8 +172,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       this.stash.layout = this.layout;
       this.layout = "edit";
     }
-    else if (this.parentLayout == "share") {
-      this.layout = "share";
+    else if (['share', 'select'].includes(this.parentLayout)) {
+      this.layout = this.parentLayout;
     }
     else this.layout = this.stash.layout;
   }
@@ -215,6 +215,16 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     this.mgChange.emit( {data:mg, action:'favorite'} );  // => SharePage.childComponentsChange()
     this.mgSubject.next(mg);
   }
+
+  toggleSelected(value?:boolean, mg?:IMarkerGroup){
+    mg = mg || this.mg;
+    if (!mg) return
+    value = value || !mg['_selected'];
+    this.stash.selected = mg['_selected'] = value;
+    this.mgChange.emit( {data:mg, action:'selected'} );  // => SharePage.childComponentsChange()
+    this.mgSubject.next(mg);
+  }
+
 
 
   createMarkerItem(ev:any, provider?:string){

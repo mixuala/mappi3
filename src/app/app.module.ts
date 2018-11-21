@@ -22,11 +22,9 @@ import { MarkerGroupFocusDirective } from './marker-group/marker-group-focus.dir
 import { GoogleMapsComponent } from './google-maps/google-maps.component';
 import { GoogleMapsHostComponent } from './google-maps/google-maps-host.component';
 import { MockDataService } from './providers/mock-data.service';
-import { RestyService } from './providers/resty.service';
 import { SubjectiveService } from './providers/subjective.service';
 import { PhotoService } from './providers/photo/photo.service';
 import { PhotoswipeComponent } from './photoswipe/photoswipe.component';
-// import { MappiImageComponent } from './mappi-image/mappi-image.component';
 import { ImgSrc, DataURLPipe } from './providers/photo/imgsrc.service';
 import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
@@ -84,7 +82,6 @@ export class SharedComponentModule {}
     SplashScreen,
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     MappiService,
-    // RestyService, 
     MockDataService, SubjectiveService,
     PhotoService, PhotoLibrary, ImgSrc
   ],
