@@ -1,0 +1,72 @@
+<ion-grid class="center-grid" tappable (click)="dismiss($event, this)">
+  <ion-row justify-content-center align-items-center>
+
+    <ng-container [ngSwitch]="template">
+
+      <ion-card class="content" padding *ngSwitchCase="'intro'">
+        <ion-item lines="none">
+          <ion-label text-wrap color="light">
+            <h1>Welcome. <small>This is an idea for</small></h1>
+            <p>
+              A map-first, photo-second travel companion<br />
+              for easy getaways and seasonal travel<br /> 
+              beyond the TripAdvisor Top 10.
+            </p>
+            <p>
+              <i>Tip: </i>move the map to the spot of your next getaway, or just explore the world.
+            </p>
+            <p>
+              <em>Note:</em> The photos you see are all random placeholders. 
+              Imagine they highlight fun spots, unique activites, or tasty food 
+              from the places you'd like to visit.
+            </p>
+          </ion-label>
+        </ion-item>
+      </ion-card>
+
+      <ion-card class="content" padding *ngSwitchCase="'cameraroll'">
+        <ion-item text-wrap lines="none">
+          <ion-label text-wrap color="light">
+            <h1>Cameraroll</h1>
+            <p>
+              Where, when and how many photos you take
+              give us unique insight into how you like to travel.
+            </p>
+            <p>
+              Imagine we searched your cameraroll to feature trips
+              away from home. We'll make it easy to find 
+              a few of your favorite moments, places, activities, and dishes.
+            </p>
+            <p>
+              <i>Tip: </i>just pick a few photos and <em>boom!</em>––you've got a map with highlights 
+              from your last trip.
+            </p>
+          </ion-label>
+        </ion-item>
+      </ion-card>
+
+      <ion-card class="content" padding *ngSwitchCase="'favorites'">
+          <ion-item text-wrap lines="none">
+              <ion-label text-wrap color="light">
+                <h1>Trips</h1>      
+                <p>
+                  Find places, moments, activities, eats, free walking tours––even entire weekend travel plans––and 
+                  mark your favorites. 
+                </p>
+                <p>
+                  You can build your own trip from there, 
+                  or just wing it when you're on-the-go.
+                </p>
+                <p>
+                  <i>Tip: </i>tap a photo to get a better view. <br />
+                  <i>Tip: </i>double tap a marker to open in Google Maps.
+                </p>
+              </ion-label>
+          </ion-item>
+
+      </ion-card>
+
+    </ng-container>
+
+  </ion-row>
+</ion-grid>

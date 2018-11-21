@@ -2,6 +2,7 @@ import { Component, Input, OnInit,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { ModalController } from '@ionic/angular';
 import { Observable, Subject, BehaviorSubject, ReplaySubject } from 'rxjs';
 import { map, skipWhile, takeUntil, } from 'rxjs/operators';
 
@@ -16,9 +17,9 @@ import  { MockDataService, RestyTrnHelper, quickUuid } from '../providers/mock-d
 import { SubjectiveService } from '../providers/subjective.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { AppCache } from '../providers/appcache';
-import { ModalController } from '@ionic/angular';
 import { AppConfig } from '../providers/helpers';
 import { MappiMarker } from '../providers/mappi/mappi.service';
+import { HelpComponent } from '../providers/help/help.component';
 
 
 
@@ -60,22 +61,23 @@ export class CamerarollPage implements OnInit {
    * @param options options.onDismiss:(resp:{selected:IPhoto[], mapping:{[uuid:string]:IMoment}})=>Promise<void>
    */
   static async presentModal(modalCtrl:ModalController, options?:any):Promise<any>{
-      options = Object.assign( {isModal:true}, options );
-      return modalCtrl.create({
-        component: CamerarollPage,
-        componentProps: options,
+
+    options = Object.assign( {isModal:true}, options );
+    return modalCtrl.create({
+      component: CamerarollPage,
+      componentProps: options,
+    })
+    .then( async (modal) => {
+      modal.present();
+      await modal.onWillDismiss().then( async (resp)=>{
+        if (resp.data.selected && resp.data.selected.length){
+          // commit before dismissing modal
+          // console.log(resp);
+          return options.onDismiss && options.onDismiss(resp.data);
+        }
       })
-      .then( async (modal) => {
-        modal.present();
-        await modal.onWillDismiss().then( async (resp)=>{
-          if (resp.data.selected && resp.data.selected.length){
-            // commit before dismissing modal
-            // console.log(resp);
-            return options.onDismiss && options.onDismiss(resp.data);
-          }
-        })
-        return modal.onDidDismiss();
-      });
+      return modal.onDidDismiss();
+    });
   }
 
   // detect launch mode to set appropriate dismiss()
@@ -100,6 +102,7 @@ export class CamerarollPage implements OnInit {
     private route: ActivatedRoute,
     public photoService: PhotoService,
     private router: Router,
+    private modalCtrl: ModalController,
     private cd: ChangeDetectorRef,
   ) {}
 
@@ -260,6 +263,9 @@ export class CamerarollPage implements OnInit {
   }
 
   async ngOnInit() {
+
+    const dontWait = HelpComponent.presentModal(this.modalCtrl, {template:'cameraroll'});
+
     this.stash.activeView = true;
     this.unsubscribe$ = new Subject<boolean>();
     this.momSubject = new BehaviorSubject<IMoment[]>([]);
@@ -339,7 +345,6 @@ export class CamerarollPage implements OnInit {
       return;
     }
     if (this.isNav) {
-      // ???: how to do pass `selected` back to the listener?
       return Promise.resolve(data);
     }
     // router-outlet nav from sidemenu, create MarkerList from selection, only

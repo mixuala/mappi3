@@ -5,9 +5,6 @@
         <ion-menu-button></ion-menu-button>
       </ion-buttons>
       <ion-buttons slot="end">
-          <ion-button fill="outline" (click)="getStaticMap()" *ngIf="stash.map">
-            <ion-icon name="cloud-download" slot="icon-only"></ion-icon>
-          </ion-button>
           <ion-button fill="outline" [href]="'/home/'+parent?.uuid">
             <ion-icon name="create" slot="icon-only"></ion-icon>
           </ion-button>
@@ -33,53 +30,9 @@
  
 
     <!-- groupItem -->
-    <ng-container [ngSwitch]="layout">
-
+    <div [ngSwitch]="layout" #contentWrap>
+       
       <ion-grid no-padding *ngSwitchCase="'default'">
-        <ion-row>
-          <ion-col size="12" size-sm="6" size-xl="4">
-               <!-- QRcode/Share Map ion-card -->
-                  <ion-card class="qrcode" *ngIf="qrcodeData">
-                    <ion-card-header>
-                        <ion-toolbar color="primary">
-                            <ion-card-title color="light" >Share Map</ion-card-title>
-                            <ion-buttons slot="end">
-                              <ion-button color="light" fill="outline" title="Share QR Code"
-                                (click)="stash.mapLink=!stash.mapLink">
-                                <ion-icon slot="icon-only" name="share"></ion-icon>
-                              </ion-button>    
-                              <ion-button color="light" fill="outline" title="Show Printable Map"
-                                (click)="browserOpen(qrcodeData)">
-                                  <ion-icon slot="icon-only" name="open"></ion-icon>
-                              </ion-button>         
-                              <ion-button color="light" fill="outline" 
-                                (click)="qrcodeData=null">
-                                <ion-icon slot="icon-only" name="close"></ion-icon>
-                              </ion-button>
-                            </ion-buttons>
-                          </ion-toolbar>        
-                    </ion-card-header>
-                    <ion-card-content padding-vertical>
-                      <ion-item text-center no-padding>
-                        <ion-label>
-                          <p>Scan this QR code to link to this page.</p>
-                        </ion-label>          
-                      </ion-item>
-                      <ion-item no-padding>
-                        <div [ngStyle]="{'margin':'auto'}">
-                            <qrcode [qrdata]="qrcodeData" [size]="256" [level]="'M'"></qrcode>
-                        </div>
-                      </ion-item>
-                      <ion-item no-padding>
-                        <ion-label *ngIf="stash.mapLink">
-                          <h2>Copy Map Link</h2>
-                          <p><ion-text text-wrap color="primary">{{qrcodeData}}</ion-text></p>
-                        </ion-label>
-                      </ion-item>  
-                    </ion-card-content>
-                  </ion-card>
-          </ion-col>
-        </ion-row>        
         <ion-row>
           <ion-col size="12" size-sm="6" size-xl="4"
             class="marker-group-focus"
@@ -99,9 +52,53 @@
             ></app-photoswipe>
           </ion-col>
         </ion-row>
+        <ion-row>
+            <ion-col size="12" size-sm="6" size-xl="4">
+                 <!-- QRcode/Share Map ion-card -->
+                    <ion-card class="qrcode" *ngIf="qrcodeData">
+                      <ion-card-header>
+                          <ion-toolbar color="primary">
+                              <ion-card-title color="light" >Share Map</ion-card-title>
+                              <ion-buttons slot="end">
+                                <ion-button color="light" fill="outline" title="Share QR Code"
+                                  (click)="stash.mapLink=!stash.mapLink">
+                                  <ion-icon slot="icon-only" name="share"></ion-icon>
+                                </ion-button>    
+                                <ion-button color="light" fill="outline" title="Show Printable Map"
+                                  (click)="browserOpen(qrcodeData)">
+                                    <ion-icon slot="icon-only" name="open"></ion-icon>
+                                </ion-button>         
+                                <ion-button color="light" fill="outline" 
+                                  (click)="qrcodeData=null">
+                                  <ion-icon slot="icon-only" name="close"></ion-icon>
+                                </ion-button>
+                              </ion-buttons>
+                            </ion-toolbar>        
+                      </ion-card-header>
+                      <ion-card-content padding-vertical>
+                        <ion-item text-center no-padding lines="none">
+                          <ion-label>
+                            <p>Scan this QR code to link to this page.</p>
+                          </ion-label>          
+                        </ion-item>
+                        <ion-item no-padding lines="none">
+                          <div [ngStyle]="{'margin':'auto'}">
+                              <qrcode [qrdata]="qrcodeData" [size]="128" [level]="'M'"></qrcode>
+                          </div>
+                        </ion-item>
+                        <ion-item no-padding>
+                          <ion-label *ngIf="stash.mapLink">
+                            <h2>Copy Map Link</h2>
+                            <p><ion-text text-wrap color="primary">{{qrcodeData}}</ion-text></p>
+                          </ion-label>
+                        </ion-item>  
+                      </ion-card-content>
+                    </ion-card>
+            </ion-col>
+          </ion-row>         
       </ion-grid>
 
-    </ng-container>
+    </div>
   
     
   

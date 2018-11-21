@@ -1,11 +1,11 @@
-import { Component, OnInit, ViewChild,
+import { Component, ElementRef, OnInit, ViewChild,
   OnChanges,  SimpleChange,
   ChangeDetectionStrategy, ChangeDetectorRef, ViewEncapsulation,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, BehaviorSubject, } from 'rxjs';
-import { takeUntil, switchMap, skipWhile } from 'rxjs/operators';
-import { AlertController, ActionSheetController } from '@ionic/angular';
+import { takeUntil, map, switchMap, skipWhile } from 'rxjs/operators';
+import { AlertController, ActionSheetController, Content, ModalController } from '@ionic/angular';
 import { Plugins } from '@capacitor/core';
 import { LaunchNavigator, LaunchNavigatorOptions } from '@ionic-native/launch-navigator/ngx';
 
@@ -19,8 +19,8 @@ import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService,  } from '../providers/photo/photo.service';
 import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 import { GoogleMapsComponent,  } from '../google-maps/google-maps.component';
-import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
 import { AppConfig, ScreenDim } from '../providers/helpers';
+import { HelpComponent } from '../providers/help/help.component';
 
 const { App, Browser, Device } = Plugins;
 declare const launchNavigator:any;
@@ -65,7 +65,7 @@ export class SharePage implements OnInit, IViewNavEvents {
     setTimeout(()=>this.cd.detectChanges())
   }
     
-  // NOTE: currently unused, but maybe for showing markers on IPhoto[] when photoswipe active
+  // NOTE: used for showing markers on IPhoto[] when photoswipe active
   // mgFocus Getter/Setter
   private _mgFocus: IMarkerGroup;
   get mgFocus() {
@@ -102,12 +102,16 @@ export class SharePage implements OnInit, IViewNavEvents {
   }
   private _mgSub: SubjectiveService<IMarkerGroup>;
 
+  @ViewChild(Content) content: Content;
+  @ViewChild('contentWrap') contentWrap: ElementRef;
+
   constructor( 
     public dataService: MockDataService,
     public actionSheetController: ActionSheetController,
     public photoService: PhotoService,
     private router: Router,
     private route: ActivatedRoute,
+    private modalCtrl: ModalController,
     private cd: ChangeDetectorRef,
     private launchNavigator: LaunchNavigator,
   ){
@@ -122,6 +126,7 @@ export class SharePage implements OnInit, IViewNavEvents {
     })
   }
 
+  // deprecate
   private _getSubjectForMarkerItems(mg:IMarkerGroup):SubjectiveService<IMarker>{
     return MockDataService.getSubjByParentUuid(mg.uuid);
   }
@@ -131,8 +136,10 @@ export class SharePage implements OnInit, IViewNavEvents {
     return found && found.watch$();
   }
 
-  getStaticMap(){
-    const markers = RestyTrnHelper.getCachedMarkers(this._mgSub.value(), 'visible');
+  async getStaticMap(items?:IMarkerGroup[]){
+    await AppConfig.mapReady
+    items = items || this._mgSub.value();
+    const markers = RestyTrnHelper.getCachedMarkers(items, 'visible');
     this.qrcodeData = GoogleMapsComponent.getStaticMap(AppConfig.map, markers);
     return
   }
@@ -254,6 +261,8 @@ export class SharePage implements OnInit, IViewNavEvents {
   }
 
   async ngOnInit() {
+    const dontWait = HelpComponent.presentModal(this.modalCtrl, {template:'favorites'});
+
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
 
@@ -264,10 +273,18 @@ export class SharePage implements OnInit, IViewNavEvents {
       MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
     this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
 
+
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
-        .pipe( skipWhile( ()=>!this.stash.activeView) );
         // NOTE: causes a delay before map loads
+        .pipe( 
+          takeUntil(this.unsubscribe$),
+          skipWhile( ()=>!this.stash.activeView),
+          map( items=>{
+            this.getStaticMap(items);
+            return items;
+          }),
+      );
 
     // initialize subjects
     await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
@@ -367,6 +384,20 @@ export class SharePage implements OnInit, IViewNavEvents {
     }
   }
 
+  async scrollToElement(uuid:string){
+    try {
+      if (this.gallery) return; // skip if photoswipe gallery open
+
+      
+      const i = this._mgSub.value().findIndex(o=>o.uuid==uuid);
+      const targets = this.contentWrap.nativeElement.querySelectorAll('APP-MARKER-GROUP');
+      const target = targets[i];
+      this.content.scrollToPoint(0, target.parentNode['offsetTop'], 500);
+    } catch (err) {
+      console.warn("ERROR", err);
+    }
+  }
+
   // called by GoogleMapComponents, marker click
   handle_MapMarkerSelected(uuid:string){
     if ( this.selectedMarkerGroup == uuid ) {
@@ -374,12 +405,13 @@ export class SharePage implements OnInit, IViewNavEvents {
       this.launchApp('Map', uuid);          
     }
     this.selectedMarkerGroup = uuid;
+    this.scrollToElement(uuid);
   }
 
   handle_MarkerGroupSelected(marker:IMarkerGroup){
     if ( this.selectedMarkerGroup == marker.uuid ) {
-      console.warn("Testing Native.LaunchNavigator on repeated select")
-      this.launchApp('Map', marker.uuid);          
+      // console.warn("Testing Native.LaunchNavigator on repeated select")
+      // this.launchApp('Map', marker.uuid);          
     }
     this.selectedMarkerGroup = marker.uuid;
   }

@@ -13,6 +13,8 @@ export interface IMarker {
   },
   seq?: number,
   placeId?: string,
+  created?: Date;
+  modified?: Date;
 }
 
 export interface IRestMarker extends IMarker {
@@ -24,9 +26,10 @@ export interface IRestMarker extends IMarker {
 }
 
 export interface IMarkerGroup extends IMarker {
-  label?: string,  
+  label?: string;
+  description?: string;
   // MarkerGroup hasMany MarkerItems, use Photos for now.
-  markerItemIds: string[],  // uuid[]
+  markerItemIds: string[];  // uuid[]
   [propName: string]: any;
 }
 
@@ -43,12 +46,11 @@ export interface IPhoto extends IMarker {
 
 export interface IMarkerList extends IMarker {
   label: string;
+  description?: string;
   zoom?: number;
   markerGroupIds: string[];
   count_markers?: number;
   count_items?: number;
-  created?: Date;
-  modified?: Date;
 }
 
 

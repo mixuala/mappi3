@@ -1,16 +1,17 @@
 import { Component, HostListener, ChangeDetectorRef, } from '@angular/core';
 import { Router } from '@angular/router';
-import { Platform, Img } from '@ionic/angular';
+import { Platform, ModalController, } from '@ionic/angular';
 import { StatusBar } from '@ionic-native/status-bar/ngx';
 
 import { Plugins, AppState } from '@capacitor/core';
-
 import { ScreenDim, AppConfig } from './providers/helpers';
 import { MockDataService } from './providers/mock-data.service';
 import { SubjectiveService } from './providers/subjective.service';
 import { ImgSrc } from './providers/photo/imgsrc.service';
 import { PhotoService, PhotoLibraryHelper,  } from './providers/photo/photo.service';
 import { AppCache, } from './providers/appcache';
+import { HelpComponent } from './providers/help/help.component';
+
 
 
 const { App, Device, SplashScreen, Storage } = Plugins;
@@ -45,6 +46,7 @@ export class AppComponent {
     private router: Router,
     private dataService: MockDataService,
     private photoService: PhotoService,
+    private modalCtrl: ModalController,
     private cd: ChangeDetectorRef,
   ) {
     this.initializeApp();
@@ -128,6 +130,7 @@ export class AppComponent {
       SplashScreen.hide().catch((err)=>{});
       await this.listenAppState();
       this.exposeDebug();
+      HelpComponent.presentModal(this.modalCtrl, {template:'intro'});
     })
 
     if (AppConfig.device.platform !='ios') {
