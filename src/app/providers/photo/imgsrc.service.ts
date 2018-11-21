@@ -161,7 +161,7 @@ export class ImgSrc {
     else {
       if (cached) {
         // force==true, delete from cache
-        delete AppCache.for('ImgSrc')._cache[cache_key];
+        AppCache.for('ImgSrc').remove(cache_key);
       }
 
       // start fresh

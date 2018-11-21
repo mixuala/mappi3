@@ -29,6 +29,11 @@ export class AppComponent {
       icon: 'list'
     },
     {
+      title: 'Favorites',
+      url: '/favorites',
+      icon: 'heart'
+    },
+    {
       title: 'Cameraroll',
       url: '/cameraroll',
       icon: 'images'
@@ -117,6 +122,7 @@ export class AppComponent {
           // state.isActive contains the active state
           console.log('&&& App state changed. active=', state.isActive);
           ImgSrc.handleAppStateChange(state);
+          AppCache.handleAppStateChange(state);
         });
         break;
     } 

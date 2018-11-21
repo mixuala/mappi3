@@ -1,13 +1,13 @@
  /**
  * Caches for runtime values
  */
-import { Plugins } from '@capacitor/core';
+import { Plugins, AppState } from '@capacitor/core';
 
 import {
   IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
   IImgSrc, IImgSrcItem,
   IMappiLibraryItem, IMoment, IExifPhoto,
-  IMarkerSubject,
+  IMarkerSubject, IFavorite,
 } from './types';
 
 const { Storage } = Plugins;
@@ -24,7 +24,13 @@ export class CacheByKey<T> {
   storage: boolean;
   className: string;
   _cache:{ [uuid:string]:T } = {};
-  reset(){ this._cache = {} }
+  reset(){ 
+    this._cache = {};
+    if (this.storage) {
+      const key = `cache-${this.className}`;
+      Storage.remove({key});  
+    }
+  }
   get(uuid:string):T { return this._cache[uuid] }
   set(item:T, key?:string):T { 
     // const className = item.className   // TODO: guard for className?
@@ -36,12 +42,26 @@ export class CacheByKey<T> {
     // this._cache[key] = item;
     this._cache[key] = Object.assign({},item);  // copy of item
     if (this.storage){
-      const cleanForJSON = AppCache.cleanProperties(item);
-      cleanForJSON['className'] = `cache-${this.className}`;
-      const storageKey = `${key}-${cleanForJSON['className']}`;
-      Storage.set({key:storageKey, value:JSON.stringify(cleanForJSON)});
+      // const cleanForJSON = AppCache.cleanProperties(item);
+      // cleanForJSON['className'] = `cache-${this.className}`;
+      // const storageKey = `${key}-${cleanForJSON['className']}`;
+      // Storage.set({key:storageKey, value:JSON.stringify(cleanForJSON)});
     }
     return this._cache[key];
+  }
+  remove(item:string|T):boolean{
+    const key = (typeof item == 'string') ? item : item['uuid'] || item['id'];
+    const found = !!this._cache[key];
+    if (found) {
+      delete this._cache[key];
+      if (this.storage){
+        // const cleanForJSON = AppCache.cleanProperties(item);
+        // cleanForJSON['className'] = `cache-${this.className}`;
+        // const storageKey = `${key}-${cleanForJSON['className']}`;
+        // Storage.set({key:storageKey, value:JSON.stringify(cleanForJSON)});
+      }
+    }
+    return found;
   }
   items():T[] {
     // const itemKeys = Object.keys(this._cache).filter(k=>k.length==43);
@@ -100,11 +120,50 @@ export class AppCache {
     AppCache._cache['ImgSrc'] = new Cache_WithMru<IImgSrcItem>({className:'ImgSrc', storage:false});
     // NOTE: get sibling & child markers by IMarker.uuid
     AppCache._cache['IMarker'] = new CacheByKey<IMarkerSubject>({className:'IMarker', storage:false});
+    AppCache._cache['Favorite'] = new CacheByKey<IFavorite>({className:'Favorite', storage:true});
+    // restore
+    AppCache.handleAppStateChange({isActive:true});
   }
 
 
-  static loadFromStorage(){
+
+  /**
+   * static methods
+   */
+  static async handleAppStateChange(state:AppState){
+    const keys = AppCache.keys();
+    keys.forEach( cacheName=>{
+      if (AppCache.for(cacheName).storage==false) 
+        return;
+      if (state.isActive){
+        AppCache.loadByClassName(cacheName);
+      }
+      else {
+        AppCache.storeByClassName(cacheName);
+      }
+    })
+  }
+
+  static async loadFromStorage(cacheName:string):Promise<any[]>{
     // restore cache from Storage
+    const cache = AppCache.for(cacheName);
+    if (cache.storage == false) return;
+
+    const search = `cache-${cache.className}`;
+    let resp = await Storage.keys();
+    const keys = resp.keys.filter( v=>v.endsWith(search));
+
+    const items:any[] = [];
+    keys.forEach( async (key)=>{
+      try {
+        const resp = await Storage.get({key});
+        const item = JSON.parse(resp['value']);
+        items.push(item);
+      } catch(err) {
+        console.error(`ERROR: JSON.parse()`, err);
+      }
+    });
+    return items;
   }
 
 
@@ -147,7 +206,7 @@ export class AppCache {
   static async storeByClassName(className:string):Promise<void>{
     try {
       const cache = AppCache.for(className);
-      if (!cache || cache.storage==true) throw new Error(`ERROR: storeByClassName() - cannot save to Storage, className=${className}`);
+      if (!cache || cache.storage==false) throw new Error(`ERROR: storeByClassName() - cannot save to Storage, className=${className}`);
       
       const cleanedItems = cache.items().map(o=>AppCache.cleanProperties(o));
       const key = `cache-${className}`;
@@ -162,11 +221,12 @@ export class AppCache {
   static async loadByClassName(className:string):Promise<any[]>{
     try {
       const cache = AppCache.for(className);
-      if (!cache || cache.storage==true) throw new Error(`ERROR: loadByClassName() - cannot save to Storage, className=${className}`);
+      if (!cache || cache.storage==false) throw new Error(`ERROR: loadByClassName() - cannot save to Storage, className=${className}`);
       const key = `cache-${className}`;
       const resp:any = await Storage.get({key});
       const items = JSON.parse(resp['value']);
-      items.forEach( o=>AppCache.for(className).set(o));
+      if (items)
+        items.forEach( o=>AppCache.for(className).set(o));
       return Promise.resolve(items);
 
     } catch (err){

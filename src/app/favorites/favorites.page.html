@@ -1,0 +1,60 @@
+<ion-header>
+    <ion-toolbar>
+      <ion-buttons slot="start">
+        <ion-back-button class="mobile-only" text=""></ion-back-button>
+        <ion-menu-button></ion-menu-button>
+      </ion-buttons>
+      <ion-buttons slot="end">
+          <ion-button fill="outline" [href]="'/home/'+parent?.uuid">
+            <ion-icon name="create" slot="icon-only"></ion-icon>
+          </ion-button>
+      </ion-buttons>    
+      <ion-title>
+        Favorites
+      </ion-title>
+    </ion-toolbar>
+  </ion-header>
+  
+  <ion-header class="google-maps-wrap hide">
+    <app-google-maps #gmap *ngIf="markerCollection$ | async as items"
+    [items]="items"
+    [mode]="mapSettings" [activeView]="stash.activeView"
+    [selected]="selectedMarkerGroup"
+    (selectedChange)="handle_MapMarkerSelected($event)"
+    ></app-google-maps>
+  </ion-header>
+  
+  
+  <ion-content no-padding class="marker-group-wrap">
+    <!-- array of MarkerList or MarkerGroup -->
+    <div [ngSwitch]="layout">
+      <ion-grid no-padding *ngSwitchCase="'gallery'">
+       
+        <ion-row>
+          <ion-col size="12" size-sm="6" size-xl="4"
+            class="marker-group-focus"
+            *ngFor="let item of mCollection$ | async">
+            <app-marker-group  *ngIf="item?._rest_action!='delete'"
+              [mg]="item" [parentLayout]="'share'"
+              (mgChange)="childComponentsChange($event)"
+              (thumbClick)="thumbClicked($event)"></app-marker-group>
+          </ion-col>
+        </ion-row>
+        <ion-row>
+          <ion-col size="12" size-sm="6" size-xl="4">
+            <app-photoswipe class="content-right-if-mq-landscape" 
+              [data]="gallery"
+              [screenDim]="screenDim$ | async"
+              (indexChange)="handle_GalleryIndexChange($event)"
+            ></app-photoswipe>
+          </ion-col>
+        </ion-row>       
+      </ion-grid>
+
+    </div>
+  
+    
+  
+  </ion-content>
+  
+

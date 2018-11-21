@@ -406,7 +406,7 @@ export class CamerarollPage implements OnInit {
 
     const count = mListSub.value().length;
     const item:IMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
-    item.label = `Map created ${item.created.toISOString()}`;
+    item.label = `Trip created ${item.created.toISOString()}`;
     item.seq = count;
 
     // create from selected photos

@@ -53,6 +53,14 @@ export interface IMarkerList extends IMarker {
   count_items?: number;
 }
 
+export interface IFavorite {
+  uuid: string;
+  className: string;
+  favorite: boolean;
+  created?: Date;
+  modified?: Date;
+}
+
 
 /**********************************************************************************************
  * google map types

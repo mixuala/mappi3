@@ -36,7 +36,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   public miLimit:number = 3;
   public static miLimit: number;
   public humanize = Humanize;
-  private stash:any = {};
+  private stash:any = {
+    favorite: false
+  };
   
   // PARENT Subject/Observable, single MarkerGroup
   // subject+observable work together to send MarkerGroup to view via async pipe
@@ -130,8 +132,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             // const check = MockDataService.subjectCache;
 
             // init owner data
-            mg.favorite = mg.favorite || false;  
-            this.toggleFavorite(null, mg); // initializes view component
+            this.stash.favorite = mg['_favorite'] = mg['_favorite'] || false;
 
             if (doChangeDetection) 
               setTimeout(()=>this.cd.detectChanges(), 10);
@@ -209,14 +210,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
   toggleFavorite(value?:boolean, mg?:IMarkerGroup){
     mg = mg || this.mg;
     if (!mg) return
-
-    if (!this.stash.hasOwnProperty('favorite')) {
-      // sync view with data
-      this.stash.favorite = mg.favorite;
-      return;
-    }
-    this.stash.favorite = value != null ? value : !this.stash.favorite;
-    mg.favorite = this.stash.favorite;
+    value = value || !mg['_favorite'];
+    this.stash.favorite = mg['_favorite'] = value;
     this.mgChange.emit( {data:mg, action:'favorite'} );  // => SharePage.childComponentsChange()
     this.mgSubject.next(mg);
   }

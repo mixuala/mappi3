@@ -288,7 +288,7 @@ export class ListPage implements OnInit, IViewNavEvents {
     const target = ev.target && ev.target.tagName;
     const count = this._mListSub.value().length;
     const item:IMarkerList = RestyTrnHelper.getPlaceholder('MarkerList');
-    item.label = `Map created ${item.created.toISOString()}`;
+    item.label = `Trip created ${item.created.toISOString()}`;
     item.seq = count;
     const child:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
     child.label = `Marker created ${child.created.toISOString()}`;

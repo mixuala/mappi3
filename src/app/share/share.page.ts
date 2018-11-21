@@ -11,7 +11,7 @@ import { LaunchNavigator, LaunchNavigatorOptions } from '@ionic-native/launch-na
 
 import {
   IMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions,
-} from '../providers/types'
+} from '../providers/types';
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, } from '../providers/mappi/mappi.service';
 import  { MockDataService, RestyTrnHelper, quickUuid, } from '../providers/mock-data.service';
@@ -21,6 +21,8 @@ import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 import { GoogleMapsComponent,  } from '../google-maps/google-maps.component';
 import { AppConfig, ScreenDim } from '../providers/helpers';
 import { HelpComponent } from '../providers/help/help.component';
+import { AppCache } from '../providers/appcache';
+import { FavoritesPage } from '../favorites/favorites.page';
 
 const { App, Browser, Device } = Plugins;
 declare const launchNavigator:any;
@@ -83,7 +85,7 @@ export class SharePage implements OnInit, IViewNavEvents {
         const subject = this._getSubjectForMarkerItems(value);
         this.markerCollection$ = subject.watch$();
         this.mapSettings = {
-            dragend: true,
+            dragend: false,
             click: true,
             clickadd: false,
           }
@@ -261,7 +263,7 @@ export class SharePage implements OnInit, IViewNavEvents {
   }
 
   async ngOnInit() {
-    const dontWait = HelpComponent.presentModal(this.modalCtrl, {template:'favorites'});
+    const dontWait = HelpComponent.presentModal(this.modalCtrl, {template:'discover'});
 
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
@@ -281,7 +283,7 @@ export class SharePage implements OnInit, IViewNavEvents {
           takeUntil(this.unsubscribe$),
           skipWhile( ()=>!this.stash.activeView),
           map( items=>{
-            this.getStaticMap(items);
+            this.getStaticMap(items); // update static map with new items
             return items;
           }),
       );
@@ -430,7 +432,16 @@ export class SharePage implements OnInit, IViewNavEvents {
         // DEV: commit immediately
         marker['modified'] = new Date();
         const done = await this._mgSub.resty.put(marker.uuid, marker as IMarkerGroup);
-        this._mgSub.reload();
+        
+
+        if (marker['_favorite']) {
+          const favorite = FavoritesPage.getOrCreateFavorite(marker);
+          AppCache.for('Favorite').set( favorite)
+        }
+        else {
+          AppCache.for('Favorite').remove(marker);
+        }
+        this._mgSub.repeat();
     }
   }
 

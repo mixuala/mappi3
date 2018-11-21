@@ -22,6 +22,7 @@ const routes: Routes = [
     path: 'cameraroll', 
     loadChildren: './cameraroll/cameraroll.module#CamerarollPageModule', 
   },
+  { path: 'favorites', loadChildren: './favorites/favorites.module#FavoritesPageModule' },
 ];
 
 // see: https://forum.ionicframework.com/t/ionic-4-event-to-trigger-navigation-back-to-page/141676/2
