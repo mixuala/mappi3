@@ -1,5 +1,5 @@
 import { 
-  Component, OnInit, ViewChild,
+  Component, ElementRef, OnInit, ViewChild,
   ChangeDetectionStrategy, ChangeDetectorRef,
 } from '@angular/core';
 import { Router } from '@angular/router';
@@ -243,6 +243,9 @@ export class FavoritesPage implements OnInit {
     if (!change.data) return;
     const marker = change.data;
     switch(change.action){
+      case 'reload':
+        this.mSubj.next( this.mSubj.value );   // called by action="rollback" from child
+        return;
       case 'selected':
         // invoked by selected from MarkerGroupComponent
         break;
@@ -280,7 +283,9 @@ export class FavoritesPage implements OnInit {
         const mListSub = this.dataService.sjMarkerLists;
         const selected = this.mSubj.value.filter(o=>!!o['_selected']);
         const mList = await FavoritesPage.createMarkerList_from_favorites(selected, mListSub);
-        const committed = await RestyTrnHelper.applyChanges(action, mListSub, this.dataService);
+
+        const commitFrom = [mList];
+        const committed = await RestyTrnHelper.commitFromRoot(action, mListSub, this.dataService, commitFrom);
 
         // TODO: refactor MarkerListComponent.cacheDescendents()
         let subject:SubjectiveService<IMarker>;

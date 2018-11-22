@@ -290,24 +290,9 @@ export class SharePage implements OnInit, IViewNavEvents {
 
     // initialize subjects
     await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
-    this.parent = mListSubj.value().find( o=>o.uuid==mListId) as IMarkerList;
-    if (!this.parent){
-      // initializers for deep-linking
-      const done = mListSubj.get$([mListId]).pipe(
-        switchMap( (o)=>{
-          if (o.length) {
-            this.parent = o[0] as IMarkerList;
-            this.stash.activeView = true;
-            // this._patch_MarkerListPosition(this.parent);  // DEV
-            return mgSubj.get$(this.parent.markerGroupIds);
-          } 
-          return Observable.create();
-        })).subscribe( ()=>{
-          if (this.parent)
-            done.unsubscribe();
-        })
-    }
-
+    this.parent = await this.dataService.MarkerLists.get([mListId]).then( arr=>arr.length ? arr[0] : null);
+    if (this.parent && mgSubj.value().length==0)
+      mgSubj.get$(this.parent.markerGroupIds);
   }
 
   viewWillEnter(){
@@ -425,6 +410,9 @@ export class SharePage implements OnInit, IViewNavEvents {
     if (!change.data) return;
     const marker = change.data;
     switch(change.action){
+      case 'reload':
+        this._mgSub.reload();   // called by action="rollback"
+        return;
       case 'selected':
         // invoked by ion-icon[pin](click) from MarkerGroupComponent
         return this.handle_MarkerGroupSelected(marker as IMarkerGroup)

@@ -202,6 +202,9 @@ export class MarkerListComponent implements OnInit {
     if (!change.data) return;
     const ml = change.data;
     switch(change.action){
+      case 'reload':
+        this._mgSub[ml.uuid].reload();   // called by action="rollback" from child
+        return;
       case 'selected':
         // this._selectedMarkerGroup = mg.uuid;
         break;

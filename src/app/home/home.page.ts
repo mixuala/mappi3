@@ -460,7 +460,32 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   /*
    * additional event handlers, 
-   */ 
+   */
+
+  /**
+   * reload after commit/rollback
+   */
+  async reload(changed:IMapActions[]=[]){
+    const waitFor = [];
+    // reload tree
+    const mgSubjUuids = this._mgSub.value().map(o => o.uuid);
+    mgSubjUuids && mgSubjUuids.forEach( uuid=>{
+      const mItemSubj = MockDataService.getSubjByParentUuid(uuid);
+      if (mItemSubj) waitFor.push(mItemSubj.reload(undefined, true));
+    })
+    waitFor.push(this._mgSub.reload());
+
+    const found = changed.find(o=>o.uuid==this.parent.uuid);
+    if (found) 
+      this.parent = found as IMarkerList;
+    else {
+      waitFor.push (this.dataService.MarkerLists.get([this.parent.uuid])
+        .then( arr=>this.parent=arr.pop())
+      );
+    }
+    await waitFor;
+  }
+  
 
   // handle childComponent/MarkerGroup changes
   childComponentsChange( change: {data:IMarkerGroup, action:string}){
@@ -468,6 +493,9 @@ export class HomePage implements OnInit, IViewNavEvents {
     const parent:IMarkerList = this.parent;
     const restMarker = parent as IRestMarker;
     switch(change.action){
+      case 'reload':
+        this.reload();   // called by action="rollback"
+        return;
       case 'selected':
         return this.selectedMarkerGroup = change.data.uuid;
       case 'remove':
@@ -543,44 +571,30 @@ export class HomePage implements OnInit, IViewNavEvents {
         if ( parent._rest_action ) {
           this.parent.markerGroupIds = mgSubjUuids;
           parent._rest_action = parent._rest_action || 'put';
-          parent._commit_child_items = mGroupSubj.value();
+          parent._commit_child_items = this._mgSub.value();
         }
 
-        const committed = await RestyTrnHelper.applyChanges(action, commitSubj, this.dataService);
-        // reload subj in RestyTrnHelper._childComponents_CommitChanges()
-        console.warn("HomePage: COMMIT complete", committed);  
-        // reload this.parent after commit reload
-        const done = mListSubj.watch$().subscribe( (mLs:IMarkerList[])=>{
-          const found = mLs.find( o=>o.uuid ==this.parent.uuid );
-          if (!found) console.error("Error: HomePage.applyChanges(), expecting to find an mList after COMMIT");
-          this.parent = found;
-          done && done.unsubscribe();
-          if ( layout=='edit' ){
-            const data = {'map-center': this.parent.loc.join(',')};
-            // this.router.navigate(['/list'], {queryParams:data} );  // queryParams not working
-            this.router.navigate(['/list', data ]);
-          }
-        });
-        return Promise.resolve(committed);
+        const commitFrom = (this.parent as IRestMarker)._rest_action ? [this.parent] : this._mgSub.value();
 
+        const committed = await RestyTrnHelper.commitFromRoot(action, commitSubj, this.dataService, commitFrom);
+        await this.reload(committed);
+        console.warn("HomePage: COMMIT complete", committed);  
+
+        if ( layout=='edit' ){
+          const data = {'map-center': this.parent.loc.join(',')};
+          // this.router.navigate(['/list'], {queryParams:data} );  // queryParams not working
+          this.router.navigate(['/list', data ]);
+        }
+        return Promise.resolve(committed);
       } catch (err) {
         console.warn("Error: cannot save to DEV MarkerGroup, parent is null", err);
         return Promise.reject(err);
       }
     case "rollback":
       // reload tree
-      mgSubjUuids && mgSubjUuids.forEach( uuid=>{
-        const mItemSubj = MockDataService.getSubjByParentUuid(uuid);
-        mItemSubj && mItemSubj.reload();
-      })
-      mGroupSubj.reload();
-      if (commitSubj == mListSubj) {
-        mListSubj.reload().then( (mLs:IMarkerList[])=>{
-          this.parent = mLs.find( o=>o.uuid ==this.parent.uuid );
-          if ( layout=='edit' ){
-            this.router.navigateByUrl('list');
-          }
-        })
+      await this.reload();
+      if ( layout=='edit' ){
+        this.router.navigateByUrl('list');
       }
     }
   }

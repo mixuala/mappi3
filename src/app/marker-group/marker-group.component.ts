@@ -304,7 +304,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     const target = ev.target && ev.target['tagName'];
     if (target!='H3') return;
     const changes = await Prompt.getText('label', 'label', this.mg, null);
-    if (changes) console.log("Prompt for title, mg=", changes.pop() );
+    if (changes) {
+      console.log("Prompt for title, mg=", changes.pop() );
+      this.mgSubject.next(this.mg); // same as detectChanges()???
+    }
     ev.preventDefault();
   }
 
@@ -313,12 +316,35 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
    * additional event handlers
    */ 
 
+  /**
+   * reload after commit/rollback
+   */
+  async reload(changed:IMarker[]=[]){
+    const waitFor = [];
+    const found = changed.find(o=>o.uuid==this.mg.uuid);
+    if (found) this.mg = found as IMarkerGroup;
+    else {
+      waitFor.push(  
+        this.dataService.MarkerGroups.get([this.mg.uuid])
+        .then( arr=>this.mg=arr.pop())
+      );
+    }
+    // reload tree Photos < MarkerGroup
+    const mItemSubj = MockDataService.getSubjByParentUuid(this.mg.uuid);
+    if (mItemSubj) waitFor.push(mItemSubj.reload(this.mg.markerItemIds, true));
+    await waitFor;
+  }
+  
+
   // handle childComponent/Photo changes
   childComponentsChange( change: {data:IPhoto, action:string}){
     if (!change.data) return;
     const parent:IMarkerGroup = this.mg;
     const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
     switch(change.action){
+      case 'reload':
+        childSubj.reload();   // called by action="rollback". reload IPhotos[]
+        return;
       case 'remove':
         parent.markerItemIds = parent.markerItemIds.filter(uuid=>uuid!=change.data.uuid);
         RestyTrnHelper.childComponentsChange(change, childSubj);
@@ -354,7 +380,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
     const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
     const commitSubj:SubjectiveService<IRestMarker> = parent._rest_action ? parentSubj : childSubj;
-    // begin commit from MarkerGroup or MarkerList
+
+    // begin commit from MarkerGroup or IPhoto[]
+    const commitFrom = (this.mg as IRestMarker)._rest_action ? [this.mg] : childSubj.value();
+
     switch (action) {
       case "commit":
         // propagate changes to MarkerGroup
@@ -366,8 +395,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             parent._commit_child_items = childSubj.value().filter(o=>!!o['_rest_action']);
             console.warn( "MarkerGroup.applyChanges, commit from", commitSubj.className )
           }
-          const committed = await RestyTrnHelper.applyChanges(action, commitSubj, this.dataService);
-          // reload subj in RestyTrnHelper._childComponents_CommitChanges()
+          const committed = await RestyTrnHelper.commitFromRoot(this.dataService, commitFrom);
+          await this.reload(committed);
           console.warn("MarkerGroup: COMMIT complete", committed);
           // commitSubj.reload() called in RestyTrnHelper.applyChanges()
           // if (commitSubj == parentSubj) childSubj.reload();
@@ -379,8 +408,13 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         break;
       case "rollback":
         // reload tree
-        commitSubj.reload();
-        if (commitSubj == childSubj) parentSubj.reload();
+        const rollbackSubj:SubjectiveService<IRestMarker> = (this.mg as IRestMarker)._rest_action ? parentSubj : childSubj;
+        rollbackSubj.reload();
+        if (rollbackSubj == childSubj) parentSubj.reload();
+        // TODO: NOTE: if mg is 'removed', then we need to reload the mgSubj which contains this mg
+        this.reload();
+        // childSubj.reload();
+        // this.mgChange.emit( {data:mg, action:'reload'} );
         return 
     }  
   }

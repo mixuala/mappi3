@@ -369,6 +369,13 @@ export class ListPage implements OnInit, IViewNavEvents {
   }
 
 
+  /**
+   * reload after commit/rollback
+   */
+  async reload(changed:IMarker[]=[]){
+    await this._mListSub.get$();
+  }
+
 
   /*
    * additional event handlers, possibly called from @ViewChilds
@@ -377,6 +384,9 @@ export class ListPage implements OnInit, IViewNavEvents {
     if (!change.data) return;
     const mLists = this._mListSub.value();
     switch(change.action){
+      case 'reload':
+        this._mListSub.reload();   // called by action="rollback" from child
+        return;
       case 'selected':
         return this.selectedMarkerList = change.data.uuid;
       case 'prompt':
@@ -396,12 +406,16 @@ export class ListPage implements OnInit, IViewNavEvents {
    */
   async applyChanges(action:string):Promise<IMarker[]> {
     const commitSubj: SubjectiveService<IRestMarker> = this._mListSub;
+    const commitFrom = this._mListSub.value();
     switch(action){
       case "commit":
-        const committed = await RestyTrnHelper.applyChanges(action, commitSubj, this.dataService);
+        const committed = await RestyTrnHelper.commitFromRoot(action, commitSubj, this.dataService, commitFrom);
+        await this.reload(committed);
         return committed;
       case "rollback":
-        return this._mListSub.reload(undefined, false);
+        // return this._mListSub.reload(undefined, false);
+        await this.reload();
+        return;
     }
   }
 
