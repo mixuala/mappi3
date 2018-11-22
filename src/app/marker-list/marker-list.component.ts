@@ -4,7 +4,7 @@ import { Component, EventEmitter, OnInit, Input, Output,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Observable, Subject, BehaviorSubject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { takeUntil, map } from 'rxjs/operators';
 
 import {
   IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
@@ -39,7 +39,7 @@ export class MarkerListComponent implements OnInit {
   private _mgSub: {[uuid:string]: SubjectiveService<IMarkerGroup>} = {};
   public mgCollection$: {[uuid:string]:  Observable<IMarkerGroup[]>} = {};
 
-  private done$: Subject<boolean> = new Subject<boolean>();
+  private unsubscribe$: Subject<boolean> = new Subject<boolean>();
 
   @Input() mList: IMarkerList;
   @Input() parentLayout: string;  
@@ -67,7 +67,7 @@ export class MarkerListComponent implements OnInit {
 
   ngOnInit() {
     this.layout = this.layout || 'gallery';
-    ScreenDim.dim$.pipe(takeUntil(this.done$)).subscribe( dim=>{
+    ScreenDim.dim$.pipe(takeUntil(this.unsubscribe$)).subscribe( dim=>{
       const [fitW, fitH] = dim.split('x').map(v=>parseInt(v));
       // this.miLimit = MarkerGroupComponent.getGalleryLimit(fitW, fitH);
       this.thumbDim = ScreenDim.getThumbDim([fitW, fitH]) as string;    
@@ -76,7 +76,7 @@ export class MarkerListComponent implements OnInit {
 
   ngOnDestroy(){
     console.warn("MarkerList onDestroy")
-    this.done$.next(true);
+    this.unsubscribe$.next(true);
   }
 
 
@@ -88,19 +88,21 @@ export class MarkerListComponent implements OnInit {
         case 'mList':
           if (!change.currentValue) return;
           const mList = change.currentValue;
-          const doChangeDetection = mList._detectChanges;
-          delete mList._detectChanges;
+          // const doChangeDetection = mList._detectChanges;
+          // delete mList._detectChanges;
           this.dataService.ready()
           .then( ()=>{
             const childSubj = this.loadMarkerGroups(mList);
-            const done = childSubj.watch$()
-              .pipe(takeUntil(this.done$))
-              .subscribe( items=>{
-              items.forEach( mg=>this.cacheDescendents(mg) )
-              // items.forEach( o=>console.log(`uuid:${mList.uuid} markerGroupId:`, o))
-            });
+            const once = childSubj.watch$().pipe(
+              takeUntil(this.unsubscribe$),
+            ).subscribe( items=>{
+              items.forEach( mg=>this.cacheDescendents(mg));
+            })
+                
             this.mListSubject.next(mList);
-            if (doChangeDetection) setTimeout(()=>this.cd.detectChanges())
+            // if (doChangeDetection) {
+            //   setTimeout(()=>this.cd.detectChanges(),10)
+            // }
           });
           break;
           case 'parentLayout':

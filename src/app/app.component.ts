@@ -13,7 +13,6 @@ import { AppCache, } from './providers/appcache';
 import { HelpComponent } from './providers/help/help.component';
 
 
-
 const { App, Device, SplashScreen, Storage } = Plugins;
 
 
@@ -59,10 +58,10 @@ export class AppComponent {
   }
 
   async reset(raw?:string){
-    Storage.clear();
+    await Storage.clear();
     AppCache.for('ImgSrc').reset();
     AppCache.for('Cameraroll').reset();
-    await this.dataService.loadDatasources(raw);
+    await this.dataService.init();
 
     const menu = document.querySelector('ion-menu-controller');
     menu.close();
@@ -110,10 +109,7 @@ export class AppComponent {
   }
 
   async listenAppState(){
-    const device = await Device.getInfo();
-    AppConfig.device = device;
-    AppConfig.detectBrowser(device);
-    switch (device.platform){
+    switch (AppConfig.device.platform){
       case 'ios':
       case 'android':
         this.patch_PWA_bootstrap();
@@ -132,6 +128,11 @@ export class AppComponent {
     AppCache.init();
     await this.platform.ready().then( async() => {
       AppConfig.platform = this.platform;
+      const device = await Device.getInfo();
+      AppConfig.device = device;
+      AppConfig.detectBrowser(AppConfig.device);
+      await this.dataService.init();
+
       this.statusBar.styleDefault();
       SplashScreen.hide().catch((err)=>{});
       await this.listenAppState();
@@ -141,7 +142,9 @@ export class AppComponent {
 
     if (AppConfig.device.platform !='ios') {
       return;
-    }  
+    }
+
+    // ios only
     // warm up cache by preloading cameraroll and moments
     setTimeout( async ()=>{
       // cameraroll

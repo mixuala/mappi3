@@ -9,7 +9,9 @@ import {
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
 import { SubjectiveService } from './subjective.service';
 import { MappiMarker, } from './mappi/mappi.service';
-import { AppCache,  } from './appcache';
+import { AppCache  } from './appcache';
+import { AppConfig } from '../providers/helpers';
+import { RAW_DEMO_DATA, PICSUM_IDS } from './demo_data';
 
 const { SplashScreen, Storage } = Plugins;
 
@@ -32,6 +34,7 @@ export class MockDataService {
     , [960,480]
   ];
   static photo_baseurl: string = "https://picsum.photos/80?image=";
+  static picsumIds: number[];
 
   public MarkerLists:RestyService<IMarkerList>;
   public MarkerGroups:RestyService<IMarkerGroup>;
@@ -62,14 +65,17 @@ export class MockDataService {
 
 
   constructor() { 
-    this._ready = this.loadDatasources()
-    .then( ()=>{
-      SplashScreen.hide().catch((err)=>{});
-      console.log("TESTDATA READY");
-    });
-
     window['_mockDataService'] = this;   // instance
+    MockDataService.picsumIds = this.shuffle(JSON.parse(PICSUM_IDS));
     return;
+  }
+
+  async init(){
+    const result = await Storage.keys();
+    if (AppConfig.device.platform=="web" && result.keys.length==0){
+      this._ready = this.loadDatasources(RAW_DEMO_DATA)
+    } 
+    else this._ready = this.loadDatasources();
   }
 
   ready():Promise<any> {
@@ -80,11 +86,10 @@ export class MockDataService {
    * Storage helpers
    * to load data into storage from DevTools console
    * 
-   window._mockDataService.dumpStorage()
-   _raw
+   _raw = window.MockDataService.dumpStorage()
    window._mockDataService.loadStorage(_raw)
    */
-  async dumpStorage() {
+  static async dumpStorage():Promise<string> {
       const result = await Storage.keys();
       const data:any[] = [];
       
@@ -95,7 +100,7 @@ export class MockDataService {
       }));
       window['_raw'] = JSON.stringify(data);
       console.log( window['_raw']  );
-      // call _mockDataService.
+      return Promise.resolve(window['_raw']);
   }
 
   async loadStorage(raw?:string):Promise<any> {
@@ -125,19 +130,29 @@ export class MockDataService {
     // restore raw data
     await Storage.clear();
     const parsed = JSON.parse(raw);
-    parsed.map( (o)=> {
-      switch (o.className) {
-        case 'Photo':
-        case 'MarkerGroup':
-        case 'MarkerList':
-          data[o.className].push(o); break;
-        default:
-          data.unknown[o.uuid] = o; break;
-      }
-    })
+    if (parsed instanceof Array){
+      parsed.map( (o)=> {
+        switch (o.className) {
+          case 'Photo':
+          case 'MarkerGroup':
+          case 'MarkerList':
+            data[o.className].push(o); break;
+          default:
+            data.unknown[o.uuid] = o; break;
+        }
+      })
+    } 
+    else data = parsed;
+    
+    // add demo Img.src 
+    data.Photo.forEach((o,i)=>MockDataService.inflatePhoto(o,i,i));
+
+
     console.log("Loading data to Storage", data);
     return Promise.resolve(data);
   }
+
+
 
   async loadTestData(): Promise<any> {
     const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo');
@@ -190,14 +205,14 @@ export class MockDataService {
         this.MarkerLists = new RestyService(data.MarkerList, "MarkerList");
       }
       else {
-        const testdata = await this.loadTestData();
-        ['Photo', 'MarkerGroup', 'MarkerList'].forEach( className=>{
-          testdata[className].forEach( async o=>{
-            const allowed = RestyService.cleanProperties(o);
-            await Storage.set({key: o.uuid, value: JSON.stringify(allowed)})
-          });
-        })
+        const data = await this.loadTestData();
       }
+      ['Photo', 'MarkerGroup', 'MarkerList'].forEach( className=>{
+        data[className].forEach( async o=>{
+          const allowed = RestyService.cleanProperties(o);
+          await Storage.set({key: o.uuid, value: JSON.stringify(allowed)})
+        });
+      })
       this.sjPhotos = new SubjectiveService(this.Photos);
       this.sjMarkerGroups = new SubjectiveService(this.MarkerGroups);
       this.sjMarkerLists = new SubjectiveService(this.MarkerLists);
@@ -229,17 +244,18 @@ export class MockDataService {
     o.markerItemIds = copyOfPhotos.splice(0,count).map( o=>o['uuid'] )
     return o;
   }
-
-  static inflatePhoto(o:IPhoto, seq?:number, index?: number){
-    const random = Math.min( Math.floor(Math.random() *  99))
-    const thumbSrc = MockDataService.photo_baseurl + (index || random);
+  
+  static inflatePhoto(o:IPhoto, seq?:number, unused?: number){
+    let baseurl = MockDataService.photo_baseurl;  //"https://picsum.photos/80?image="
+    const index = MockDataService.picsumIds.shift();
+    const thumbSrc = baseurl + index;
     o.seq = seq;
     o.position = MappiMarker.position(o);
-    let size = MockDataService.sizes[ random % MockDataService.sizes.length];
+    let size = MockDataService.sizes[ index % MockDataService.sizes.length];
     o.src = thumbSrc.replace("80", size.join('/'));
     o.width = size[0];
     o.height = size[1];
-    o.dateTaken = new Date( Date.now() - ((90-seq)*24*3600*1000) ).toISOString();
+    o.dateTaken = o.dateTaken || new Date( Date.now() - ((90-seq)*24*3600*1000) ).toISOString();
 
     function patchCameraroll(o){
       o.camerarollId = "fake";
@@ -261,6 +277,7 @@ export class MockDataService {
   }
 
 }
+
 
 export const MARKER_GROUPS: IMarkerGroup[] = [
   {uuid: null, label: 'Seri Hening Residence', loc: [3.1589503, 101.73743390000004], locOffset:[0,0], placeId: null, markerItemIds: [] },
