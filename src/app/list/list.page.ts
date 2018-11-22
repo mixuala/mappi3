@@ -102,7 +102,6 @@ export class ListPage implements OnInit, IViewNavEvents {
     );
 
     this.stash.activeView = true;
-    // this.stash.CamerarollPage = CamerarollPage;
     
     // for map marker rendering
     this.markerCollection$ = this.mListCollection$
@@ -179,6 +178,7 @@ export class ListPage implements OnInit, IViewNavEvents {
         const loc = mapCenter.split(',');
         this.stash.mapPosition = Object.assign( this.stash.mapPosition || {}, {center: new google.maps.LatLng( loc[0], loc[1])} );
         this.location.replaceState(this.location.path().split(';').shift());
+        // BUG: this line doesn't work
         // if (this.route.snapshot.queryParams) this.router.navigate([], {relativeTo: this.route, replaceUrl:true} )
       }
       if ( this.stash.mapPosition ) {
@@ -241,6 +241,7 @@ export class ListPage implements OnInit, IViewNavEvents {
           console.log( "Create MarkerList from selected=", resp.selected);
           await this.createMarkerList_from_Cameraroll(resp)
           .then( mL=>{ 
+            AppCache.for('Key').set(mL, mL.uuid);
             this.nav('home', mL, {
               queryParams:{
                 layout:'edit'
@@ -256,7 +257,8 @@ export class ListPage implements OnInit, IViewNavEvents {
     }
 
     return this.createMarkerList_from_Camera(undefined)
-    .then( mL=>{ 
+    .then( mL=>{
+      AppCache.for('Key').set(mL, mL.uuid);
       this.nav('home', mL, {
         queryParams:{
           layout:'edit'
@@ -321,7 +323,6 @@ export class ListPage implements OnInit, IViewNavEvents {
     })
     .then( ()=>{
       RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
-      MockDataService.getSubjByUuid(item.uuid, this._mListSub); // back reference to mListSubj
       return item;
     });
   }
@@ -354,7 +355,6 @@ export class ListPage implements OnInit, IViewNavEvents {
     })
     .then( ()=>{
       RestyTrnHelper.childComponentsChange({data:item, action:'add'}, this._mListSub);
-      MockDataService.getSubjByUuid(item.uuid, this._mListSub); // back reference to mListSubj
       return item;
     });
   }
@@ -405,11 +405,10 @@ export class ListPage implements OnInit, IViewNavEvents {
    * @param action 
    */
   async applyChanges(action:string):Promise<IMarker[]> {
-    const commitSubj: SubjectiveService<IRestMarker> = this._mListSub;
     const commitFrom = this._mListSub.value();
     switch(action){
       case "commit":
-        const committed = await RestyTrnHelper.commitFromRoot(action, commitSubj, this.dataService, commitFrom);
+        const committed = await RestyTrnHelper.commitFromRoot(this.dataService, commitFrom);
         await this.reload(committed);
         return committed;
       case "rollback":

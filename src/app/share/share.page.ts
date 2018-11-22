@@ -269,12 +269,9 @@ export class SharePage implements OnInit, IViewNavEvents {
     const mListId = this.route.snapshot.paramMap.get('uuid');
 
     // configure subjects and cache
-    const mListSubj = MockDataService.getSubjByUuid(mListId) || 
-      MockDataService.getSubjByUuid(mListId, new SubjectiveService(this.dataService.MarkerLists));
     const mgSubj = MockDataService.getSubjByParentUuid(mListId) || 
       MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
     this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
-
 
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()

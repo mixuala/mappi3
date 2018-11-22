@@ -116,9 +116,6 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
 
           const isUncomittedMarker = this.inflateUncommittedMarker(this.mg);
           // configure subjects and cache
-          const mgSubj = MockDataService.getSubjByUuid(mg.uuid) ||
-                MockDataService.getSubjByUuid(mg.uuid, new SubjectiveService(this.dataService.MarkerGroups));
-          // console.warn("*** MarkerGroup.ngOnChanges: mgSubj", mgSubj.value());
           const childSubj = MockDataService.getSubjByParentUuid(mg.uuid) || 
                 MockDataService.getSubjByParentUuid(mg.uuid, new SubjectiveService(this.dataService.Photos));  
           
@@ -348,7 +345,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       case 'remove':
         parent.markerItemIds = parent.markerItemIds.filter(uuid=>uuid!=change.data.uuid);
         RestyTrnHelper.childComponentsChange(change, childSubj);
-
+        this.mgChange.emit( {data:parent, action:'update'});        // adds parent._rest_action="put"
         // BUG: ion-item-sliding
         // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
         return this.slidingList.closeSlidingItems();
@@ -370,48 +367,31 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
    */
   async applyChanges(action:string):Promise<IMarker[]>{
     const mg = this.mg;
-
-    const parent = this.mg;
-    const parentSubj = MockDataService.getSubjByUuid(parent.uuid);
-
-    // is this a deeplinking problem???
-    const found = parentSubj.value().find(o=>o.uuid == parent.uuid);
-    if (!found) parentSubj.next([parent]);
-
-    const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
-    const commitSubj:SubjectiveService<IRestMarker> = parent._rest_action ? parentSubj : childSubj;
+    const childSubj = MockDataService.getSubjByParentUuid(mg.uuid);
 
     // begin commit from MarkerGroup or IPhoto[]
     const commitFrom = (this.mg as IRestMarker)._rest_action ? [this.mg] : childSubj.value();
-
     switch (action) {
       case "commit":
-        // propagate changes to MarkerGroup
+        // propagate changes to MarkerItems
         const childSubjUuids = childSubj.value().map(o => o.uuid);
+        // use getVisible
         try {
-          if (parent._rest_action) {
-            parent.markerItemIds = childSubjUuids;
-            parent._rest_action = parent._rest_action || 'put';
-            parent._commit_child_items = childSubj.value().filter(o=>!!o['_rest_action']);
-            console.warn( "MarkerGroup.applyChanges, commit from", commitSubj.className )
+          if (mg._rest_action) {
+            // mg.markerItemIds = childSubjUuids;
+            mg._rest_action = mg._rest_action || 'put';
+            mg._commit_child_items = childSubj.value().filter(o=>!!o['_rest_action']);
+            console.warn( "MarkerGroup.applyChanges, commitFrom=", commitFrom )
           }
           const committed = await RestyTrnHelper.commitFromRoot(this.dataService, commitFrom);
           await this.reload(committed);
           console.warn("MarkerGroup: COMMIT complete", committed);
-          // commitSubj.reload() called in RestyTrnHelper.applyChanges()
-          // if (commitSubj == parentSubj) childSubj.reload();
           return Promise.resolve(committed);
         } catch (err) {
-          console.warn("Error: cannot save to DEV MarkerGroup, parent is null");
+          console.log("Error: ", err);
           return Promise.reject(err);
         }
-        break;
       case "rollback":
-        // reload tree
-        const rollbackSubj:SubjectiveService<IRestMarker> = (this.mg as IRestMarker)._rest_action ? parentSubj : childSubj;
-        rollbackSubj.reload();
-        if (rollbackSubj == childSubj) parentSubj.reload();
-        // TODO: NOTE: if mg is 'removed', then we need to reload the mgSubj which contains this mg
         this.reload();
         // childSubj.reload();
         // this.mgChange.emit( {data:mg, action:'reload'} );

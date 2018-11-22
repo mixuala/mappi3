@@ -13,6 +13,7 @@ import  {
   MockDataService, RestyTrnHelper, Prompt,
 } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
+import { AppCache } from '../providers/appcache';
 import { ScreenDim, Humanize } from '../providers/helpers';
 
 @Component({
@@ -59,6 +60,7 @@ export class MarkerListComponent implements OnInit {
   nav(item:IMarkerList){
     // this.router.navigate(['/home', {uuid: item.uuid}]);
     console.log("click: nav to item=", item.uuid)
+    AppCache.for('Key').set(item, item.uuid);
     this.router.navigateByUrl(`/map/${item.uuid}`);
   }
 
@@ -121,7 +123,6 @@ export class MarkerListComponent implements OnInit {
     const subject = this.cacheDescendents(mList) as SubjectiveService<IMarkerGroup>;
     this._mgSub[mList.uuid] = subject;
     this.mgCollection$[mList.uuid] = subject.watch$();
-
     return subject
   }
 
@@ -140,15 +141,9 @@ export class MarkerListComponent implements OnInit {
     if (parent.hasOwnProperty('markerGroupIds')) {
       subject = new SubjectiveService(this.dataService.MarkerGroups);
       subject.get$(parent.markerGroupIds);
-      parent.markerGroupIds.forEach( uuid=>{
-        MockDataService.getSubjByUuid(uuid, subject);
-      });
     } else if (parent.hasOwnProperty('markerItemIds')) {
       subject = new SubjectiveService(this.dataService.Photos);
       subject.get$(parent.markerItemIds);
-      parent.markerItemIds.forEach( uuid=>{
-        MockDataService.getSubjByUuid(uuid, subject);
-      });
     } else 
       return null;
 
@@ -187,8 +182,7 @@ export class MarkerListComponent implements OnInit {
     const changes = await Prompt.getText('label', 'label', this.mList, this.dataService);
     if (changes.length){
       this.mListChange.emit({data:this.mList, action:'prompt'})
-      // const subj = MockDataService.getSubjByUuid(this.mList.uuid);
-      // await subj.reload();
+      // this.mListSubject.next(this.mListSubject.value); // same as detectChanges()???
       this.cd.detectChanges();
     }
     
@@ -219,19 +213,4 @@ export class MarkerListComponent implements OnInit {
         return;
     }
   }
-
-  // applyChanges(action:string):Promise<IMarker[]> {
-  //   return RestyTrnHelper.applyChanges(action, this.mListSubject, this.dataService)
-  //   .then( (items)=>{
-  //     // post-save actions
-  //     switch(action){
-  //       case "commit":
-  //         return this.dataService.sjMarkerLists.reload()
-  //         .then( ()=>items )
-  //     }
-  //     return items;
-  //   });
-  // }
-
-
 }

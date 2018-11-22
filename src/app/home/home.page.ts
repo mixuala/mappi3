@@ -141,8 +141,12 @@ export class HomePage implements OnInit, IViewNavEvents {
     const mListId = this.route.snapshot.paramMap.get('uuid');
 
     // configure subjects and cache
-    const mListSubj = MockDataService.getSubjByUuid(mListId) || 
-      MockDataService.getSubjByUuid(mListId, new SubjectiveService(this.dataService.MarkerLists));
+    const uncommitedMarker = AppCache.for('Key').get(mListId);
+    if (uncommitedMarker && uncommitedMarker['_rest_action']){
+      AppCache.for('Key').remove(mListId);
+      this.inflateUncommittedMarker(uncommitedMarker);
+      this.parent = uncommitedMarker;
+    }
     const mgSubj = MockDataService.getSubjByParentUuid(mListId) || 
       MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
     this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
@@ -153,25 +157,12 @@ export class HomePage implements OnInit, IViewNavEvents {
       
     // initialize subjects
     await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
-    this.parent = mListSubj.value().find( o=>o.uuid==mListId) as IMarkerList;
-    if (!this.parent){
-      // initializers for deep-linking
-      const done = mListSubj.get$([mListId]).pipe(
-        switchMap( (o)=>{
-          if (o.length) {
-            this.parent = o[0] as IMarkerList;
-            this.stash.activeView = true;
-            return mgSubj.get$(this.parent.markerGroupIds);
-          } 
-          return Observable.create();
-        })).subscribe( ()=>{
-          if (this.parent){
-            const check = mListSubj.value().find( o=>o.uuid==this.parent.uuid)
-            done.unsubscribe();
-          }
-        })
+
+    if (!this.parent){    // get from Resty
+      this.parent = await this.dataService.MarkerLists.get([mListId]).then( arr=>arr.length ? arr[0] : null);
     }
-    this.inflateUncommittedMarker(this.parent);
+    if (this.parent && mgSubj.value().length==0) 
+      mgSubj.get$(this.parent.markerGroupIds);
     
     // detectChanges if in `edit` mode
     const layout = this.route.snapshot.queryParams.layout;
@@ -294,13 +285,10 @@ export class HomePage implements OnInit, IViewNavEvents {
     }
     mgParent.label = `Marker created ${mgParent.created.toISOString()}`;
     mgParent.seq = data.seq || this._mgSub.value().length;
-    // cache subject by MarkerGroup.uuid
-    MockDataService.getSubjByUuid(mgParent.uuid, this._mgSub);
 
     return Promise.resolve(true)
     .then ( async ()=>{
       if (MappiMarker.hasLoc(child)) {
-        const parentSubj = MockDataService.getSubjByUuid(mgParent.uuid);
         RestyTrnHelper.setFKfromChild(mgParent, child);
         RestyTrnHelper.setLocFromChild(mgParent, child);
         console.log(`createMarkerGroup: selected Photo`, JSON.stringify(child).slice(0,100));
@@ -465,7 +453,7 @@ export class HomePage implements OnInit, IViewNavEvents {
   /**
    * reload after commit/rollback
    */
-  async reload(changed:IMapActions[]=[]){
+  async reload(changed:IMarker[]=[]){
     const waitFor = [];
     // reload tree
     const mgSubjUuids = this._mgSub.value().map(o => o.uuid);
@@ -558,10 +546,8 @@ export class HomePage implements OnInit, IViewNavEvents {
 
 
     const layout = this.route.snapshot.queryParams.layout;
-    const mListSubj = MockDataService.getSubjByUuid(this.parent.uuid);
     const mGroupSubj = this._mgSub;
-    // const childSubj = MockDataService.getSubjByParentUuid(parent.uuid);
-    const commitSubj: SubjectiveService<IRestMarker> = parent._rest_action ? mListSubj : mGroupSubj;
+
     // begin commit from MarkerList
     switch (action) {
       case "commit":
@@ -576,7 +562,7 @@ export class HomePage implements OnInit, IViewNavEvents {
 
         const commitFrom = (this.parent as IRestMarker)._rest_action ? [this.parent] : this._mgSub.value();
 
-        const committed = await RestyTrnHelper.commitFromRoot(action, commitSubj, this.dataService, commitFrom);
+        const committed = await RestyTrnHelper.commitFromRoot( this.dataService, commitFrom);
         await this.reload(committed);
         console.warn("HomePage: COMMIT complete", committed);  
 

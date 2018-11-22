@@ -349,6 +349,7 @@ export class CamerarollPage implements OnInit {
     }
     // router-outlet nav from sidemenu, create MarkerList from selection, only
     const mL = await CamerarollPage.createMarkerList_from_Cameraroll(selected, this.dataService.sjMarkerLists);
+    AppCache.for('Key').set(mL, mL.uuid)
     this.router.navigate(['home', mL.uuid], {queryParams:{layout:'edit'}});
     return;
   }
@@ -471,7 +472,6 @@ export class CamerarollPage implements OnInit {
 
     // finish up
     RestyTrnHelper.childComponentsChange({data:item, action:'add'}, mListSub);
-    MockDataService.getSubjByUuid(item.uuid, mListSub); // back reference to mListSubj
     return Promise.resolve(item);
   }
 

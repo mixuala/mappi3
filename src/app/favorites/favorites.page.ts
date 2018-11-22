@@ -151,12 +151,16 @@ export class FavoritesPage implements OnInit {
     return Promise.resolve(result);
   }
 
+  async loadFavoritesFromAppCache(){
+    const favorites = AppCache.for('Favorite').items() as IFavorite[];
+    return await this.inflateFavorites( favorites );
+  }
+
   async ngOnInit() {
     const dontWait = HelpComponent.presentModal(this.modalCtrl, {template:'favorites'});
 
     this.layout = 'gallery';
-    const favorites = AppCache.for('Favorite').items().filter(o=>!!o.favorite) as IFavorite[];
-    const items = await this.inflateFavorites( favorites )
+    const items = await this.loadFavoritesFromAppCache();
     this.mSubj = new BehaviorSubject<IMarker[]>(items);
     this.markerCollection$ = this.mCollection$ = this.mSubj.asObservable()
     .pipe(
@@ -169,10 +173,7 @@ export class FavoritesPage implements OnInit {
     try {
       this.stash.activeView = true;
       console.warn(`viewWillEnter: FavoritesPage`)
-
-      const favorites = AppCache.for('Favorite').items() as IFavorite[];
-      const items = await this.inflateFavorites( favorites )
-      this.mSubj.next( items );
+      this.reload();
       this.cd.detectChanges();
     } catch {}
   }
@@ -202,12 +203,13 @@ export class FavoritesPage implements OnInit {
     else {
       this.applyChanges(action)
       .then( 
-        (res:IMarkerList)=>{
+        (mL:IMarkerList)=>{
           this.layout = this.stash.layout;
           this.mgFocus = null;
           const selected = this.mSubj.value.filter(o=>o['_selected']=false);
-          if (res && res['className']=="MarkerList"){
-            this.router.navigate(['map', res.uuid]);
+          if (mL && mL['className']=="MarkerList"){
+            // AppCache.for('Key').set(mL, mL.uuid);  // already committed
+            this.router.navigate(['map', mL.uuid]);
           }
         },
         err=>console.log('ERROR saving changes',err)
@@ -235,6 +237,10 @@ export class FavoritesPage implements OnInit {
     this.scrollToElement(uuid);
   }
 
+  async reload(){
+    const items = await this.loadFavoritesFromAppCache();
+    this.mSubj.next( items );
+  }
 
   /*
    * additional event handlers, possibly called from @ViewChilds
@@ -285,22 +291,20 @@ export class FavoritesPage implements OnInit {
         const mList = await FavoritesPage.createMarkerList_from_favorites(selected, mListSub);
 
         const commitFrom = [mList];
-        const committed = await RestyTrnHelper.commitFromRoot(action, mListSub, this.dataService, commitFrom);
+        const committed = await RestyTrnHelper.commitFromRoot(this.dataService, commitFrom);
+        this.reload();
 
-        // TODO: refactor MarkerListComponent.cacheDescendents()
+        // TODO: refactor MarkerListComponent.cacheDescendents()  
         let subject:SubjectiveService<IMarker>;
         if (mList.hasOwnProperty('markerGroupIds')) {
           subject = new SubjectiveService(this.dataService.MarkerGroups);
           subject.get$(mList.markerGroupIds);
           MockDataService.getSubjByParentUuid(mList.uuid, subject);
-          mList.markerGroupIds.forEach( uuid=>{
-            // BUG: what happens when the SAME mg is in 2 different mList?
-            MockDataService.getSubjByUuid(uuid, subject);  // siblings in 2 different lists
-          });
         }
         return Promise.resolve(mList);
       case "rollback":
-        this.mSubj.value.filter(o=>o['_selected']=false);
+        this.reload();
+        // this.mSubj.value.filter(o=>o['_selected']=false);
         return;
     }  
   }
@@ -345,7 +349,6 @@ export class FavoritesPage implements OnInit {
 
     // finish up
     RestyTrnHelper.childComponentsChange({data:item, action:'add'}, mListSub);
-    MockDataService.getSubjByUuid(item.uuid, mListSub); // back reference to mListSubj
     return Promise.resolve(item);
   }
 

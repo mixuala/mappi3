@@ -128,8 +128,9 @@ export interface IImgSrcItem {
 import { SubjectiveService } from './subjective.service';
 export interface IMarkerSubject {
   uuid: string,
-  sibling: SubjectiveService<IMarker>;   // TODO: refactor, use siblings
-  child: SubjectiveService<IMarker>;  // TODO: refactor, use children
+  parent?: IMarker;
+  sibling?: SubjectiveService<IMarker>;   // deprecate
+  child: SubjectiveService<IMarker>;  
 }
 
 

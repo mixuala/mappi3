@@ -47,28 +47,15 @@ export class MockDataService {
   /**
    * helper functions
    */
-  static getSubjByUuid(uuid:string, subj?:SubjectiveService<IMarker>){
-    let markerSubj:IMarkerSubject = AppCache.for('IMarker').get(uuid);
-    if (markerSubj){
-      if (subj) return markerSubj.sibling = subj;
-      return markerSubj.sibling;
-    } 
-
-    const empty:IMarkerSubject = {uuid, sibling: null, child:null};
-    markerSubj = AppCache.for('IMarker').set(empty);
-    if (subj) return markerSubj.sibling = subj;
-    return null;
-  }
-
   static getSubjByParentUuid(uuid:string, subj?:SubjectiveService<IMarker>){
-    let markerSubj:IMarkerSubject = AppCache.for('IMarker').get(uuid);
+    let markerSubj:IMarkerSubject = AppCache.for('IMarkerSubj').get(uuid);
     if (markerSubj){
       if (subj) return markerSubj.child = subj;
       return markerSubj.child;
     }
 
     const empty:IMarkerSubject = {uuid, sibling: null, child:null};
-    markerSubj = AppCache.for('IMarker').set(empty);
+    markerSubj = AppCache.for('IMarkerSubj').set(empty);
     if (subj) return markerSubj.child = subj;
     return null;
   }
@@ -314,20 +301,15 @@ export class Prompt {
   static async getText(label:string, key:string, o:IRestMarker, dataService:MockDataService):Promise<IMarker[]>{
     const resp =  window.prompt(`Enter ${label}:`);
     if (!resp) return;
-    const subj = MockDataService.getSubjByUuid(o.uuid);
-    const found = subj.value().find(m=>m.uuid==o.uuid);
-    if (found !== o) {
-      console.warn("ERROR: expecting the same item", found, o);
-      // TODO: refactor: if found==o then we can completely ignore subj
-    }
-    found[key] = resp;
-    found['_rest_action'] = found['_rest_action'] || 'put'; 
-    RestyTrnHelper.childComponentsChange({data:found, action:'update'}, subj);  // subj is not touched with 'update
+
+    o[key] = resp;
+    o['_rest_action'] = o['_rest_action'] || 'put'; 
+    RestyTrnHelper.childComponentsChange({data:o, action:'update'}, null);  // subj is not touched with 'update
     if (!dataService) 
       return Promise.resolve([o]);
 
-    const commitFrom = [found];
-    const changed = await RestyTrnHelper.commitFromRoot('commit', subj, dataService, commitFrom);
+    const commitFrom = [o];
+    const changed = await RestyTrnHelper.commitFromRoot(dataService, commitFrom);
     return changed;   // call subj.reload(undefined, true);
   }
 }
@@ -434,8 +416,7 @@ export class RestyTrnHelper {
       parent._commit_child_items.push(child);
     }
     child['_rest_action'] = 'post';
-
-    // call XXX.inflateUncommittedMarker() to render uncommitted data
+    // NOTE: call .inflateUncommittedMarker() to render uncommitted data
     return;
   }
   static setLocFromChild (data:any, child:IRestMarker) {
@@ -495,15 +476,11 @@ export class RestyTrnHelper {
    * 
    * Recursive commit of IRestMarker[], beginning from leafs
    * 
-   * @param action // deprecate
-   * @param subj // deprecate subj.value() should be same as commitFrom
    * @param dataSvc 
    * @param commitFrom IRestMarker[] items to begin recursive commit
    * @returns IMarker[], // TODO: need to call subj.reload( undefined , true) on success
    */
   static async commitFromRoot(
-    action:string, 
-    subj: SubjectiveService<IRestMarker>,  // deprecate, cannot guarantee parent from subject
     dataSvc?:MockDataService, 
     commitFrom?: IRestMarker[],
   ):Promise<IMarker[]> {
@@ -523,7 +500,7 @@ export class RestyTrnHelper {
     if (check.length)
       console.error("applyChanges(): some commitItems were NOT included", check);
 
-    return RestyTrnHelper._childComponents_CommitChanges(allItems, subj, dataSvc)
+    return RestyTrnHelper._childComponents_CommitChanges(allItems, dataSvc)
     .then( 
       (changed:IMarker[])=>{
         // need to reload changed markers. WHERE/WHEN??
@@ -535,37 +512,19 @@ export class RestyTrnHelper {
     });
   }
 
-  private static _schemaLookup(subj:SubjectiveService<any>, dataSvc:MockDataService, generation?:string):RestyService<IMarker>{
-    let found = RestyTrnHelper.objectHierarchy.className.findIndex( v=>v==subj.className)
-    try {
-      if (found==-1) throw new Error('className not found');
-
-      switch (generation){
-        case 'parent': found--; break;
-        case 'child': found++; break;
-      }
-      return dataSvc[ RestyTrnHelper.objectHierarchy.schema[found] ];
-    } catch (err) {
-      console.log(`ERROR lookup db schema from className`, err);
-    }
-  }
-
   /**
    * commit changes to Resty and reload Subject to push changes to Observers
    * - recursively commit child items before parent
    * - SubjectiveService.reload( items, resort='false') after each leaf node complete
    * @param changes 
-   * @param subj        // TODO: deprecate
    * @param dataSvc 
    */
   private static async _childComponents_CommitChanges(
-    changes:IRestMarker[], 
-    subj?: SubjectiveService<IMarker>, 
+    changes:IRestMarker[],  
     dataSvc?:MockDataService,
     isRecursive:boolean=false,
   ):Promise<IMarker[]>{  
     const generations = ['MarkerLists', 'MarkerGroups', 'Photos'];
-    // let resty:RestyService<IMarker> = RestyTrnHelper._schemaLookup(subj, dataSvc);
     const pr:Promise<any>[] = [];
 
     changes.forEach( async (o)=>{
@@ -574,13 +533,12 @@ export class RestyTrnHelper {
       const resty:RestyService<IMarker> = dataSvc[generations[restyNameIndex]];
 
       // first, recursively commit child
-      const restyChild:RestyService<IMarker> = RestyTrnHelper._schemaLookup(subj, dataSvc, 'child');
 
       if (o.hasOwnProperty('_commit_child_items')){
         const items = o['_commit_child_items'];
         const childSubj = MockDataService.getSubjByParentUuid(o.uuid);   // deprecate
         // recursive call
-        pr.push( RestyTrnHelper._childComponents_CommitChanges(items, childSubj, dataSvc, isRecursive=true)
+        pr.push( RestyTrnHelper._childComponents_CommitChanges(items, dataSvc, isRecursive=true)
           .then (
             res=>{
               delete o['_commit_child_items'];

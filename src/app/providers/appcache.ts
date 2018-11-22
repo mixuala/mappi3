@@ -119,8 +119,10 @@ export class AppCache {
     // NOTE: dataUrls, do not put into Storage
     AppCache._cache['ImgSrc'] = new Cache_WithMru<IImgSrcItem>({className:'ImgSrc', storage:false});
     // NOTE: get sibling & child markers by IMarker.uuid
-    AppCache._cache['IMarker'] = new CacheByKey<IMarkerSubject>({className:'IMarker', storage:false});
+    AppCache._cache['IMarkerSubj'] = new CacheByKey<IMarkerSubject>({className:'IMarkerSubj', storage:false});
     AppCache._cache['Favorite'] = new CacheByKey<IFavorite>({className:'Favorite', storage:true});
+    // use for passing objects between components/pages
+    AppCache._cache['Key'] = new CacheByKey<any>({className:'Key', storage:false});
     // restore
     AppCache.handleAppStateChange({isActive:true});
   }
