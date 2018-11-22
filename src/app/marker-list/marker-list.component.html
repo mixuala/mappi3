@@ -16,10 +16,10 @@
 
     <ion-card-content>
         <ion-item>
-          <ion-button slot="start" class="marker-wrap">
+          <ion-button slot="start" class="marker-wrap"  (click)="selectMarkerList(mList, $event)">
             <ion-chip class="marker" color="primary" fill="solid">
               <ion-icon name="pin" slot="start"></ion-icon>
-              <ion-label>{{mList.markerGroupIds.length}}</ion-label>
+              <ion-label>{{this.seq+1}}</ion-label>
             </ion-chip>
           </ion-button>
           <ion-label>

@@ -43,6 +43,7 @@ export class MarkerListComponent implements OnInit {
 
   @Input() mList: IMarkerList;
   @Input() parentLayout: string;  
+  @Input() seq: number;  
 
   @Output() mListChange: EventEmitter<{data:IMarkerList, action:string}> = new EventEmitter<{data:IMarkerList, action:string}>();
   @Output() thumbClick: EventEmitter<{mList:IMarkerList, mi:IPhoto}> = new EventEmitter<{mList:IMarkerList, mi:IPhoto}>();
@@ -161,7 +162,7 @@ export class MarkerListComponent implements OnInit {
     else this.layout = this.stash.layout;
   }
 
-  selectMarkerList(o:IMarkerList){
+  selectMarkerList(o:IMarkerList, ev?:MouseEvent){
     this.mListChange.emit({data:o, action:'selected'});
   }
 
@@ -180,7 +181,7 @@ export class MarkerListComponent implements OnInit {
     if (ev.clientX > 100) return;
     if (target=='ION-BUTTON') return;
     const changes = await Prompt.getText('label', 'label', this.mList, this.dataService);
-    if (changes.length){
+    if (changes && changes.length){
       this.mListChange.emit({data:this.mList, action:'prompt'})
       // this.mListSubject.next(this.mListSubject.value); // same as detectChanges()???
       this.cd.detectChanges();

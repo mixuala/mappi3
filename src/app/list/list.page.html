@@ -49,9 +49,9 @@
               <ion-col size="12" size-sm="6" size-xl="4">
                   <ng-container *ngIf="(mListCollection$ | async) as mLists">
                     <ng-container *ngIf="mLists.length ; else moveMap">
-                      <ng-container *ngFor="let item of mLists">
+                      <ng-container *ngFor="let item of mLists; index as i">
                         <app-marker-list
-                        [mList]=item [parentLayout]="layout" 
+                        [mList]=item [parentLayout]="layout" [seq]="i"
                         (mListChange)="childComponentsChange($event)"
                         ></app-marker-list>
                       </ng-container>

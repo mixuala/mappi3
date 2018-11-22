@@ -90,7 +90,9 @@ export class ListPage implements OnInit, IViewNavEvents {
     const _filterByMapBounds = map( (arr:IMarkerList[])=>{
       return arr.filter( o=>{
           const mapBounds = AppConfig.map.getBounds();
-          return mapBounds.contains( new google.maps.LatLng(o.position.lat, o.position.lng));
+          const keep = mapBounds.contains( new google.maps.LatLng(o.position.lat, o.position.lng));
+          // if (keep) o['_detectChanges']=true;  // trigger changeDetection in MarkerListComponent
+          return keep;
         })
     } );
 
@@ -368,7 +370,13 @@ export class ListPage implements OnInit, IViewNavEvents {
     this.nav('map', {uuid} as IMarkerList )
   }
 
-
+  handle_MarkerListSelected(marker:IMarkerList){
+    // if ( this.selectedMarkerList == marker.uuid ) {
+    //   // console.warn("Testing Native.LaunchNavigator on repeated select")
+    //   // this.launchApp('Map', marker.uuid);          
+    // }
+    this.selectedMarkerList = marker.uuid;
+  }
   /**
    * reload after commit/rollback
    */
@@ -388,7 +396,9 @@ export class ListPage implements OnInit, IViewNavEvents {
         this._mListSub.reload();   // called by action="rollback" from child
         return;
       case 'selected':
-        return this.selectedMarkerList = change.data.uuid;
+        // return this.selectedMarkerList = change.data.uuid;
+        // invoked by ion-icon[pin](click) from MarkerGroupComponent
+        return this.handle_MarkerListSelected(change.data as IMarkerList)
       case 'prompt':
         // Prompt.getText() already committed, just reload
         return this._mListSub.reload();
