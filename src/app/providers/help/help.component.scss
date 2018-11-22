@@ -3,7 +3,9 @@
 }
 
 ion-grid.center-grid {
-  background-color: rgba(0,0,0,0.5);
+
+  background-color: rgba(0,0,0,0.3);
+
   margin: 0px;
   &, & > ion-row {
     height: 100%;

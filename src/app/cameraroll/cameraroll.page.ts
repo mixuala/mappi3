@@ -68,6 +68,7 @@ export class CamerarollPage implements OnInit {
       componentProps: options,
     })
     .then( async (modal) => {
+      modal.classList.add('cameraroll-modal');  
       modal.present();
       await modal.onWillDismiss().then( async (resp)=>{
         if (resp.data.selected && resp.data.selected.length){

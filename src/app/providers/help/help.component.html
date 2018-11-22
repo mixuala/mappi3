@@ -1,6 +1,6 @@
 <ion-grid class="center-grid" tappable (click)="dismiss($event, this)">
-  <ion-row justify-content-center align-items-center>
-
+  <ion-row justify-content-center align-items-center >
+  <ion-col size="12" size-md="6">
     <ng-container [ngSwitch]="template">
 
       <ion-card class="content" padding *ngSwitchCase="'intro'">
@@ -85,6 +85,6 @@
       </ion-card>
 
     </ng-container>
-
+  </ion-col>
   </ion-row>
 </ion-grid>

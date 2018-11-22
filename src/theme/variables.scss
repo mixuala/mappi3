@@ -112,12 +112,22 @@
   }
 
       
-  ion-modal {
+  ion-modal.cameraroll-modal {
     top: var(--google-map-bottom);
     height: calc( 100vh - var(--google-map-bottom) );
     @at-root.plt-mobile ion-modal {
       top: 0px;
       height: 100vh;
+    }
+  }
+
+  ion-modal.help-modal {
+
+    @media only screen and (min-height: 768px) and (min-width: 768px) {
+      @at-root & .modal-wrapper.modal-wrapper {    
+        width: 100%;
+        height: 100%;  
+      }
     }
   }
 
@@ -270,12 +280,14 @@
       display: none;
     }
   
-    .photoswipe-host-wrap .pswp {
-      left: var(--split-pane-side-max-width);
-      width: calc(100vw - var(--split-pane-side-max-width));
+    .photoswipe-wrap .pswp {
+      top: var(--google-map-bottom);
+      left: 0px;
+      width: 100vw;
+      height: calc( 100vh - var(--google-map-bottom) );
     }
 
-    ion-modal {
+    ion-modal.cameraroll-modal {
       top: var(--google-map-bottom);
       left: var(--split-pane-side-max-width) !important;
       width: calc(100vw - var(--split-pane-side-max-width)) !important;
