@@ -47,6 +47,12 @@ export class MockDataService {
   private _ready:Promise<any>;
   private static MARKER_LISTS = [];
 
+  private _datasourceDeferred: { 
+    promise:  Promise<any>, 
+    resolve:  ()=>void, 
+    reject:   (err:any)=>void
+  };
+
   /**
    * helper functions
    */
@@ -67,15 +73,27 @@ export class MockDataService {
   constructor() { 
     window['_mockDataService'] = this;   // instance
     MockDataService.picsumIds = this.shuffle(JSON.parse(PICSUM_IDS));
+
+    this._datasourceDeferred = (()=>{
+      let resolve;
+      let reject;
+      this._ready = new Promise<any>((res, rej) => {
+          resolve = res;
+          reject = rej;
+      });
+      return { promise:this._ready, resolve, reject };
+    })();
+    
     return;
   }
 
   async init(){
     const result = await Storage.keys();
+    const {resolve, reject} = this._datasourceDeferred;
     if (AppConfig.device.platform=="web" && result.keys.length==0){
-      this._ready = this.loadDatasources(RAW_DEMO_DATA)
+      this.loadDatasources(RAW_DEMO_DATA).then( resolve, reject )
     } 
-    else this._ready = this.loadDatasources();
+    else this._ready = this.loadDatasources().then( resolve, reject );
   }
 
   ready():Promise<any> {

@@ -113,9 +113,9 @@ export class AppCache {
     // NOTE: use keys = [IPhoto.uuid, IMappiLibraryItem.id]
     AppCache._cache['Photo'] = new Cache_WithSpareKeys<IPhoto>({className:'Photo', storage:false});
     AppCache._cache['Cameraroll'] = new CacheByKey<IMappiLibraryItem>({
-      className:'Cameraroll', storage:false
+      className:'Cameraroll', storage:true
     });
-    AppCache._cache['Moment'] = new Cache_WithSpareKeys<IMoment>({className:'Moment', storage:false});
+    AppCache._cache['Moment'] = new Cache_WithSpareKeys<IMoment>({className:'Moment', storage:true});
     // NOTE: dataUrls, do not put into Storage
     AppCache._cache['ImgSrc'] = new Cache_WithMru<IImgSrcItem>({className:'ImgSrc', storage:false});
     // NOTE: get sibling & child markers by IMarker.uuid
@@ -223,7 +223,8 @@ export class AppCache {
   static async loadByClassName(className:string):Promise<any[]>{
     try {
       const cache = AppCache.for(className);
-      if (!cache || cache.storage==false) throw new Error(`ERROR: loadByClassName() - cannot save to Storage, className=${className}`);
+      if (!cache || cache.storage==false) 
+        throw new Error(`ERROR: loadByClassName() - cannot save to Storage, className=${className}`);
       const key = `cache-${className}`;
       const resp:any = await Storage.get({key});
       const items = JSON.parse(resp['value']);
