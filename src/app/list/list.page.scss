@@ -3,8 +3,13 @@
   display: none;
 }
 
-.center-wrap.move-map{
-  margin-top: calc( 50% - var(--toolbar-min-height) - 26px);
+.center-wrap {
+  height: 50vh;
+  width: 100%;
+  .move-map{
+    // margin-top: calc( 50% - var(--toolbar-min-height) - 26px);
+    width: 100%;
+  }
 }
 
 ion-grid {

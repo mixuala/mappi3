@@ -46,27 +46,32 @@
       <!-- list mode -->
       <ion-grid no-padding *ngSwitchCase="'default'">
           <ion-row>
-              <ion-col size="12" size-sm="6" size-xl="4">
-                  <ng-container *ngIf="(mListCollection$ | async) as mLists">
-                    <ng-container *ngIf="mLists.length ; else moveMap">
-                      <ng-container *ngFor="let item of mLists; index as i">
-                        <app-marker-list
-                        [mList]=item [parentLayout]="layout" [seq]="i"
-                        (mListChange)="childComponentsChange($event)"
-                        ></app-marker-list>
-                      </ng-container>
-                    </ng-container>
-                    <ng-template #moveMap>
-                      <div class="center-wrap move-map">
-                        <div>Move map to see more...</div>
-                        <ion-button color="primary" fill="solid"
-                          (click)="zoomOutUntilMarkerVisible()"
-                          >zoom out</ion-button>
-                      </div>
-                    </ng-template>
-                  </ng-container>
-                  
-                </ion-col>
+            <ng-container *ngIf="(mListCollection$ | async) as mLists">
+              <ng-container *ngIf="mLists.length>0;else moveMap">
+
+                <ng-container *ngFor="let item of mLists; index as i">
+                  <ion-col size="12" size-sm="6" size-xl="4">
+                    <app-marker-list
+                    [mList]=item [parentLayout]="layout" [seq]="i"
+                    (mListChange)="childComponentsChange($event)"
+                    ></app-marker-list>
+                    
+                  </ion-col>
+                </ng-container>
+              </ng-container>
+              
+              <ng-template #moveMap>
+                <ion-row class="center-wrap" justify-content-center align-items-center>
+                  <div class="move-map">
+                    <div>Move map to see more...</div>
+                    <ion-button color="primary" fill="solid"
+                    (click)="zoomOutUntilMarkerVisible()"
+                    >zoom out</ion-button>
+                  </div>
+                </ion-row>
+              </ng-template>
+              
+            </ng-container>
           </ion-row>
       </ion-grid>
       

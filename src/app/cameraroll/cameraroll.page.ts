@@ -520,17 +520,17 @@ export class CamerarollPage implements OnInit {
    * @param options 
    */
   mockCamerarollAsMoments(options:any={}):Promise<IMoment[]>{
+    const cached = AppCache.for('Moment').items()
+    if (cached.length) return Promise.resolve(cached);
+
     let index = 0;
-    const skip_ids = [47,48,49,50,452,55] // bad ids for picsum
     const moments:IMoment[] = [BANGKOK_LOCATIONS, SIEMREAP_LOCATIONS]
     .map( o=>JSON.parse(o))
     .map( locs=>{
       return locs.map( loc=>{
 
-        do {index++} while (skip_ids.includes(index))
-
         const emptyPhoto = RestyTrnHelper.getPlaceholder('Photo',{loc});
-        const p = MockDataService.inflatePhoto(emptyPhoto, index, index+10);
+        const p = MockDataService.inflatePhoto(emptyPhoto, index, index);
         // add loc and dateTaken
         return p;
       })

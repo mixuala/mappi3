@@ -38,15 +38,45 @@
       <!-- case="gallery" -->
       <ion-grid no-padding *ngSwitchCase="'gallery'">
        
+
+
         <ion-row>
-          <ion-col size="12" size-sm="6" size-xl="4"
-            *ngFor="let item of mCollection$ | async">
-            <app-marker-group
-              [mg]="item" [parentLayout]="'share'"
-              (mgChange)="childComponentsChange($event)"
-              (thumbClick)="thumbClicked($event)"></app-marker-group>
-          </ion-col>
+
+          <ng-container *ngIf="(mCollection$ | async) as markers">
+            <ng-container *ngIf="markers.length>0;else findFavorites">
+
+              <ng-container *ngFor="let item of markers; index as i">
+              <ion-col size="12" size-sm="6" size-xl="4">
+                <app-marker-group
+                  [mg]="item" [parentLayout]="'share'"
+                  (mgChange)="childComponentsChange($event)"
+                  (thumbClick)="thumbClicked($event)"></app-marker-group>
+              </ion-col>
+
+            </ng-container>
+          </ng-container>
+
+
+          <ng-template #findFavorites>
+            <ion-row class="center-wrap" justify-content-center align-items-center>
+              <div class="find-favorites">
+                <div>You have no favorites...</div>
+                <ion-button color="primary" fill="solid" routerLink="/list">
+
+                  Find some
+                  <ion-icon name="heart" slot="end"></ion-icon>
+                  
+                </ion-button>
+              </div>
+            </ion-row>
+          </ng-template>
+
+        </ng-container>
         </ion-row>
+
+
+
+
         <ion-row>
           <ion-col size="12" size-sm="6" size-xl="4">
             <app-photoswipe class="content-right-if-mq-landscape" 
