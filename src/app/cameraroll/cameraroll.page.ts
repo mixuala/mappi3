@@ -8,7 +8,7 @@ import { map, skipWhile, takeUntil, } from 'rxjs/operators';
 
 
 import { 
-  IMarkerList, IMarkerGroup, IPhoto, 
+  IMarkerList, IMarkerGroup, IPhoto, IMarker,
   IMoment, IExifPhoto, IMappiLibraryItem, IMappiGetLibraryOptions, IMappiGetThumbnailOptions, IChoosePhotoOptions,
 } from '../providers/types'
 import { PhotoService, PhotoLibraryHelper, } from '../providers/photo/photo.service';
@@ -393,6 +393,11 @@ export class CamerarollPage implements OnInit {
   }
 
 
+  /**
+   * when photos selected from >1 moment, each moment => MarkerGroup
+   * @param selected 
+   * @param mListSub 
+   */
   public static createMarkerList_from_Cameraroll(selected:IPhoto[], mListSub: SubjectiveService<IMarkerList>):Promise<IMarkerList>{
 
     // function _getMomentsFromPhoto(photos):{[uuid:string]:IMoment}{
@@ -477,7 +482,59 @@ export class CamerarollPage implements OnInit {
   }
 
 
+  public static async createMarkerGroup_from_Cameraroll(selected:IPhoto[], mgSub: SubjectiveService<IMarkerGroup>):Promise<IMarkerGroup>{
+    
+    const momentsById = {};         // back ref for moments
+    const photos = selected;        // create from selected photos
+    const bounds = new google.maps.LatLngBounds(null);
+    photos.forEach( (p:IPhoto)=>{
+      bounds.extend( new google.maps.LatLng(p.loc[0], p.loc[1]));
+      momentsById[ p['_moment'].id ]=false;
+    });
 
+    if (!selected || selected.length==0) 
+      return Promise.resolve(null);
+
+    const count = mgSub.value().length;
+    const item:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
+    item.label = `Marker created ${item.created.toISOString()}`;
+    item.seq = count;
+
+
+    // create IPhoto < IMarkerGroup < IMarkerList
+    let item_position;
+    photos.forEach( async (p,i)=>{
+      const moment = p['_moment'];
+      // create MarkerGroup
+
+      if (moment && i==0) {
+        item.label = moment.title || moment.locations;
+      } 
+      
+      if (p && p['className']=='Photo') {
+        RestyTrnHelper.setFKfromChild(item, p);
+      }
+
+      if (MappiMarker.hasLoc(p)) {
+        RestyTrnHelper.setLocFromChild(item, p);
+        item_position = item_position || p.position;
+      }
+    });
+
+    if (!item_position) { 
+      // get default position for MarkerList
+      let latlng = AppConfig.map && AppConfig.map.getCenter();
+      if (!latlng) 
+        latlng = await GoogleMapsHostComponent.getCurrentPosition();
+      item_position = latlng.toJSON();
+    }
+    RestyTrnHelper.setLocToDefault(item, item_position);
+
+    // finish up
+    RestyTrnHelper.childComponentsChange({data:item, action:'add'}, mgSub);
+    return Promise.resolve(item);
+  
+  }
 
 
 

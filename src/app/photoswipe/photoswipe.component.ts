@@ -60,29 +60,34 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
     const waitFor:Promise<void>[] = [];
     let sortOrder:string[] = [];
     markerGroups.forEach( mg=>{
-      const mgPhotos = MockDataService.getSubjByParentUuid(mg.uuid).value();
+      const mgPhotos = MockDataService.getSubjByParentUuid(mg.uuid).value()
+        .filter( o=>o['width'] && o['height']);  // require img W,H for photoswipe
       sortOrder = sortOrder.concat(mgPhotos.sort( (a,b)=>a['seq']-b['seq']).map(o=>o.uuid));
       mgPhotos.forEach( i=>mgUuids.push( mg.uuid) );
       mgPhotos.forEach( (p:IPhoto)=>{
         waitFor.push(
 
           new Promise( async (resolve, reject)=>{
-            const fsDim = await ImgSrc.scaleDimToScreen(p, screenDim);
-            const [imgW, imgH] = fsDim.split('x');
-            const done = ImgSrc.getImgSrc$(p, fsDim)
-            .subscribe( (fsSrc:IImgSrc)=>{
-              if (!fsSrc.src) return;
-              // NOTE: these responses are return async, and not in sort order!!!
-              const item = {
-                src: fsSrc.src,
-                w: parseInt(imgW),
-                h: parseInt(imgH),
-              }; 
-              item['uuid'] = p.uuid;
-              items.push(item);
-              done && done.unsubscribe();
-              resolve();
-            });
+            try{
+              const fsDim = await ImgSrc.scaleDimToScreen(p, screenDim);
+              const [imgW, imgH] = fsDim.split('x');
+              const done = ImgSrc.getImgSrc$(p, fsDim)
+              .subscribe( (fsSrc:IImgSrc)=>{
+                if (!fsSrc.src) return;
+                // NOTE: these responses are return async, and not in sort order!!!
+                const item = {
+                  src: fsSrc.src,
+                  w: parseInt(imgW),
+                  h: parseInt(imgH),
+                }; 
+                item['uuid'] = p.uuid;
+                items.push(item);
+                done && done.unsubscribe();
+                resolve();
+              });
+            } catch(err){
+
+            }
           }) // end new Promise()
 
         );
@@ -332,6 +337,7 @@ export class PhotoswipeComponent implements OnDestroy, OnInit, AfterViewInit {
           this.reset()
           .then( ()=>{
             const {items, index, uuid} = change.currentValue;
+            if (items.length==0) return;
             const galleryOptions = Object.assign({}, this.defaultOptions, {
               index : index || 0,
               galleryUID: uuid,

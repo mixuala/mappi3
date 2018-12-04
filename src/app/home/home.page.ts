@@ -8,16 +8,17 @@ import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil, switchMap, filter, skipWhile, first } from 'rxjs/operators';
 
 import {
-  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions,
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions, IMarkerLink,
 } from '../providers/types';
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, } from '../providers/mappi/mappi.service';
 import  { MockDataService, RestyTrnHelper, quickUuid, } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { PhotoService } from '../providers/photo/photo.service';
+import { CamerarollPage } from '../cameraroll/cameraroll.page';
 import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { ScreenDim, AppConfig } from '../providers/helpers';
+import { ScreenDim, AppConfig, Hacks } from '../providers/helpers';
 import { AppCache } from '../providers/appcache';
 
 @Component({
@@ -226,6 +227,20 @@ export class HomePage implements OnInit, IViewNavEvents {
       )
     }    
   }
+
+
+  /**
+   * create a new MarkerGroup from CamerarollPage Modal
+   * @param selected IPhoto[], expecting IPhoto._moment: IMoment
+   */
+  async createMarkerGroup_fromCameraroll(selected:IPhoto[]){
+    // TODO: refactor, add parent.uuid to params
+    return CamerarollPage.createMarkerGroup_from_Cameraroll(selected, this._mgSub)
+    .then( mg=>{ 
+      AppCache.for('Key').set(mg, mg.uuid);
+    })
+  }
+
 
   /**
    * create a new MarkerGroup from:
@@ -473,7 +488,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     }
     await waitFor;
   }
-  
+
 
   // handle childComponent/MarkerGroup changes
   childComponentsChange( change: {data:IMarkerGroup, action:string}){
@@ -495,6 +510,11 @@ export class HomePage implements OnInit, IViewNavEvents {
         // BUG: ion-item-sliding
         // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
         return this.slidingList.closeSlidingItems();
+      case 'markerLink':
+        // add markerLink to current marker
+        const mg = Hacks.patch_MarkerLink_as_MarkerGroup(change.data as any as IMarkerLink)
+        this.childComponentsChange( {data:mg, action:"add"});
+        break;
       case 'add':
         // update MarkerList FKs (Parent)
         parent.markerGroupIds = parent.markerGroupIds.slice(); // make a copy

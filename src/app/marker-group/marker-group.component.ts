@@ -7,16 +7,17 @@ import { Observable, Subject, BehaviorSubject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import {
-  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto, IMarkerLink,
   IMoment, IChoosePhotoOptions,
 } from '../providers/types';
 import { MockDataService, RestyTrnHelper, Prompt, } from '../providers/mock-data.service';
 import { SubjectiveService } from '../providers/subjective.service';
 import { MarkerGroupFocusDirective } from './marker-group-focus.directive';
 import { PhotoService,  } from '../providers/photo/photo.service';
+import { CamerarollPage } from '../cameraroll/cameraroll.page';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { AppConfig, ScreenDim, Humanize } from '../providers/helpers';
+import { AppConfig, ScreenDim, Humanize, Hacks } from '../providers/helpers';
 import { AppCache } from '../providers/appcache';
 
 
@@ -124,6 +125,15 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             // this._miSub[mg.uuid] = childSubj as SubjectiveService<IPhoto>;
             const photoSubj = (childSubj as SubjectiveService<IPhoto>);
             this.miCollection$[mg.uuid] =  isUncomittedMarker ? photoSubj.watch$() : photoSubj.get$(mg.markerItemIds);
+            if (mg.markerItemIds.includes(mg.uuid)) {
+              // patch add markerList IMG without creating Photo
+              this.miCollection$[mg.uuid].pipe(takeUntil(this.done$)).subscribe( items=>{
+                if (items.length < mg.markerItemIds.length){
+                  const i = mg.markerItemIds.findIndex( id=>id==mg.uuid);
+                  items = items.splice(i,0,mg);
+                }
+              });
+            }
             this.mgSubject.next(this.mg); // set value for view
 
             // const check = MockDataService.subjectCache;
@@ -220,6 +230,22 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     this.stash.selected = mg['_selected'] = value;
     this.mgChange.emit( {data:mg, action:'selected'} );  // => SharePage.childComponentsChange()
     this.mgSubject.next(mg);
+  }
+
+
+  /**
+   * create a new MarkerItem from CamerarollPage Modal
+   * @param selected IPhoto[], expecting IPhoto._moment: IMoment
+   */
+  async createMarkerItems_fromCameraroll(selected:IPhoto[]){
+    let default_position = AppConfig.map.getCenter() || await GoogleMapsHostComponent.getCurrentPosition();
+    selected.forEach( (photo)=>{
+      this.childComponentsChange({data:photo, action:'add'});
+      if (MappiMarker.hasLoc(photo)==false){
+        RestyTrnHelper.setLocToDefault(photo, default_position);
+      }
+    });
+    setTimeout(()=>this.cd.detectChanges(),10);
   }
 
 
@@ -342,6 +368,10 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
       case 'reload':
         childSubj.reload();   // called by action="rollback". reload IPhotos[]
         return;
+      case 'markerLink':
+        // add markerLink to current marker
+        const marker = Hacks.patch_MarkerLink_as_MarkerItem(change.data as any as IMarkerLink)
+        return this.childComponentsChange( {data:marker, action:"add"});       
       case 'remove':
       // just HIDE in view, do NOT remove until COMMIT
         parent.markerItemIds = parent.markerItemIds.filter(uuid=>uuid!=change.data.uuid);

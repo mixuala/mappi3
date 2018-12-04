@@ -3,7 +3,7 @@ import { Plugins } from '@capacitor/core';
 import { Observable, ReplaySubject } from 'rxjs';
 
 import {
-  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
+  IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto, IMarkerLink,
   IMarkerSubject,
 } from './types';
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
@@ -39,6 +39,7 @@ export class MockDataService {
   public MarkerLists:RestyService<IMarkerList>;
   public MarkerGroups:RestyService<IMarkerGroup>;
   public Photos:RestyService<IPhoto>;
+  public Links:RestyService<IMarkerLink>;
 
   public sjMarkerLists:SubjectiveService<IMarkerList>;
   public sjMarkerGroups:SubjectiveService<IMarkerGroup>;
@@ -236,6 +237,15 @@ export class MockDataService {
       this.sjMarkerLists = new SubjectiveService(this.MarkerLists);
       return Promise.resolve(true);
     })
+    .then( ()=>{
+      // load markerLinks
+      const links:IMarkerLink[] = LINKS.map( (o,i,l)=>{
+        o = Object.assign({}, o);
+        return MockDataService.inflateLink(o, i);
+      });
+      this.Links = new RestyService(links, "Link");
+
+    })
   }
 
   static inflateMarkerListFromMarkerGroups( mgs:IMarkerGroup[], o:IMarkerList, seq:number ){
@@ -282,6 +292,14 @@ export class MockDataService {
     return o;
   }
 
+  static inflateLink(o:IMarkerLink, seq?:number){
+    o.uuid = quickUuid();
+    o.seq = seq;
+    o.position = MappiMarker.position(o);
+    // add multiple FKs, shuffled, random count
+    return o;
+  }
+
 
   private shuffle(arr:any[], sample?:number|boolean):any[] {
     const shuffled = arr
@@ -321,6 +339,40 @@ export const PHOTOS: IPhoto[] = [
   {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?image={id}" , width:0, height:0 },    
 ]
 
+export const LINKS: IMarkerLink[] = [
+  {uuid: null, loc: [0,0], locOffset:[0,0]
+    , title: 'How to Spend 48 Hours in Kuala Lumpur'
+    , description: 'Discover how to spend an epic 48 hours in Kuala Lumpur and visit temples, mosques, museums and a lake oasis filled with monkeys.'
+    , site_name: 'Culture Trip'
+    , url: '	https://theculturetrip.com/asia/malaysia/articles/how-to-spend-48-hours-in-kuala-lumpur/'
+    , image: 'https://cdn.theculturetrip.com/wp-content/uploads/2018/06/shutterstock_453556639.jpg'
+    , updated_time: 1536485672   // Date.now()
+  }
+  , {uuid: null, loc: [0,0], locOffset:[0,0]
+    , title: '36 Hours in Kuala Lumpur'
+    , description: 'With its looming skyscrapers, stellar cuisine and thumping night life, the Malaysian capital has emerged as one of Southeast Asia’s most alluring metropolises.'
+    , site_name: ''
+    , url: 'https://www.nytimes.com/2009/12/20/travel/20hours.html'
+    , image: 'https://static01.nyt.com/images/2009/12/20/travel/20hours_CA0/articleLarge.jpg'
+    , updated_time: 1536485672   // Date.now()
+  }
+  , {uuid: null, loc: [0,0], locOffset:[0,0]
+    , title: 'What to Do in KL in 2 Days - 2 Days in Kuala Lumpur -'
+    , description: "2 Days in Kuala Lumpur? If your stopover in Malaysia consists of 48 hours in Kuala Lumpur, you'll have ample time to see most of the must-visit attractions in the city centre as well as plan a daytrip to the forested outskirts of the city, where you can get"
+    , site_name: 'kuala-lumpur.ws'
+    , url: 'http://www.kuala-lumpur.ws/magazine/48-hours-in-kuala-lumpur.htm'
+    , image: 'http://static.asiawebdirect.com/m/kl/portals/kuala-lumpur-ws/homepage/magazine/48-hours-in-kuala-lumpur/pagePropertiesImage/2-days-kuala-lumpur.jpg.jpg'
+    , updated_time: 1534750894   // Date.now()
+  }  
+  , {uuid: null, loc: [0,0], locOffset:[0,0]
+    , title: '36 Hours In...Bangkok'
+    , description: 'Read our guide to the best things to do on a short break in Bangkok, as recommended by Telegraph Travel. Find great photos, expert advice and insiders tips.'
+    , site_name: ''
+    , url: 'https://www.telegraph.co.uk/travel/destinations/asia/thailand/bangkok/articles/36-hours-in-bangkok/'
+    , image: 'https://www.telegraph.co.uk/content/dam/Travel/Destinations/Asia/Thailand/Bangkok/Bangkok_36hours_WatTraimit-xlarge.jpg'
+    , updated_time: 1536485672   // Date.now()
+  }  
+]
 
 /**
  * DEV: temp class for getting user input for labels

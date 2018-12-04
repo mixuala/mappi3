@@ -13,9 +13,23 @@ export interface IMarker {
   },
   seq?: number,
   placeId?: string,
+  markerLinkIds?: string[];
   created?: Date;
   modified?: Date;
 }
+
+// ???: extend IMarker or IPhoto
+// from fb open graph
+export interface IMarkerLink extends IMarker {
+  title: string;
+  description: string;
+  url: string,
+  updated_time: number,  // Date.now()
+  site_name?: string;
+  image: string,
+  _imgSrc$?: Observable<IImgSrc>;
+}
+
 
 export interface IRestMarker extends IMarker {
   className?: string;

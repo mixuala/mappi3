@@ -1,0 +1,28 @@
+<ion-item>
+
+<ion-buttons>
+  <ion-button  fill="outline"
+  (click)="handle_addByCameraRoll($event)">
+    <ion-icon name="images"></ion-icon> 
+  </ion-button>
+</ion-buttons>
+<ion-searchbar animated XXXshowCancelButton 
+  [searchIcon]="stash.search.searchIcon" 
+  [placeholder]="stash.search.placeholder"
+  [type]="stash.search.type"
+  [(ngModel)]="stash.search.value"
+  [debounce]="500"
+  (ionInput)="searchBarInput($event)"
+  (ionBlur)="handle_addBySearchBar($event)"
+  ></ion-searchbar>
+<ion-segment (ionChange)="handle_SearchModeChanged($event.detail.value)" color="primary">
+  <ion-segment-button value="map">
+    <ion-icon name="map"></ion-icon>
+  </ion-segment-button>
+  <ion-segment-button value="link">
+    <ion-icon name="link"></ion-icon>
+  </ion-segment-button>
+</ion-segment>
+
+
+</ion-item>
