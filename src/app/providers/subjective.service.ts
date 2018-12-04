@@ -46,14 +46,22 @@ export class SubjectiveService<T> {
       this.resty.get(uuid)
       .then(arr=>{
         if (['MarkerList'].includes(this.resty.className)){
-          this.sortBy = 'label'; // TODO: this doesn't work if a user reorders. 
+          this.sortBy = 'label'; // TODO: this doesn't work if a user reorders.
+          arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>{
+            o['seq']=i;
+          });
         } else {
           this.sortBy = 'seq';
+          if (uuid instanceof Array){
+            const orderedUuids = uuid;
+            // set o.seq to match sequence of orderedUuids
+            arr.forEach( o=>{
+              o['seq']=orderedUuids.findIndex( id=>o['uuid']==id);
+            });
+            arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 );
+          }
         }
         // reindex for Subject only, NOT DB
-        arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>{
-          o['seq']=i;
-        });
         this.subject$.next(arr);
         // extras
         this.cacheOnlyPhotos(arr);

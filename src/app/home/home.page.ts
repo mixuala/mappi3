@@ -487,22 +487,21 @@ export class HomePage implements OnInit, IViewNavEvents {
       case 'selected':
         return this.selectedMarkerGroup = change.data.uuid;
       case 'remove':
+        // just HIDE in view, do NOT remove until COMMIT
         parent.markerGroupIds = parent.markerGroupIds.filter(uuid=>uuid!=change.data.uuid);
-        // TODO: not yet implemented: 
-        // this.mListChange.emit( {data:parent, action:'update'});
         restMarker._rest_action = restMarker._rest_action || 'put';
-        RestyTrnHelper.childComponentsChange(change, this._mgSub);
+        RestyTrnHelper.childComponentsChange(change, this._mgSub, parent.markerGroupIds);
 
         // BUG: ion-item-sliding
         // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
         return this.slidingList.closeSlidingItems();
       case 'add':
         // update MarkerList FKs (Parent)
+        parent.markerGroupIds = parent.markerGroupIds.slice(); // make a copy
         parent.markerGroupIds.push(change.data.uuid);
-        // TODO: not yet implemented: 
-        // this.mListChange.emit( {data:parent, action:'update'});
         restMarker._rest_action = restMarker._rest_action || 'put';
         // continue processing Child IMarkerGroup
+        return RestyTrnHelper.childComponentsChange(change, this._mgSub, parent.markerGroupIds);
       default:
         return RestyTrnHelper.childComponentsChange(change, this._mgSub);
     }

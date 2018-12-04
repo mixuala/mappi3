@@ -474,7 +474,13 @@ export class RestyTrnHelper {
   }
 
 
-  static childComponentsChange( change: {data:IRestMarker, action:string}, subj: SubjectiveService<IMarker>){
+  /**
+   * 
+   * @param change 
+   * @param subj 
+   * @param seq apply o.seq to items based on array of uuids, e.g. MarkerList.markerGroupIds
+   */
+  static childComponentsChange( change: {data:IRestMarker, action:string}, subj: SubjectiveService<IMarker>, seq?:string[]){
     if (!change.data) return;
     const markers = subj.value();
     const marker = change.data;
@@ -486,9 +492,15 @@ export class RestyTrnHelper {
         // update ChildComponent subject, which is referenced by ParentComponent
         const newMarker = change.data;
         newMarker['_rest_action'] = 'post';
-        const items = this.getCachedMarkers(markers); // just sort
-        items.push(newMarker);
-        subj.next(items);
+        markers.push(newMarker);
+        if (seq) { // re-index o.seq based on FK array
+          markers.forEach( o=>{
+            const i=seq.findIndex( id=>id==o.uuid);
+            o.seq = (~i) ? i : 999; 
+          });
+        }
+        markers.sort( (a,b)=>a.seq-b.seq );
+        subj.next(markers);
         return;   
       case 'update':
         marker['_rest_action'] = marker['_rest_action'] || 'put';
@@ -502,7 +514,14 @@ export class RestyTrnHelper {
         return;
       case 'remove':
         marker['_rest_action'] = 'delete';
-        subj.next(this.getCachedMarkers(markers));
+        if (seq) { // re-index o.seq based on FK array
+          markers.forEach( o=>{
+            const i=seq.findIndex( id=>id==o.uuid);
+            o.seq = (~i) ? i : 999; 
+          });
+        }
+        markers.sort( (a,b)=>a.seq-b.seq );
+        subj.next(markers);
         return;
     }
   }

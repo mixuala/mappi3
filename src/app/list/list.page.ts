@@ -403,7 +403,7 @@ export class ListPage implements OnInit, IViewNavEvents {
         // Prompt.getText() already committed, just reload
         return this._mListSub.reload();
       case 'remove':
-        const item:IRestMarker = mLists.find(o=>o.uuid==change.data.uuid);
+        // const item:IRestMarker = mLists.find(o=>o.uuid==change.data.uuid);
         RestyTrnHelper.childComponentsChange(change, this._mListSub);
         return this.slidingList.closeSlidingItems();
     }

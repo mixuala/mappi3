@@ -343,17 +343,19 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         childSubj.reload();   // called by action="rollback". reload IPhotos[]
         return;
       case 'remove':
+      // just HIDE in view, do NOT remove until COMMIT
         parent.markerItemIds = parent.markerItemIds.filter(uuid=>uuid!=change.data.uuid);
-        RestyTrnHelper.childComponentsChange(change, childSubj);
+        RestyTrnHelper.childComponentsChange(change, childSubj, parent.markerItemIds);
         this.mgChange.emit( {data:parent, action:'update'});        // adds parent._rest_action="put"
         // BUG: ion-item-sliding
         // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
         return this.slidingList.closeSlidingItems();
       case 'add':
         // update MarkerGroup FKs
+        parent.markerItemIds = parent.markerItemIds.slice(); // make a copy
         parent.markerItemIds.push(change.data.uuid);
         this.mgChange.emit( {data:parent, action:'update'});
-        // continue processing Child IPhoto
+        return RestyTrnHelper.childComponentsChange(change, childSubj, parent.markerItemIds);
       default:
         RestyTrnHelper.childComponentsChange(change, childSubj);
     }
