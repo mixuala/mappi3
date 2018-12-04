@@ -30,6 +30,7 @@ import { ServiceWorkerModule } from '@angular/service-worker';
 import { environment } from '../environments/environment';
 import { CamerarollPage } from './cameraroll/cameraroll.page';
 import { HelpComponent } from './providers/help/help.component';
+import { MarkerAddComponent } from './marker-add/marker-add.component';
 
 
 
@@ -44,7 +45,7 @@ import { HelpComponent } from './providers/help/help.component';
   declarations: [
     MarkerListComponent,
     MarkerGroupComponent, MarkerGroupFocusDirective,
-    MarkerItemComponent,
+    MarkerItemComponent, MarkerAddComponent,
     GoogleMapsComponent, GoogleMapsHostComponent,
     PhotoswipeComponent,
     DataURLPipe,
@@ -58,7 +59,7 @@ import { HelpComponent } from './providers/help/help.component';
   exports: [
     MarkerListComponent,
     MarkerGroupComponent, MarkerGroupFocusDirective,
-    MarkerItemComponent,
+    MarkerItemComponent, MarkerAddComponent,
     GoogleMapsComponent, GoogleMapsHostComponent,
     PhotoswipeComponent,  
     CamerarollPage,

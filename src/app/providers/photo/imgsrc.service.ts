@@ -79,6 +79,7 @@ export class ImgSrc {
     const {width , height } = photo;
     const [fitW, fitH] = screenDim.split('x').map(v=>parseInt(v));
     const scale = Math.min( fitW/width, fitH/height ) * pixelRatio;
+    if (isNaN(scale)) return Promise.reject("NaN");
     const scaled = [Math.round(width*scale), Math.round(height*scale)].join('x') as string;
     return Promise.resolve(scaled);
   }

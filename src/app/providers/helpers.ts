@@ -3,8 +3,10 @@ import { DeviceInfo } from '@capacitor/core';
 import { Platform } from '@ionic/angular';
 
 import {
-  IMarker, IPhoto,
+  IMarker, IPhoto, IMarkerLink,
 } from './types'
+import  { RestyTrnHelper, } from '../providers/mock-data.service';
+import { MappiMarker, } from '../providers/mappi/mappi.service';
 
 /**
  * stash App (mostly) constants here. 
@@ -168,4 +170,41 @@ export class Humanize {
     d.setTime( d.getTime() + offset*1000 );
     return d;
   }
+
+}
+
+/**
+ * random helpful methods
+ */
+export class Helpful {
+}
+
+export class Hacks {
+  // HACK: decide how to include MarkerLinks 
+  static patch_MarkerLink_as_MarkerGroup(link:IMarkerLink){
+    const mg = RestyTrnHelper.getPlaceholder('MarkerGroup', link);
+    mg.label = link.title;
+    const position = AppConfig.map.getCenter().toJSON();
+    mg.loc = [position.lat, position.lng];
+    mg.position = MappiMarker.position(mg);
+    // add MarkerLink self ref, patch for photoswipe
+    mg.markerItemIds = [mg.uuid]  
+    mg.src = link.image;   // emulate IPhoto
+    // get width, height
+    return mg;
+  }
+
+  // HACK: decide how to include MarkerLinks 
+  static patch_MarkerLink_as_MarkerItem(link:IMarkerLink){
+    const p = RestyTrnHelper.getPlaceholder('Photo', link);
+    p.label = link.title;
+    p.dateTaken = new Date(link.updated_time);
+    const position = AppConfig.map.getCenter().toJSON();
+    p.loc = [position.lat, position.lng];
+    p.position = MappiMarker.position(p);
+    // add MarkerLink self ref, patch for photoswipe
+    p.src = link.image;   // emulate IPhoto
+    return p;
+  }
+
 }

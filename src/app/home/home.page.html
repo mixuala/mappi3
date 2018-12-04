@@ -59,6 +59,11 @@
                         </ion-thumbnail> -->
                       <ion-label color="primary"> Add photo/marker </ion-label>
                     </ion-item>
+                    <app-marker-add 
+                      (camerarollSelected)="createMarkerGroup_fromCameraroll($event)"
+                      [marker]="parent" 
+                      (markerChange)="childComponentsChange($event)">
+                      </app-marker-add>
                 </ion-list>                  
         </ion-col>
       </ion-row>
