@@ -145,4 +145,23 @@ npx cap open ios
 # TODO: look at ionic-webview to see if it solves the 'cdvphotolibrary://' protocol issue with WKWebView  
 ionic cordova plugin add cordova-plugin-ionic-webview
 npm install --save @ionic-native/ionic-webview@beta
-``
+
+// typescript: /snappi.dev/ionic4/mappi3/src/tsconfig.app.json
+  "include": [
+    "../node_modules/cordova-plugin-photo-library/PhotoLibrary.d.ts"
+  ]
+}
+```
+
+
+# firebase hosting with Google Cloud Functions
+> https://firebase.google.com/docs/hosting/functions
+
+```
+firebase init functions
+# choose TypeScript, install dependencies with npm, 
+
+cd ./functions
+npm install suq --save
+npm audit fix
+```

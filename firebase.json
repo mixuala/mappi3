@@ -8,6 +8,10 @@
     ],
     "rewrites": [
       {
+        "source": "/get-open-graph", 
+        "function": "getOpenGraph"
+      },  
+      {
         "source": "**",
         "destination": "/index.html"
       }
