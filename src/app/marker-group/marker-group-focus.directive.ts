@@ -18,9 +18,13 @@ import { Directive, HostBinding, ElementRef } from '@angular/core';
 })
 export class MarkerGroupFocusDirective {
   @HostBinding('class.blur') private _blur:boolean = false;
+  @HostBinding('class.focus') private _focus:boolean = false;
 
   blur(value:boolean) {
     this._blur = value;
+  }
+  focus(value:boolean) {
+    this._focus = value;
   }
 
 }

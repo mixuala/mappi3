@@ -152,8 +152,8 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
         case 'mgFocus':
           if (!this.mgFocusBlur) break;
           const focus = change.currentValue;
-          const hide = focus && this.mg.uuid != focus.uuid || false
-          this.mgFocusBlur.blur(hide)
+          this.mgFocusBlur.blur(focus && focus.uuid!=this.mg.uuid)
+          this.mgFocusBlur.focus(focus && focus.uuid==this.mg.uuid)
           break;
       }
     });

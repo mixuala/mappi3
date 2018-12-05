@@ -1,7 +1,7 @@
 <div [ngSwitch]="layout" *ngIf="(markerGroup$ | async) as marker">
   <!-- layout={{layout}} -->
   <!-- 'focus-marker-group' view -->
-  <ion-card *ngSwitchCase="'focus-marker-group'">
+  <ion-card class="focus-marker-group" *ngSwitchCase="'focus-marker-group'">
     <ion-card-header>
       <ion-item class="menu-commit-rollback sticky">
         <ion-icon name="pin" slot="start" color="primary"></ion-icon>
