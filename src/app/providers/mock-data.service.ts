@@ -553,7 +553,7 @@ export class RestyTrnHelper {
         }
         markers.sort( (a,b)=>a.seq-b.seq );
         subj.next(markers);
-        return;   
+        return;  
       case 'update':
         marker['_rest_action'] = marker['_rest_action'] || 'put';
         return;    

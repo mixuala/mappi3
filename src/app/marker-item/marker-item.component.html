@@ -4,7 +4,6 @@
     <ion-thumbnail class="gallery"  slot="start"
       *ngIf="(photo._imgSrc$ | async) as imgSrc">
       <img [src]="imgSrc.src"  *ngIf="imgSrc.src">
-      <!-- <app-mappi-image [thumbSrc]="photo._imgSrc$ | async" [dim]="thumbDim"></app-mappi-image> -->
     </ion-thumbnail>
   </ng-container>
 
@@ -14,7 +13,6 @@
       <ion-thumbnail slot="start" *ngIf="(photo._imgSrc$ | async) as imgSrc">
         <ion-badge class="thumbnail-overlay" color="primary"> {{photo.seq+1}} </ion-badge>
         <img [src]="imgSrc.src">
-        <!-- <app-mappi-image [thumbSrc]="photo._imgSrc$ | async" [dim]="thumbDim"></app-mappi-image> -->
       </ion-thumbnail>
       <ion-label>
         <h3>DateTaken: {{ asLocalTime(photo).toLocaleString()}}</h3>

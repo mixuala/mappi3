@@ -10,7 +10,7 @@ import { Plugins } from '@capacitor/core';
 import { LaunchNavigator, LaunchNavigatorOptions } from '@ionic-native/launch-navigator/ngx';
 
 import {
-  IMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions,
+  IMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions, IMarkerLink,
 } from '../providers/types';
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, } from '../providers/mappi/mappi.service';
@@ -243,8 +243,9 @@ export class SharePage implements OnInit, IViewNavEvents {
     await actionSheet.present();
   }
 
-  async browserOpen(url):Promise<void> {
-    return await Browser.open({url:url})
+  async browserOpen(url, options:any={}):Promise<void> {
+    options.url = url;
+    return await Browser.open(options)
   }
 
 
@@ -427,6 +428,10 @@ export class SharePage implements OnInit, IViewNavEvents {
           AppCache.for('Favorite').remove(marker);
         }
         this._mgSub.repeat();
+      case 'open-link':
+        const link = marker as IMarkerLink;
+        this.browserOpen(link.url,{windowName:link.title});
+        return;
     }
   }
 

@@ -136,7 +136,15 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             }
             this.mgSubject.next(this.mg); // set value for view
 
-            // const check = MockDataService.subjectCache;
+            const isMarkerLink = !!mg['url'];
+            if (isMarkerLink){
+              switch (this.layout){
+                case 'share': this.layout = "link-share"; break;
+                case 'gallery': this.layout = "link-edit"; break;
+              }
+              mg['_pub_date'] = mg.updated_time && new Date(mg.updated_time*1000).toDateString();
+              mg['site_name'] = mg['site_name'] || mg.url.split('/')[2];
+            }
 
             // init owner data
             this.stash.favorite = mg['_favorite'] = mg['_favorite'] || false;
@@ -232,6 +240,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     this.mgSubject.next(mg);
   }
 
+  openLink(marker:IMarker){
+    this.mgChange.emit( {data:marker as IMarkerGroup, action:'open-link'} );  // => SharePage.childComponentsChange()
+  }
 
   /**
    * create a new MarkerItem from CamerarollPage Modal

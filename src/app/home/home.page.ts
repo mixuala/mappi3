@@ -82,6 +82,7 @@ export class HomePage implements OnInit, IViewNavEvents {
             click: true,
             clickadd: false,
           }
+        this.stash.disableEditMode = true;
         break;
       case "groups":
         // MappiMarker.reset();
@@ -92,6 +93,7 @@ export class HomePage implements OnInit, IViewNavEvents {
         }
         this.selectedMarkerGroup = value ? value.uuid : null;
         this.markerCollection$ = this.mgCollection$;
+        this.stash.disableEditMode = false;
         break;
     }
   }
@@ -203,6 +205,7 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   toggleEditMode(action?:string) {
     if (this.layout != "edit" || action=='edit') {
+      if (this.stash.disableEditMode) return;
       this.stash.layout = this.layout;
       this.layout = "edit";
       this.mapSettings = {
