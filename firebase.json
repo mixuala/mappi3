@@ -8,9 +8,13 @@
     ],
     "rewrites": [
       {
-        "source": "/get-open-graph", 
+        "source": "/svc/get-open-graph", 
         "function": "getOpenGraph"
       },  
+      {
+        "source": "/svc/hello", 
+        "function": "helloWorld"
+      },        
       {
         "source": "**",
         "destination": "/index.html"
