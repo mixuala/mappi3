@@ -268,29 +268,32 @@ export class SharePage implements OnInit, IViewNavEvents {
 
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
-
+    
+    await this.dataService.ready();
+    // await AppConfig.mapReady
+    
     // configure subjects and cache
     const mgSubj = MockDataService.getSubjByParentUuid(mListId) || 
-      MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
+    MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
     this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
-
+    
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
-        // NOTE: causes a delay before map loads
-        .pipe( 
-          takeUntil(this.unsubscribe$),
-          skipWhile( ()=>!this.stash.activeView),
-          map( items=>{
-            this.getStaticMap(items); // update static map with new items
-            return items;
-          }),
+      .pipe( 
+        takeUntil(this.unsubscribe$),
+        skipWhile( ()=>!this.stash.activeView),
+        map( items=>{
+          this.getStaticMap(items); // update static map with new items
+          return items;
+        }),
       );
-
+    
     // initialize subjects
-    await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
     this.parent = await this.dataService.MarkerLists.get([mListId]).then( arr=>arr.length ? arr[0] : null);
     if (this.parent && mgSubj.value().length==0)
       mgSubj.get$(this.parent.markerGroupIds);
+    
+    this.cd.markForCheck();  // required because async pipe initialized AFTER await
   }
 
   viewWillEnter(){

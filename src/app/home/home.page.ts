@@ -150,16 +150,18 @@ export class HomePage implements OnInit, IViewNavEvents {
       this.inflateUncommittedMarker(uncommitedMarker);
       this.parent = uncommitedMarker;
     }
+
+    await this.dataService.ready();
+    // await AppConfig.mapReady
+    
+    // initialize subjects
     const mgSubj = MockDataService.getSubjByParentUuid(mListId) || 
       MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
     this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
 
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
-        .pipe( skipWhile( ()=>!this.stash.activeView) );
-      
-    // initialize subjects
-    await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
+      .pipe( skipWhile( ()=>!this.stash.activeView) );
 
     if (!this.parent){    // get from Resty
       this.parent = await this.dataService.MarkerLists.get([mListId]).then( arr=>arr.length ? arr[0] : null);
@@ -177,6 +179,8 @@ export class HomePage implements OnInit, IViewNavEvents {
     };
     this.stash.activeView = true;
     this.markerCollection$.subscribe( o=>console.log( "map markers", o));
+
+    this.cd.markForCheck();  // required because async pipe initialized AFTER await
     console.warn("HomePage ngOnInit complete");
   }
 
