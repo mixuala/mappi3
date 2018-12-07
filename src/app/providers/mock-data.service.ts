@@ -39,11 +39,12 @@ export class MockDataService {
   public MarkerLists:RestyService<IMarkerList>;
   public MarkerGroups:RestyService<IMarkerGroup>;
   public Photos:RestyService<IPhoto>;
-  public Links:RestyService<IMarkerLink>;
+  public MarkerLinks:RestyService<IMarkerLink>;
 
   public sjMarkerLists:SubjectiveService<IMarkerList>;
   public sjMarkerGroups:SubjectiveService<IMarkerGroup>;
   public sjPhotos:SubjectiveService<IPhoto>;
+  public sjMarkerLinks:SubjectiveService<IMarkerLink>;
 
   private _ready:Promise<any>;
   private static MARKER_LISTS = [];
@@ -123,7 +124,7 @@ export class MockDataService {
   }
 
   async loadStorage(raw?:string):Promise<any> {
-    let data = {'Photo': [], 'MarkerGroup': [], 'MarkerList': [], 'unknown':{}};
+    let data = {'Photo': [], 'MarkerGroup': [], 'MarkerList': [], 'MarkerLink': [], 'unknown':{}};
     if (!raw) {
       const result = await Storage.keys();
       if (result.keys.length==0) 
@@ -138,6 +139,7 @@ export class MockDataService {
           case 'Photo':
           case 'MarkerGroup':
           case 'MarkerList':
+          case 'MarkerLink':
             data[o.className].push(o); break;
           default:
             data.unknown[uuid] = o; break;
@@ -155,6 +157,7 @@ export class MockDataService {
           case 'Photo':
           case 'MarkerGroup':
           case 'MarkerList':
+          case 'MarkerLink':
             data[o.className].push(o); break;
           default:
             data.unknown[o.uuid] = o; break;
@@ -163,9 +166,17 @@ export class MockDataService {
     } 
     else data = parsed;
     
-    // add demo Img.src 
-    data.Photo.forEach((o,i)=>MockDataService.inflatePhoto(o,i,i));
+    if (AppConfig.device.platform=="web"){
+      // add demo Img.src for web demos
+      data.Photo.forEach((o,i)=>MockDataService.inflatePhoto(o,i,i));
+    }
 
+    ['Photo', 'MarkerGroup', 'MarkerList', 'MarkerLink'].forEach( className=>{
+      data[className] && data[className].forEach( async o=>{
+        const allowed = RestyService.cleanProperties(o);
+        await Storage.set({key: o.uuid, value: JSON.stringify(allowed)})
+      });
+    });
 
     console.log("Loading data to Storage", data);
     return Promise.resolve(data);
@@ -209,7 +220,25 @@ export class MockDataService {
     this.MarkerLists = new RestyService(data['MarkerList'], "MarkerList");
     data['MarkerList'] = await this.MarkerLists.get();
 
+
+    // load markerLinks
+    const links:IMarkerLink[] = LINKS.map( (o,i,l)=>{
+      o = Object.assign({}, o);
+      return MockDataService.inflateLink(o, i);
+    });
+    this.MarkerLinks = new RestyService(links, "MarkerLink");
+    data['MarkerLink'] = await this.MarkerLinks.get();
+
     console.log("TESTDATA", data);
+
+    // save to Storage
+    ['Photo', 'MarkerGroup', 'MarkerList', 'MarkerLink'].forEach( className=>{
+      data[className] && data[className].forEach( async o=>{
+        const allowed = RestyService.cleanProperties(o);
+        await Storage.set({key: o.uuid, value: JSON.stringify(allowed)})
+      });
+    });
+
     return data;
   }
 
@@ -219,33 +248,26 @@ export class MockDataService {
       // Storage.clear();
       let data = await this.loadStorage(raw);
       if (data){
-        this.Photos = new RestyService(data.Photo, "Photo");
-        this.MarkerGroups = new RestyService(data.MarkerGroup, "MarkerGroup");
-        this.MarkerLists = new RestyService(data.MarkerList, "MarkerList");
+        this.Photos = new RestyService(data.Photo || [], "Photo");
+        this.MarkerGroups = new RestyService(data.MarkerGroup || [], "MarkerGroup");
+        this.MarkerLists = new RestyService(data.MarkerList || [], "MarkerList");
+        this.MarkerLinks = new RestyService(data.MarkerLink || [], "MarkerLink");
       }
       else {
         const data = await this.loadTestData();
-      }
-      ['Photo', 'MarkerGroup', 'MarkerList'].forEach( className=>{
-        data[className].forEach( async o=>{
-          const allowed = RestyService.cleanProperties(o);
-          await Storage.set({key: o.uuid, value: JSON.stringify(allowed)})
+        ['Photo', 'MarkerGroup', 'MarkerList', 'MarkerLink'].forEach( className=>{
+          data[className] && data[className].forEach( async o=>{
+            const allowed = RestyService.cleanProperties(o);
+            await Storage.set({key: o.uuid, value: JSON.stringify(allowed)})
+          });
         });
-      })
+      }
       this.sjPhotos = new SubjectiveService(this.Photos);
       this.sjMarkerGroups = new SubjectiveService(this.MarkerGroups);
       this.sjMarkerLists = new SubjectiveService(this.MarkerLists);
+      this.sjMarkerLinks = new SubjectiveService(this.MarkerLinks);
       return Promise.resolve(true);
-    })
-    .then( ()=>{
-      // load markerLinks
-      const links:IMarkerLink[] = LINKS.map( (o,i,l)=>{
-        o = Object.assign({}, o);
-        return MockDataService.inflateLink(o, i);
-      });
-      this.Links = new RestyService(links, "Link");
-
-    })
+    });
   }
 
   static inflateMarkerListFromMarkerGroups( mgs:IMarkerGroup[], o:IMarkerList, seq:number ){
@@ -346,7 +368,6 @@ export const LINKS: IMarkerLink[] = [
     , site_name: 'Culture Trip'
     , url: '	https://theculturetrip.com/asia/malaysia/articles/how-to-spend-48-hours-in-kuala-lumpur/'
     , image: 'https://cdn.theculturetrip.com/wp-content/uploads/2018/06/shutterstock_453556639.jpg'
-    , updated_time: 1536485672   // Date.now()
   }
   , {uuid: null, loc: [0,0], locOffset:[0,0]
     , title: '36 Hours in Kuala Lumpur'
@@ -354,7 +375,6 @@ export const LINKS: IMarkerLink[] = [
     , site_name: ''
     , url: 'https://www.nytimes.com/2009/12/20/travel/20hours.html'
     , image: 'https://static01.nyt.com/images/2009/12/20/travel/20hours_CA0/articleLarge.jpg'
-    , updated_time: 1536485672   // Date.now()
   }
   , {uuid: null, loc: [0,0], locOffset:[0,0]
     , title: 'What to Do in KL in 2 Days - 2 Days in Kuala Lumpur -'
@@ -362,7 +382,6 @@ export const LINKS: IMarkerLink[] = [
     , site_name: 'kuala-lumpur.ws'
     , url: 'http://www.kuala-lumpur.ws/magazine/48-hours-in-kuala-lumpur.htm'
     , image: 'http://static.asiawebdirect.com/m/kl/portals/kuala-lumpur-ws/homepage/magazine/48-hours-in-kuala-lumpur/pagePropertiesImage/2-days-kuala-lumpur.jpg.jpg'
-    , updated_time: 1534750894   // Date.now()
   }  
   , {uuid: null, loc: [0,0], locOffset:[0,0]
     , title: '36 Hours In...Bangkok'
@@ -370,7 +389,6 @@ export const LINKS: IMarkerLink[] = [
     , site_name: ''
     , url: 'https://www.telegraph.co.uk/travel/destinations/asia/thailand/bangkok/articles/36-hours-in-bangkok/'
     , image: 'https://www.telegraph.co.uk/content/dam/Travel/Destinations/Asia/Thailand/Bangkok/Bangkok_36hours_WatTraimit-xlarge.jpg'
-    , updated_time: 1536485672   // Date.now()
   }  
 ]
 
@@ -409,9 +427,10 @@ export class Prompt {
 
 export class RestyTrnHelper {
   static objectHierarchy = {
-    className : ['MarkerList', 'MarkerGroup', 'Photo'],
-    schema: ['MarkerLists', 'MarkerGroups', 'Photos'],
-    hasMany: ['markerGroupIds', 'markerItemIds']
+    className : ['MarkerList', 'MarkerGroup', 'Photo', 'MarkerLink'],
+    // TODO: standardize on className, without plural
+    schema: ['MarkerLists', 'MarkerGroups', 'Photos', 'MarkerLinks'],
+    hasMany: ['markerGroupIds', 'markerItemIds', 'markerLinkIds']
   }
 
   static getCachedMarkers(items:IRestMarker[], option?:string):IRestMarker[] {
@@ -470,6 +489,29 @@ export class RestyTrnHelper {
           count_items: 0,
         }
         break;
+      case 'MarkerLink':
+        let pubDate:any = data['og:published_time'] || data['og:article:published_time'] || data['article:published_time'];
+        pubDate = pubDate || data['og:updated_time']*1000;
+        let author = data['og:article:author'] || data['article:author']
+        author = author || (data['og:article:author:first_name'] + ' ' + data['og:article:author:last_name']);
+        let tag = data['og:article:tag'] || data['article:tag'] || data['og:tag'];
+
+        extras = {
+          className: 'MarkerLink',
+          title: data['og:title'],
+          description: data['og:description'],
+          url: data['og:url'],
+          published: pubDate ? new Date(pubDate).toISOString() : null,
+          site_name: data['og:site_name'],
+          author: author,
+          tag: tag,
+          image: data['og:image'],
+        }
+
+        if (data['og:image:height']) extras['height'] = data['og:image:height'];
+        if (data['og:image:width']) extras['width'] = data['og:image:width'];
+        data = {og:data}
+        break;
     }
     const {uuid, created, modified} = base;  // force new values
     Object.assign(base, extras, data, {uuid, created, modified});
@@ -480,6 +522,7 @@ export class RestyTrnHelper {
       case 'Photo': return base as any as IPhoto
       case 'MarkerGroup': return base as any as IMarkerGroup
       case 'MarkerList': return base as any as IMarkerList
+      case 'MarkerLink': return base as any as IMarkerLink
       default: return base as any
     }
   }
@@ -630,7 +673,7 @@ export class RestyTrnHelper {
     dataSvc?:MockDataService,
     isRecursive:boolean=false,
   ):Promise<IMarker[]>{  
-    const generations = ['MarkerLists', 'MarkerGroups', 'Photos'];
+    const generations = ['MarkerLists', 'MarkerGroups', 'Photos', 'MarkerLinks'];
     const pr:Promise<any>[] = [];
 
     changes.forEach( async (o)=>{

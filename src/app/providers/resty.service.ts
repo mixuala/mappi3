@@ -36,7 +36,7 @@ export class RestyService<T> {
         // emulate async with setTimeout()
 
         let res:T[];
-        if (!uuid || uuid == 'all'){
+        if (!uuid || uuid == 'all' || uuid.length==0){
           res = Object.values(this._data);
         }
         else if (Array.isArray(uuid)){

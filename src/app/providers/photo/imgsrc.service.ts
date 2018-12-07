@@ -9,7 +9,7 @@ import { Observable, BehaviorSubject, Subject } from 'rxjs';
 import { map, take, skipWhile }  from 'rxjs/operators'
 
 import {
-  IPhoto, IImgSrc, IImgSrcItem,
+  IPhoto, IImgSrc, IImgSrcItem, IMarker,
 } from '../types'
 import { PhotoLibraryHelper } from './photo.service';
 import { AppConfig, ScreenDim } from '../helpers';
@@ -35,6 +35,7 @@ const CACHE_MAX = 200;
  *    NOTE: just mangling url for https://picsum.photos
  * */
 const DEV_async_getSrc = (photo:IPhoto, dim:string='80x80'):Promise<string> => {
+
   return new Promise( (resolve, reject)=>{
     setTimeout( ()=>{
       // console.warn( "@@@ fake cameraroll, async delay for id=", photo.uuid)
@@ -42,6 +43,20 @@ const DEV_async_getSrc = (photo:IPhoto, dim:string='80x80'):Promise<string> => {
       resolve(  src  );
     },100);
   });
+}
+
+const getThumbnail_fromMarker = (m:IMarker, dim:string='80x80'):Promise<string> => {
+  const [imgW, imgH] = dim.split('x');
+  if (!!m['image']) {
+    // TODO: get thumbnail from external img.src, google cloud function
+    const src = m['image'] || m['src'];
+    return new Promise( (resolve, reject)=>{
+      setTimeout( ()=>{
+        // TODO: get resized thumbnail with GoogleCloudFunction
+        resolve(  src  );
+      },1000);
+    });
+  }
 }
 
 @Injectable({
@@ -220,7 +235,7 @@ export class ImgSrc {
          * photo in cloud, but not cached, fetch src with proper size spec
          *    NOTE: just mangling url for https://picsum.photos
          * */
-        cacheItem['loading'] = DEV_async_getSrc(photo, dim)
+        cacheItem['loading'] = getThumbnail_fromMarker(photo, dim)
         .then( imgSrc=>{
           cacheItem.imgSrc.src = imgSrc; 
           delete cacheItem['loading'];  // wait for promise to complete

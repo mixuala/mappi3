@@ -23,10 +23,14 @@ export interface IMarker {
 export interface IMarkerLink extends IMarker {
   title: string;
   description: string;
-  url: string,
-  updated_time: number,  // Date.now()
+  url: string;
+  image: string;
+  published?: string;     // ISODate
   site_name?: string;
-  image: string,
+  author?: string;
+  tag?: string;
+  width?: number;
+  height?: number;
   _imgSrc$?: Observable<IImgSrc>;
 }
 

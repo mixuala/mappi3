@@ -98,7 +98,7 @@ export class MarkerAddComponent implements OnInit {
 
   async handle_addBySearchBar(ev:MouseEvent){
     const loading = await this.loadingController.create({
-      duration: 3000
+      duration: 10*1000
     });
     await loading.present();
     

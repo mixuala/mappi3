@@ -17,7 +17,8 @@ import { PhotoService,  } from '../providers/photo/photo.service';
 import { CamerarollPage } from '../cameraroll/cameraroll.page';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { AppConfig, ScreenDim, Humanize, Hacks } from '../providers/helpers';
+import { AppConfig, ScreenDim, Humanize, } from '../providers/helpers';
+import { Hacks} from '../providers/hacks';
 import { AppCache } from '../providers/appcache';
 
 
