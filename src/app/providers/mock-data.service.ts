@@ -145,7 +145,11 @@ export class MockDataService {
             data.unknown[uuid] = o; break;
         }
       }));
-
+      /**
+       * to update demo db:
+       * - set breakpoint here,raw = JSON.stringify(data)
+       * - add to demo_data.ts
+       */
       return Promise.resolve(data);
     }
     // restore raw data
@@ -493,14 +497,14 @@ export class RestyTrnHelper {
         let pubDate:any = data['og:published_time'] || data['og:article:published_time'] || data['article:published_time'];
         pubDate = pubDate || data['og:updated_time']*1000;
         let author = data['og:article:author'] || data['article:author']
-        author = author || (data['og:article:author:first_name'] + ' ' + data['og:article:author:last_name']);
+        author = author || data['og:article:author:first_name'] && (data['og:article:author:first_name'] + ' ' + data['og:article:author:last_name']);
         let tag = data['og:article:tag'] || data['article:tag'] || data['og:tag'];
 
         extras = {
           className: 'MarkerLink',
           title: data['og:title'],
           description: data['og:description'],
-          url: data['og:url'],
+          url: data['og:url'] || data['url'],
           published: pubDate ? new Date(pubDate).toISOString() : null,
           site_name: data['og:site_name'],
           author: author,
