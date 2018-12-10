@@ -13,12 +13,14 @@ import {
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, } from '../providers/mappi/mappi.service';
 import  { MockDataService, RestyTrnHelper, quickUuid, } from '../providers/mock-data.service';
-import { SubjectiveService } from '../providers/subjective.service';
+import { RestyService } from '../providers/resty.service';
+import { SubjectiveService, UnionSubjectiveService } from '../providers/subjective.service';
 import { PhotoService } from '../providers/photo/photo.service';
 import { CamerarollPage } from '../cameraroll/cameraroll.page';
 import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { ScreenDim, AppConfig, Hacks } from '../providers/helpers';
+import { ScreenDim, AppConfig, } from '../providers/helpers';
+import { Hacks} from '../providers/hacks';
 import { AppCache } from '../providers/appcache';
 
 @Component({
@@ -82,6 +84,7 @@ export class HomePage implements OnInit, IViewNavEvents {
             click: true,
             clickadd: false,
           }
+        this.stash.disableEditMode = true;
         break;
       case "groups":
         // MappiMarker.reset();
@@ -92,6 +95,7 @@ export class HomePage implements OnInit, IViewNavEvents {
         }
         this.selectedMarkerGroup = value ? value.uuid : null;
         this.markerCollection$ = this.mgCollection$;
+        this.stash.disableEditMode = false;
         break;
     }
   }
@@ -111,6 +115,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     this.router.navigate([page, item.uuid]);
   }
 
+  // TODO: deprecate
   private _getSubjectForMarkerItems(mg:IMarkerGroup):SubjectiveService<IMarker>{
     return MockDataService.getSubjByParentUuid(mg.uuid);
   }
@@ -148,23 +153,41 @@ export class HomePage implements OnInit, IViewNavEvents {
       this.inflateUncommittedMarker(uncommitedMarker);
       this.parent = uncommitedMarker;
     }
-    const mgSubj = MockDataService.getSubjByParentUuid(mListId) || 
-      MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
-    this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
 
+    await this.dataService.ready();
+    // await AppConfig.mapReady
+
+    // configure subjects and cache
+    let mgSubj = MockDataService.getSubjByParentUuid(mListId);
+    if (!mgSubj) {
+      const restys:RestyService<IMarker>[] = [this.dataService.MarkerGroups, this.dataService.MarkerLinks ];
+      const subject = new UnionSubjectiveService(restys);
+      mgSubj = MockDataService.getSubjByParentUuid(mListId, subject);
+    }
+    this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
+    
+    
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
-        .pipe( skipWhile( ()=>!this.stash.activeView) );
+    .pipe( 
+      takeUntil(this.unsubscribe$),
+      skipWhile( ()=>!this.stash.activeView),
+      );
       
-    // initialize subjects
-    await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
 
+    // initialize subjects
     if (!this.parent){    // get from Resty
-      this.parent = await this.dataService.MarkerLists.get([mListId]).then( arr=>arr.length ? arr[0] : null);
+      this.dataService.MarkerLists.get([mListId])
+      .then( arr=>{
+        this.parent = arr.length ? arr[0] : null;
+        if (this.parent && mgSubj.isStale(this.parent.markerGroupIds))
+          mgSubj.get$(this.parent.markerGroupIds);
+      
+        this.cd.markForCheck();  // required because async pipe initialized AFTER await
+      });
     }
-    if (this.parent && mgSubj.value().length==0) 
-      mgSubj.get$(this.parent.markerGroupIds);
-    
+
+
     // detectChanges if in `edit` mode
     const layout = this.route.snapshot.queryParams.layout;
     if ( layout=='edit' ) {
@@ -173,8 +196,6 @@ export class HomePage implements OnInit, IViewNavEvents {
         this.cd.detectChanges();
       },100);
     };
-    this.stash.activeView = true;
-    this.markerCollection$.subscribe( o=>console.log( "map markers", o));
     console.warn("HomePage ngOnInit complete");
   }
 
@@ -203,6 +224,7 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   toggleEditMode(action?:string) {
     if (this.layout != "edit" || action=='edit') {
+      if (this.stash.disableEditMode) return;
       this.stash.layout = this.layout;
       this.layout = "edit";
       this.mapSettings = {
@@ -471,12 +493,13 @@ export class HomePage implements OnInit, IViewNavEvents {
   async reload(changed:IMarker[]=[]){
     const waitFor = [];
     // reload tree
+    // TODO: get original markerIds;
     const mgSubjUuids = this._mgSub.value().map(o => o.uuid);
     mgSubjUuids && mgSubjUuids.forEach( uuid=>{
       const mItemSubj = MockDataService.getSubjByParentUuid(uuid);
-      if (mItemSubj) waitFor.push(mItemSubj.reload(undefined, true));
+      if (mItemSubj) waitFor.push(mItemSubj.reload());
     })
-    waitFor.push(this._mgSub.reload());
+    waitFor.push(this._mgSub.get$(mgSubjUuids));
 
     const found = changed.find(o=>o.uuid==this.parent.uuid);
     if (found) 

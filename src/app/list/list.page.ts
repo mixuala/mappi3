@@ -84,8 +84,7 @@ export class ListPage implements OnInit, IViewNavEvents {
 
   async ngOnInit() {
     this.layout = "default";
-    const waitFor = [ this.dataService.ready(), AppConfig.mapReady ];
-    await Promise.all(waitFor);
+    await this.dataService.ready();
 
     const _filterByMapBounds = map( (arr:IMarkerList[])=>{
       return arr.filter( o=>{
@@ -99,11 +98,10 @@ export class ListPage implements OnInit, IViewNavEvents {
     // for async binding in view
     this.mListCollection$ = this._mListSub.watch$()
     .pipe( 
-      skipWhile( (arr)=>!this.stash.activeView ),
+      takeUntil(this.unsubscribe$),
+      skipWhile( (arr)=>!this.stash.activeView ), // set in viewWillEnter
       _filterByMapBounds,
     );
-
-    this.stash.activeView = true;
     
     // for map marker rendering
     this.markerCollection$ = this.mListCollection$
@@ -114,6 +112,9 @@ export class ListPage implements OnInit, IViewNavEvents {
     this._mListSub.get$();
   }
 
+  /**
+   * called by viewWillEnter() < AppConfig.mapReady;
+   */
   handleMapMoved() {
     let lastBounds = AppConfig.map.getBounds();
 
@@ -209,10 +210,6 @@ export class ListPage implements OnInit, IViewNavEvents {
     // this.router.navigate(['/home', {uuid: item.uuid}]);
     console.log("click: nav to item=", item.uuid)
     this.router.navigate([page, item.uuid], options);
-  }
-
-  private _getSubjectForMarkerGroups(mL:IMarkerList):SubjectiveService<IMarker>{
-    return MockDataService.getSubjByParentUuid(mL.uuid);
   }
 
   toggleEditMode(action:string) {

@@ -5,7 +5,7 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-buttons slot="end">
-        <ion-button fill="outline" (click)="toggleEditMode()" *ngIf="layout!='edit'">
+        <ion-button fill="outline" (click)="toggleEditMode()" [disabled]="stash.disableEditMode" *ngIf="layout!='edit'">
           <ion-icon name="list" slot="icon-only"></ion-icon>
         </ion-button>
         <ion-button  color="secondary" fill="outline" (click)="toggleEditMode('commit')" *ngIf="layout=='edit'">
@@ -48,17 +48,14 @@
                   </ion-list>
                 </ion-reorder-group>
                 <ion-list>
-                    <ion-item class="add-marker-group wrap-btn-as-thumbnail" 
+                    <!-- <ion-item class="add-marker-group wrap-btn-as-thumbnail" 
                       (click)="createMarkerGroup($event)"
                       (dblclick)="createMarkerGroup($event, null, 'Camera')">
                         <ion-button  class="as-thumbnail" slot="start" expand="full" size="large">
                           <ion-icon slot="icon-only" name="add"></ion-icon>
                         </ion-button>
-                        <!-- <ion-thumbnail slot="start">
-                          <ion-img src="https://picsum.photos/80?image=0"></ion-img>
-                        </ion-thumbnail> -->
                       <ion-label color="primary"> Add photo/marker </ion-label>
-                    </ion-item>
+                    </ion-item> -->
                     <app-marker-add 
                       (camerarollSelected)="createMarkerGroup_fromCameraroll($event)"
                       [marker]="parent" 

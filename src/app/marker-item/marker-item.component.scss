@@ -3,9 +3,13 @@ ion-thumbnail {
   width: var(--thumbnail-size);
   height: var(--thumbnail-size);
   margin: 1px 1px 1px 0;
+  position: relative;
 }
 
 .layout-edit {
+  ion-item {
+    --padding-start: 0px;
+  }
   ion-badge.thumbnail-overlay {
     position: absolute;
     top: 1px;
@@ -15,4 +19,15 @@ ion-thumbnail {
   ion-label {
     margin:0 8px;
   }
+}
+
+
+
+.marker-link.thumbnail-overlay {
+  position: absolute;
+  left: 0px;
+  opacity: 0.4;
+  top: -5px;
+  width: var(--thumbnail-size);
+  height: var(--thumbnail-size);
 }

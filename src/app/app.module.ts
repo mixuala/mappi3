@@ -31,6 +31,7 @@ import { environment } from '../environments/environment';
 import { CamerarollPage } from './cameraroll/cameraroll.page';
 import { HelpComponent } from './providers/help/help.component';
 import { MarkerAddComponent } from './marker-add/marker-add.component';
+import { HttpClientModule } from '@angular/common/http';
 
 
 
@@ -40,6 +41,7 @@ import { MarkerAddComponent } from './marker-add/marker-add.component';
     CommonModule,
     FormsModule,
     IonicModule,
+    HttpClientModule,
     ServiceWorkerModule.register('ngsw-worker.js', { enabled: environment.production }),
   ],
   declarations: [

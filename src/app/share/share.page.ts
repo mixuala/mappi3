@@ -4,18 +4,19 @@ import { Component, ElementRef, OnInit, ViewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Observable, Subject, BehaviorSubject, } from 'rxjs';
-import { takeUntil, map, switchMap, skipWhile } from 'rxjs/operators';
+import { debounceTime, takeUntil, map, switchMap, skipWhile } from 'rxjs/operators';
 import { AlertController, ActionSheetController, Content, ModalController } from '@ionic/angular';
 import { Plugins } from '@capacitor/core';
 import { LaunchNavigator, LaunchNavigatorOptions } from '@ionic-native/launch-navigator/ngx';
 
 import {
-  IMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions,
+  IMarker, IMarkerList, IMarkerGroup, IPhoto, IMapActions, IMarkerLink,
 } from '../providers/types';
 import { IViewNavEvents } from "../app-routing.module";
 import { MappiMarker, } from '../providers/mappi/mappi.service';
 import  { MockDataService, RestyTrnHelper, quickUuid, } from '../providers/mock-data.service';
-import { SubjectiveService } from '../providers/subjective.service';
+import { RestyService } from '../providers/resty.service';
+import { SubjectiveService, UnionSubjectiveService } from '../providers/subjective.service';
 import { PhotoService,  } from '../providers/photo/photo.service';
 import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 import { GoogleMapsComponent,  } from '../google-maps/google-maps.component';
@@ -243,8 +244,9 @@ export class SharePage implements OnInit, IViewNavEvents {
     await actionSheet.present();
   }
 
-  async browserOpen(url):Promise<void> {
-    return await Browser.open({url:url})
+  async browserOpen(url, options:any={}):Promise<void> {
+    options.url = url;
+    return await Browser.open(options)
   }
 
 
@@ -267,35 +269,57 @@ export class SharePage implements OnInit, IViewNavEvents {
 
     this.layout = "default";
     const mListId = this.route.snapshot.paramMap.get('uuid');
-
+    
+    await this.dataService.ready();
+    // await AppConfig.mapReady
+    
     // configure subjects and cache
-    const mgSubj = MockDataService.getSubjByParentUuid(mListId) || 
-      MockDataService.getSubjByParentUuid(mListId, new SubjectiveService(this.dataService.MarkerGroups));
+    let mgSubj = MockDataService.getSubjByParentUuid(mListId);
+    if (!mgSubj) {
+      const restys:RestyService<IMarker>[] = [this.dataService.MarkerGroups, this.dataService.MarkerLinks ];
+      const subject = new UnionSubjectiveService(restys);
+      mgSubj = MockDataService.getSubjByParentUuid(mListId, subject);
+    }
     this._mgSub = mgSubj as SubjectiveService<IMarkerGroup>;
-
+    
     // for async binding in view
     this.markerCollection$ = this.mgCollection$ = this._mgSub.watch$()
-        // NOTE: causes a delay before map loads
-        .pipe( 
-          takeUntil(this.unsubscribe$),
-          skipWhile( ()=>!this.stash.activeView),
-          map( items=>{
-            this.getStaticMap(items); // update static map with new items
-            return items;
-          }),
-      );
+    .pipe( 
+      takeUntil(this.unsubscribe$),
+      skipWhile( ()=>!this.stash.activeView),
+    );
 
+    
     // initialize subjects
-    await Promise.all([this.dataService.ready(), AppConfig.mapReady]);
-    this.parent = await this.dataService.MarkerLists.get([mListId]).then( arr=>arr.length ? arr[0] : null);
-    if (this.parent && mgSubj.value().length==0)
-      mgSubj.get$(this.parent.markerGroupIds);
+    this.dataService.MarkerLists.get([mListId])
+    .then( arr=>{
+      this.parent = arr.length ? arr[0] : null;
+      if (this.parent && mgSubj.isStale(this.parent.markerGroupIds))
+        mgSubj.get$(this.parent.markerGroupIds);
+    
+      this.cd.markForCheck();  // required because async pipe initialized AFTER await
+    });
+
+
+    // run whenever: update static map on debounce
+    this.mgCollection$.pipe(
+      takeUntil(this.unsubscribe$),
+      debounceTime( 1000 ),
+      map( items=>{
+        // update static map with new markers after debounce
+        this.getStaticMap(items); 
+        return items;
+      }),
+    );
+    console.warn("SharePage ngOnInit complete");
   }
 
   viewWillEnter(){
     try {
       this.stash.activeView = true;
-      this._mgSub.reload(undefined, false);
+      if (this._mgSub.isStale(this.parent.markerGroupIds, 5)) {
+        this._mgSub.reload();
+      }
       // AppConfig.map.activeView=true;
       console.warn(`viewWillEnter: SharePage`)
     } catch {}
@@ -427,6 +451,10 @@ export class SharePage implements OnInit, IViewNavEvents {
           AppCache.for('Favorite').remove(marker);
         }
         this._mgSub.repeat();
+      case 'open-link':
+        const link = marker as IMarkerLink;
+        this.browserOpen(link.url,{windowName:link.title});
+        return;
     }
   }
 

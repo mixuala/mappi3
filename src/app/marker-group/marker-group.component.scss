@@ -9,6 +9,11 @@ ion-card {
 ion-card.marker-group {
   ion-item {
     --padding-start: 0;
+    &.image-overlay {
+      position: absolute;
+      top: 6px;
+      left: 16px;
+    }
     .marker-wrap {   
       // eliminate CSS flash
       padding: 0px;
@@ -35,6 +40,16 @@ ion-card.marker-group {
       --padding-start: 0;
       --inner-padding-end:0;
     }
+  }
+}
+
+
+.marker-link.thumbnail-overlay {
+  position: absolute;
+  opacity: 0.4;
+  left: 0px;
+  ion-button {
+    font-size: 18px;
   }
 }
 
@@ -70,6 +85,9 @@ ion-item.gallery {
 }
 
 .layout-edit {
+  ion-item {
+    --padding-start: 0px;
+  }
   ion-badge.thumbnail-overlay {
     position: absolute;
     top: 1px;
@@ -108,3 +126,18 @@ ion-item.wrap-btn-as-thumbnail{
   margin-left: 16px;
   --padding-start: 0;
 }
+
+
+ion-card.focus-marker-group {
+  ion-card-header, ion-card-content {
+    padding-left: 0px;
+    padding-right: 0px;
+  }
+  ion-reorder-group ion-list {
+    position:relative;
+    .marker-link.thumbnail-overlay {
+      top: -4px;
+    }
+  }
+}
+

@@ -10,9 +10,11 @@ import {
   IMarker, IRestMarker, IMarkerList, IMarkerGroup, IPhoto,
 } from '../providers/types';
 import  { 
-  MockDataService, RestyTrnHelper, Prompt,
+  MockDataService, Prompt,
 } from '../providers/mock-data.service';
-import { SubjectiveService } from '../providers/subjective.service';
+
+import { RestyService } from '../providers/resty.service';
+import { SubjectiveService, UnionSubjectiveService } from '../providers/subjective.service';
 import { AppCache } from '../providers/appcache';
 import { ScreenDim, Humanize } from '../providers/helpers';
 
@@ -142,10 +144,12 @@ export class MarkerListComponent implements OnInit {
 
     let subject:SubjectiveService<IMarker>;
     if (parent.hasOwnProperty('markerGroupIds')) {
-      subject = new SubjectiveService(this.dataService.MarkerGroups);
+      const restys:RestyService<IMarker>[] = [this.dataService.MarkerGroups, this.dataService.MarkerLinks ];
+      subject = new UnionSubjectiveService(restys);
       subject.get$(parent.markerGroupIds);
     } else if (parent.hasOwnProperty('markerItemIds')) {
-      subject = new SubjectiveService(this.dataService.Photos);
+      const restys:RestyService<IMarker>[] = [this.dataService.Photos, this.dataService.MarkerLinks ];
+      subject = new UnionSubjectiveService(restys);
       subject.get$(parent.markerItemIds);
     } else 
       return null;

@@ -1,5 +1,6 @@
 import { Component, EventEmitter, OnInit, Input, Output } from '@angular/core';
-
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
+import { LoadingController } from '@ionic/angular';
 
 import {
   IMarker, IRestMarker, IPhoto,
@@ -9,6 +10,21 @@ import { MockDataService, RestyTrnHelper, Prompt, } from '../providers/mock-data
 import { PhotoService,  } from '../providers/photo/photo.service';
 import { CamerarollPage } from '../cameraroll/cameraroll.page';
 import { ModalController, } from '@ionic/angular';
+
+
+
+const OG_BASEURL = "https://us-central1-mappi3-c91f1.cloudfunctions.net/getOpenGraph";
+export class OpenGraphHelper {
+  public static getOG(url, http:HttpClient):Promise<{}> {
+    const options = {
+      params: new HttpParams().set('url', url),
+      headers: new HttpHeaders({ 'Content-Type':  'application/json',}),
+    };
+    return http.get<{}>(OG_BASEURL, options).toPromise();
+  }
+}
+
+
 
 @Component({
   selector: 'app-marker-add',
@@ -35,6 +51,8 @@ export class MarkerAddComponent implements OnInit {
     public dataService: MockDataService,
     public photoService: PhotoService,
     private modalCtrl: ModalController,
+    private loadingController: LoadingController,
+    private http: HttpClient,
   ) { }
 
   ngOnInit() {
@@ -71,15 +89,20 @@ export class MarkerAddComponent implements OnInit {
     }
   }
 
-  searchBarInput(ev:any, self:any){
+  searchBarInput(ev:any){
     if (ev && ev.detail && ev.detail.inputType=="insertFromPaste"){
-      setTimeout( ()=>this.handle_addBySearchBar(this.stash.search.value), 100);
+      // setTimeout( ()=>this.handle_addBySearchBar(this.stash.search.value), 100);
       console.log("keyboard PASTE detected value=", this.stash.search.value);
     }
   }
 
   async handle_addBySearchBar(ev:MouseEvent){
-    // wrap in setTimeout() to handle_SearchModeChanged() first
+    const loading = await this.loadingController.create({
+      duration: 10*1000
+    });
+    await loading.present();
+    
+    // wrap in setTimeout() to handle_SearchModeChanged() first    
     setTimeout( async ()=>{
       const search = this.stash.search;
       const value = search.value;
@@ -87,20 +110,20 @@ export class MarkerAddComponent implements OnInit {
       console.log("addBySearchBar(), value=", value, search);
 
       if (value && value.startsWith('http') || type=='link'){
-        const markerLinks = await this.dataService.Links.get();
-        const link = markerLinks.pop();
+        const opengraph = await OpenGraphHelper.getOG(value, this.http);
+        const link = RestyTrnHelper.getPlaceholder('MarkerLink', opengraph);
         console.log( "MarkerLink, value=", link);
-
 
         const marker = MarkerAddComponent.addMarkerLink(this.marker, link);
         // TODO: add as marker.markerLinkIds.push() or as MarkerGroup/Photo???
 
-        await this.markerChange.emit({data:link, action:"markerLink"})
+        await this.markerChange.emit({data:link, action:"markerLink"});
       }
       else {
         console.log( "search google placeIds for value=", value)
       }
       this.reset();
+      loading.dismiss();
     });
   }
 
@@ -109,6 +132,8 @@ export class MarkerAddComponent implements OnInit {
   }
 
   static addMarkerLink(marker:IMarker, link:IMarkerLink):IMarker{
+    // TODO: add unique key to link.url
+    // TODO: make sure we do NOT save until COMMIT
     marker.markerLinkIds = marker.markerLinkIds || [];
     marker.markerLinkIds.push(link.uuid);
     // add markerLink

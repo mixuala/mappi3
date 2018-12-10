@@ -17,7 +17,8 @@ import { PhotoService,  } from '../providers/photo/photo.service';
 import { CamerarollPage } from '../cameraroll/cameraroll.page';
 import { MappiMarker } from '../providers/mappi/mappi.service';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { AppConfig, ScreenDim, Humanize, Hacks } from '../providers/helpers';
+import { AppConfig, ScreenDim, Humanize, } from '../providers/helpers';
+import { Hacks} from '../providers/hacks';
 import { AppCache } from '../providers/appcache';
 
 
@@ -136,7 +137,15 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
             }
             this.mgSubject.next(this.mg); // set value for view
 
-            // const check = MockDataService.subjectCache;
+            const isMarkerLink = !!mg['url'];
+            if (isMarkerLink){
+              switch (this.layout){
+                case 'share': this.layout = "link-share"; break;
+                case 'gallery': this.layout = "link-edit"; break;
+              }
+              mg['_pub_date'] = mg.updated_time && new Date(mg.updated_time*1000).toDateString();
+              mg['site_name'] = mg['site_name'] || mg.url.split('/')[2];
+            }
 
             // init owner data
             this.stash.favorite = mg['_favorite'] = mg['_favorite'] || false;
@@ -232,6 +241,9 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     this.mgSubject.next(mg);
   }
 
+  openLink(marker:IMarker){
+    this.mgChange.emit( {data:marker as IMarkerGroup, action:'open-link'} );  // => SharePage.childComponentsChange()
+  }
 
   /**
    * create a new MarkerItem from CamerarollPage Modal
