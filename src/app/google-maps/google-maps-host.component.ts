@@ -131,7 +131,8 @@ export class GoogleMapsHostComponent implements OnInit {
           return Promise.resolve(position);
         }
         console.error(err);
-        Promise.reject('GoogleMapsHostComponent: Could not get current location.');
+        // Promise.reject('GoogleMapsHostComponent: Could not get current location.');
+        Promise.resolve(null);
     })
     .then( pos=>AppConfig.currentLoc=pos)
   }

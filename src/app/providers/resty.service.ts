@@ -31,26 +31,30 @@ export class RestyService<T> {
   }
 
   get(uuid?:string | string[]):Promise<T[]>{
-    return Promise.resolve()
-    .then( res=>{ 
-      if (!uuid || uuid == 'all'){
-        return Promise.resolve(Object.values(this._data))
-      }
-      if (Array.isArray(uuid)){
-        const result:T[] = Object.values(this._data).reduce( (res, o:T)=>{
-          if ( uuid.includes( o['uuid'] ) ){
-            res.push( o );
-          }
-          return res;
-        }, []);
-        return Promise.resolve(result); 
-      }
-      return Promise.resolve([ this._data[uuid] ]);
-    })
-    .then( res=>{
-      // make sure we return a COPY of the data
-      return res.map( o=>Object.assign({},o) );
-    })
+    return new Promise( (resolve)=>{
+      setTimeout( ()=>{
+        // emulate async with setTimeout()
+
+        let res:T[];
+        if (!uuid || uuid == 'all' || uuid.length==0){
+          res = Object.values(this._data);
+        }
+        else if (Array.isArray(uuid)){
+          const result:T[] = Object.values(this._data).reduce( (res, o:T)=>{
+            if ( uuid.includes( o['uuid'] ) ){
+              res.push( o );
+            }
+            return res;
+          }, []);
+          res = result; 
+        } 
+        else res = [ this._data[uuid] ];
+
+        const copy = res.map( o=>Object.assign({},o) );
+        resolve( copy );
+
+      },10);
+    });
   }
 
   getById$(uuid:string):Observable<T>{

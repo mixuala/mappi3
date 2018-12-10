@@ -11,20 +11,15 @@ import { AppCache } from './appcache';
 })
 export class SubjectiveService<T> {
 
-  /**
-  cacheOnlyPhotos(items:T[]){
-   * NOTE: cache all T.className=='Photo' in this.get$()
-   */
-  public static photoCache:{[uuid:string]:IPhoto} = {};
-
   public readonly className:string;
   public subject$: BehaviorSubject<T[]>;
   public resty: RestyService<T>;
-  private _observable$: Observable<T[]>;
-  public sortBy:string = 'seq';
+  protected _observable$: Observable<T[]>;
+  protected _id2seq:{[uuid:string]:number};
+  public modified:number;   // time of last resty.get()
 
   constructor(resty:RestyService<T>) {
-    this.className = resty.className;
+    this.className = resty && resty.className;
     this.resty = resty;
     this.subject$ = new BehaviorSubject<T[]>([]);
     this._observable$ = this.subject$.pipe( SubjectiveService.sortBySeq );
@@ -37,43 +32,43 @@ export class SubjectiveService<T> {
   })
 
   // see: https://coryrylan.com/blog/angular-async-data-binding-with-ng-if-and-ng-else
-  get$( uuid?:string | string[]): Observable<T[]> {
-    const now = Date.now();
-    if (uuid=="current") {
-      return this._observable$;
-    }
-    else {
-      this.resty.get(uuid)
-      .then(arr=>{
-        if (['MarkerList'].includes(this.resty.className)){
-          this.sortBy = 'label'; // TODO: this doesn't work if a user reorders.
-          arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>{
-            o['seq']=i;
-          });
-        } else {
-          this.sortBy = 'seq';
-          if (uuid instanceof Array){
-            const orderedUuids = uuid;
-            // set o.seq to match sequence of orderedUuids
-            arr.forEach( o=>{
-              o['seq']=orderedUuids.findIndex( id=>o['uuid']==id);
-            });
-            arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 );
-          }
-        }
-        // reindex for Subject only, NOT DB
-        this.subject$.next(arr);
-        // extras
-        this.cacheOnlyPhotos(arr);
-      })
-    }
-  
+  get$( uuids:string[]=[]): Observable<T[]> {
+    this._id2seq = uuids.reduce( (res,id,i)=>{ res[id]=i; return res;}, {});
+    this.reload(uuids).then(items=>{
+      if (['MarkerList'].includes(this.resty.className)){
+        items.sort( (a,b)=>a['label']>b['label'] ? 1:-1 ).forEach( (o,i)=>{
+          o['seq']=i;
+        });
+        this._id2seq = items.reduce( (res,o,i)=>{ res[o['uuid']]=i; return res;}, {});
+      }
+      this.next(items);
+      // extras
+      this.cacheOnlyPhotos(items);
+    })
     return this._observable$;
   }
+    
+  reload(uuids?:any[], sort:boolean=false):Promise<T[]>{
+    if (!uuids) {
+      uuids = this.subject$.value.map( o=>o['uuid'] );
+    } 
+    return this.resty.get(uuids)
+    .then( items=>{
+      // deprecate sort
+      // if (sort) items.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>o['seq']=i);
+      items.forEach( (o,i)=>{
+        o['seq'] = this._id2seq[ o['uuid'] ] || (i+1000); // sort by seq, as ordered in uuid:string[]
+      });
+      this.modified = Date.now();
+      this.next(items);
+      return items
+    });
+  }
+
   next( items:T[] ){
-    items.sort( (a,b)=>a['seq']-b['seq'] );
     this.subject$.next(items);
   }
+
   value() {
     return this.subject$.value.slice();  // return a copy
   }
@@ -81,35 +76,71 @@ export class SubjectiveService<T> {
   repeat() {
     this.subject$.next(this.value());
   }
-  
-  reload(ids?:any[], sort:boolean=false):Promise<T[]>{
-    if (!ids) {
-      ids = this.subject$.value.map( o=>o['uuid'] );
-    } 
-    return this.resty.get(ids)
-    .then( arr=>{
-      // reindex for Subject only, NOT DB
-      if (sort) arr.sort( (a,b)=>a[this.sortBy]>b[this.sortBy] ? 1:-1 ).forEach( (o,i)=>o['seq']=i);
-      this.next(arr);
-      return arr
-    });
-  }
-  // deprecate, use watch$()
-  observe$():Observable<T[]> {
-    return this._observable$;
-  }
+
   watch$():Observable<T[]> {
     return this._observable$;
+  }
+
+  isStale(uuids:string[], ageInSeconds?:number):boolean{
+    if (uuids.length != this.subject$.value.length) return true;
+    const keys = this.subject$.value.map(o=>o['uuid']);
+    const notEmpty = uuids.filter(id=>!keys.includes(id));
+    if (notEmpty) return true;
+    if (ageInSeconds && Date.now() - this.modified > (ageInSeconds*1000) ) return true;
+    return false;
   }
 
   cacheOnlyPhotos(items:T[]){
     if (this.className != 'Photo') return;
     (items as any as IPhoto[]).forEach( o=>{
-      AppCache.for('Photo').set(o)
-      SubjectiveService.photoCache[o.uuid] = o;
+      AppCache.for('Photo').set(o);
     });
   }
+}
 
+export class UnionSubjectiveService<IMarker> extends SubjectiveService<IMarker> {
+  private restys: RestyService<IMarker>[];
+
+  constructor(restys:RestyService<IMarker>[]){
+    super(null);
+    this.restys = restys;
+    this.subject$ = new BehaviorSubject<IMarker[]>([]);
+    this._observable$ = this.subject$.pipe( SubjectiveService.sortBySeq );
+  }
+
+  get$( uuids:string[]): Observable<IMarker[]> {
+    this._id2seq = uuids.reduce( (res,id,i)=>{ res[id]=i; return res;}, {});
+    this.reload(uuids).then( merged=>{
+      // extras
+      console.log(">>> UnionSubjSvc: merged=", merged);
+      merged.filter( o=>o['className']=="Photo").forEach(o=>{
+        AppCache.for('Photo').set(o);
+      });
+    });
+    return this._observable$;
+  }
+
+  reload(uuids?:any[]):Promise<IMarker[]>{
+    if (!uuids) {
+      uuids = Object.keys(this._id2seq);
+    }
+    const merged:IMarker[] = [];
+    const waitFor = [];
+    this.restys.forEach( async (resty)=>{
+      const pr = resty.get(uuids).then( items=>{
+        items.forEach( o=>{
+          o['seq'] = this._id2seq[o['uuid']]; // sort by seq, as ordered in uuid:string[]
+          merged.push(o);
+        });
+      })
+      waitFor.push(pr);
+    });
+    return Promise.all(waitFor)
+    .then( (res)=>{
+      this.next(merged);
+      return Promise.resolve(merged);
+    });
+  }
 
 }
 
