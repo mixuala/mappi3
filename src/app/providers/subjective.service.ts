@@ -60,7 +60,7 @@ export class SubjectiveService<T> {
     .then( items=>{
       items.forEach( (o,i)=>{
         o['seq'] = this._id2seq[ o['uuid'] ]; // sort by seq, as ordered in uuid:string[]
-        if (o['seq]']==null) o['seq]'] = 1000+i;
+        if (o['seq']==null) o['seq'] = 1000+i;
       });
       this.modified = Date.now();  // for check against stale
       if (broadcast) this.next(items);
@@ -115,26 +115,35 @@ export class UnionSubjectiveService<IMarker> extends SubjectiveService<IMarker> 
   }
 
   get$( uuids:string[]): Observable<IMarker[]> {
-    this._id2seq = uuids.reduce( (res,id,i)=>{ res[id]=i; return res;}, {});
-    this.reload(uuids, false)
-    .then( merged=>{
-      // extras
-      console.log(">>> UnionSubjSvc: merged=", merged);
-      this.next(merged);
-      this.cacheOnlyPhotos(merged);
-    });
+    if (uuids.length==0) {
+      this._id2seq = {}
+      this.next([]);
+    } else {
+      this._id2seq = uuids.reduce( (res,id,i)=>{ res[id]=i; return res;}, {});
+      this.reload(uuids, false)
+      .then( merged=>{
+        // extras
+        // console.log(">>> UnionSubjSvc: merged=", merged);
+        this.next(merged);
+        this.cacheOnlyPhotos(merged);
+      });
+    }
     return this._observable$;
   }
 
   reload(uuids?:any[], broadcast:boolean=true):Promise<IMarker[]>{
     if (!uuids) {
       uuids = Object.keys(this._id2seq);
-      if (uuids.length===0) return;   // do not reload if previously empty
+    }
+    if (uuids.length==0) {
+      if (broadcast) this.next([]);
+      return Promise.resolve([]);   // do not reload if previously empty
     }
     const merged:IMarker[] = [];
     const waitFor = [];
     this.restys.forEach( async (resty)=>{
       const pr = resty.get(uuids).then( items=>{
+        if (items.length>100) console.log("uuids=", uuids, items);
         items.forEach( o=>{
           o['seq'] = this._id2seq[o['uuid']]; // sort by seq, as ordered in uuid:string[]
           merged.push(o);

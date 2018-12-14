@@ -56,7 +56,8 @@ const getThumbnail_fromMarker = (m:IMarker, dim:string='80x80'):Promise<string> 
         resolve(  src  );
       },1000);
     });
-  }
+  } 
+  else return Promise.reject();
 }
 
 @Injectable({
@@ -236,12 +237,19 @@ export class ImgSrc {
          *    NOTE: just mangling url for https://picsum.photos
          * */
         cacheItem['loading'] = getThumbnail_fromMarker(photo, dim)
-        .then( imgSrc=>{
-          cacheItem.imgSrc.src = imgSrc; 
-          delete cacheItem['loading'];  // wait for promise to complete
-          AppCache.for('ImgSrc').set(cacheItem, cache_key);
-          return;
-        })
+        .then( 
+          imgSrc=>{
+            cacheItem.imgSrc.src = imgSrc; 
+            delete cacheItem['loading'];  // wait for promise to complete
+            AppCache.for('ImgSrc').set(cacheItem, cache_key);
+            return;
+          }
+          , (err)=>{
+            // we shouldn't be here if !marker.image
+            cacheItem.imgSrc$ = null;  
+            delete cacheItem['loading'];  
+            console.warn("no markerLink.image");
+        });
       }
       return cacheItem['loading'];
     }

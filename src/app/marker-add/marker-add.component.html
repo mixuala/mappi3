@@ -15,7 +15,9 @@
     (ionBlur)="handle_addMarkerLink()"
     ></ion-searchbar>
 
-  <ion-button  fill="outline"  color="primary" [disabled]="!stash.enableCreateMarkerLink">
+  <ion-button  fill="outline"  color="primary" [disabled]="!stash.enableCreateMarkerLink"
+    (click)="detachAutocomplete()"
+  >
     <ion-icon name="link"></ion-icon> 
   </ion-button>
 

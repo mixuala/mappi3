@@ -144,6 +144,7 @@ export class SharePage implements OnInit, IViewNavEvents {
     items = items || this._mgSub.value();
     const markers = RestyTrnHelper.getCachedMarkers(items, 'visible');
     this.qrcodeData = GoogleMapsComponent.getStaticMap(AppConfig.map, markers);
+    this.cd.detectChanges();
     return
   }
 
@@ -301,7 +302,6 @@ export class SharePage implements OnInit, IViewNavEvents {
     });
 
 
-    // run whenever: update static map on debounce
     this.mgCollection$.pipe(
       takeUntil(this.unsubscribe$),
       debounceTime( 1000 ),
@@ -310,13 +310,14 @@ export class SharePage implements OnInit, IViewNavEvents {
         this.getStaticMap(items); 
         return items;
       }),
-    );
+    ).subscribe();
     console.warn("SharePage ngOnInit complete");
   }
 
   viewWillEnter(){
     try {
       this.stash.activeView = true;
+      // run whenever: update static map on debounce
       if (this._mgSub.isStale(this.parent.markerGroupIds, 5)) {
         this._mgSub.reload();
       }

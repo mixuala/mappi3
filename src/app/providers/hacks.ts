@@ -16,9 +16,11 @@ export class Hacks {
     const position = AppConfig.map.getCenter().toJSON();
     mg.loc = [position.lat, position.lng];
     mg.position = MappiMarker.position(mg);
-    // add MarkerLink self ref, patch for photoswipe
-    mg.markerItemIds = [mg.uuid]  
-    mg.src = link.image;   // emulate IPhoto
+    if (link.image){ 
+      // add MarkerLink self ref, to show thumbnail as markerItem image
+      mg.markerItemIds = [mg.uuid]  
+      mg.src = link.image;   // emulate IPhoto
+    }
     // get width, height
     return mg;
   }

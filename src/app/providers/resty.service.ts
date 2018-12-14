@@ -108,7 +108,7 @@ export class RestyService<T> {
       o['modified'] = new Date();
       Object.assign(this._data[uuid], cleaned);
       if (Storage){
-        Storage.set({key:o['uuid'], value:JSON.stringify(this._data[uuid])});
+        Storage.set({key:o['uuid'], value:JSON.stringify(cleaned)});
       }
       this.debug && console.log( `${this.className}: PUT`, o);
       return Promise.resolve( o );

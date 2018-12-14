@@ -53,6 +53,14 @@ ion-card.marker-group {
   }
 }
 
+.marker-group.layout-link-share {
+  ion-card-header.no-image {
+    padding: 0px;
+    position: relative;
+    top: -4px;
+  }
+}
+
 // ip6/7/8 PORTRAIT
 @media only screen 
   and (max-width: 414px) 

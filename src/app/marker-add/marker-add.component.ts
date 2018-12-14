@@ -116,6 +116,7 @@ export class MarkerAddComponent implements OnInit {
 
 
   async handle_addMarkerLink(){
+
     // scrape opengraph or reverse-geocode
     // WARNING: (ionBlur) fires BEFORE Autocomplete.(place_changed)
     const search = this.stash.search;
@@ -142,7 +143,8 @@ export class MarkerAddComponent implements OnInit {
     } 
     else if ("ALLOW REVERSE-GEOCODE") {
 
-      // if ("DISABLE REVERSE-GEOCODE FOR NOW") return;
+      if (this.autocomplete) return;
+      if ("DISABLE REVERSE-GEOCODE FOR NOW") return;
 
       // use REVERSE-geocode
       const options = {
@@ -160,6 +162,11 @@ export class MarkerAddComponent implements OnInit {
       
       const place = await GeocodeComponent.presentModal(this.modalCtrl, options);
     }
+  }
+
+  detachAutocomplete(){
+    // called by create link button, force ionBlur() over autocomplete
+    if (this.autocomplete) this.autocomplete.detach();
   }
 
   attachAutocomplete():any{

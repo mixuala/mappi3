@@ -225,12 +225,7 @@ export class MockDataService {
     data['MarkerList'] = await this.MarkerLists.get();
 
 
-    // load markerLinks
-    const links:IMarkerLink[] = LINKS.map( (o,i,l)=>{
-      o = Object.assign({}, o);
-      return MockDataService.inflateLink(o, i);
-    });
-    this.MarkerLinks = new RestyService(links, "MarkerLink");
+    this.MarkerLinks = new RestyService([], "MarkerLink");
     data['MarkerLink'] = await this.MarkerLinks.get();
 
     console.log("TESTDATA", data);
@@ -318,15 +313,6 @@ export class MockDataService {
     return o;
   }
 
-  static inflateLink(o:IMarkerLink, seq?:number){
-    o.uuid = quickUuid();
-    o.seq = seq;
-    o.position = MappiMarker.position(o);
-    // add multiple FKs, shuffled, random count
-    return o;
-  }
-
-
   private shuffle(arr:any[], sample?:number|boolean):any[] {
     const shuffled = arr
       .map(a => [Math.random(), a])
@@ -363,37 +349,6 @@ export const PHOTOS: IPhoto[] = [
   {uuid: null, loc: [3.160250353353649, 101.72868381210333], locOffset:[0,0], dateTaken:"2018-06-05T11:49:00", orientation: 1,  src:"https://picsum.photos/80?image={id}" , width:0, height:0 },
   {uuid: null, loc: [3.1569080416737467, 101.74091468521124], locOffset:[0,0], dateTaken:"2018-07-25T16:29:00", orientation: 1,  src:"https://picsum.photos/80?image={id}" , width:0, height:0 },
   {uuid: null, loc:  [3.1602273283815983, 101.73691749572754], locOffset:[0,0], dateTaken:"2018-02-25T10:11:00", orientation: 1,  src:"https://picsum.photos/80?image={id}" , width:0, height:0 },    
-]
-
-export const LINKS: IMarkerLink[] = [
-  {uuid: null, loc: [0,0], locOffset:[0,0]
-    , title: 'How to Spend 48 Hours in Kuala Lumpur'
-    , description: 'Discover how to spend an epic 48 hours in Kuala Lumpur and visit temples, mosques, museums and a lake oasis filled with monkeys.'
-    , site_name: 'Culture Trip'
-    , url: '	https://theculturetrip.com/asia/malaysia/articles/how-to-spend-48-hours-in-kuala-lumpur/'
-    , image: 'https://cdn.theculturetrip.com/wp-content/uploads/2018/06/shutterstock_453556639.jpg'
-  }
-  , {uuid: null, loc: [0,0], locOffset:[0,0]
-    , title: '36 Hours in Kuala Lumpur'
-    , description: 'With its looming skyscrapers, stellar cuisine and thumping night life, the Malaysian capital has emerged as one of Southeast Asia’s most alluring metropolises.'
-    , site_name: ''
-    , url: 'https://www.nytimes.com/2009/12/20/travel/20hours.html'
-    , image: 'https://static01.nyt.com/images/2009/12/20/travel/20hours_CA0/articleLarge.jpg'
-  }
-  , {uuid: null, loc: [0,0], locOffset:[0,0]
-    , title: 'What to Do in KL in 2 Days - 2 Days in Kuala Lumpur -'
-    , description: "2 Days in Kuala Lumpur? If your stopover in Malaysia consists of 48 hours in Kuala Lumpur, you'll have ample time to see most of the must-visit attractions in the city centre as well as plan a daytrip to the forested outskirts of the city, where you can get"
-    , site_name: 'kuala-lumpur.ws'
-    , url: 'http://www.kuala-lumpur.ws/magazine/48-hours-in-kuala-lumpur.htm'
-    , image: 'http://static.asiawebdirect.com/m/kl/portals/kuala-lumpur-ws/homepage/magazine/48-hours-in-kuala-lumpur/pagePropertiesImage/2-days-kuala-lumpur.jpg.jpg'
-  }  
-  , {uuid: null, loc: [0,0], locOffset:[0,0]
-    , title: '36 Hours In...Bangkok'
-    , description: 'Read our guide to the best things to do on a short break in Bangkok, as recommended by Telegraph Travel. Find great photos, expert advice and insiders tips.'
-    , site_name: ''
-    , url: 'https://www.telegraph.co.uk/travel/destinations/asia/thailand/bangkok/articles/36-hours-in-bangkok/'
-    , image: 'https://www.telegraph.co.uk/content/dam/Travel/Destinations/Asia/Thailand/Bangkok/Bangkok_36hours_WatTraimit-xlarge.jpg'
-  }  
 ]
 
 /**
@@ -511,6 +466,7 @@ export class RestyTrnHelper {
           tag: tag,
           image: data['og:image'],
         }
+        if (!extras['title']) extras['title'] = extras['url'];
 
         if (data['og:image:height']) extras['height'] = data['og:image:height'];
         if (data['og:image:width']) extras['width'] = data['og:image:width'];
@@ -640,27 +596,21 @@ export class RestyTrnHelper {
     const items = commitFrom;             //  subj.value();
     // action="commit"
     const commitItems = items.filter(o=>o._rest_action);
-    const remainingItems = RestyTrnHelper.getCachedMarkers(items, 'visible')
-    .sort( (a,b)=>a.seq-b.seq )
-    .map((o,i)=>{
-      o.seq = i;    // re-index remaining/visible items
-      if (!o._rest_action) o._rest_action = 'seq';
-      return o;
-    });
-    const allItems = remainingItems.concat(RestyTrnHelper.getCachedMarkers(items, 'removed'));
+    // const remainingItems = RestyTrnHelper.getCachedMarkers(items, 'visible')
+    // const allItems = remainingItems.concat(RestyTrnHelper.getCachedMarkers(items, 'removed'));
 
-    const check = commitItems.filter( o=>!allItems.includes(o));
-    if (check.length)
-      console.error("applyChanges(): some commitItems were NOT included", check);
+    // const check = commitItems.filter( o=>!allItems.includes(o));
+    // if (check.length)
+    //   console.error("applyChanges(): some commitItems were NOT included", check);
 
-    return RestyTrnHelper._childComponents_CommitChanges(allItems, dataSvc)
+    return RestyTrnHelper._childComponents_CommitChanges(commitItems, dataSvc)
     .then( 
       (changed:IMarker[])=>{
         // need to reload changed markers. WHERE/WHEN??
         return changed;
       }
       , err=>{
-        console.error(`ERROR: problem saving nodes.`, allItems);
+        console.error(`ERROR: problem saving nodes.`, commitItems);
         return Promise.reject(err);
     });
   }
@@ -716,11 +666,11 @@ export class RestyTrnHelper {
         case "put":
           pr.push( resty.put(o.uuid, o).then( o=>{delete o['_rest_action']; return o;}) );     
           break;
-        case "seq":
-          console.warn("confirm _rest_action=seq is working properly");
-          // do not report sequence updates
-          resty.put(o.uuid, o, ['seq']).then( o=>{delete o['_rest_action'];})    
-          break;
+        // case "seq":
+        //   console.warn("confirm _rest_action=seq is working properly");
+        //   // do not report sequence updates
+        //   resty.put(o.uuid, o, ['seq']).then( o=>{delete o['_rest_action'];})    
+        //   break;
         case "delete":
           pr.push( resty.delete(o.uuid).then( resp=>{
             if (!resp && !o.uuid){

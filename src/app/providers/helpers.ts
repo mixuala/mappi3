@@ -186,6 +186,14 @@ export class Helpful {
       sample = Math.ceil(Math.random() * Math.floor(arr.length))
     return shuffled.slice(0,sample)
   }
+  
+  public static bytesToSize(bytes:number):string{ 
+    if (bytes == 0) return '0 Bytes';
+    const k = 1000;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return (bytes / Math.pow(k, i)).toPrecision(3) + ' ' + sizes[i];
+  }
 
 }
 

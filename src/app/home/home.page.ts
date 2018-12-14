@@ -533,9 +533,11 @@ export class HomePage implements OnInit, IViewNavEvents {
     const mgSubjUuids = this._mgSub.value().map(o => o.uuid);
     mgSubjUuids && mgSubjUuids.forEach( uuid=>{
       const mItemSubj = MockDataService.getSubjByParentUuid(uuid);
-      if (mItemSubj) waitFor.push(mItemSubj.reload());
+      if (mItemSubj) waitFor.push( mItemSubj.reload() );
     })
-    waitFor.push(this._mgSub.get$(mgSubjUuids));
+
+    // TODO: not reloading markerLists
+    waitFor.push( this._mgSub.reload( mgSubjUuids ) );
 
     const found = changed.find(o=>o.uuid==this.parent.uuid);
     if (found) 
@@ -545,7 +547,8 @@ export class HomePage implements OnInit, IViewNavEvents {
         .then( arr=>this.parent=arr.pop())
       );
     }
-    await waitFor;
+    const done = await Promise.all(waitFor);
+    return
   }
 
 
@@ -587,7 +590,8 @@ export class HomePage implements OnInit, IViewNavEvents {
     // check MarkerGroups for changes or new MarkerItems
     const mgs:IRestMarker[] = this._mgSub.value();
     found = mgs.find( mg=>!!mg._rest_action );
-    if (found) return true;
+    if (found) 
+      return true;
     
     // check MarkerList for new MarkerGroups
     const parent = this.parent as IRestMarker; 
@@ -603,7 +607,8 @@ export class HomePage implements OnInit, IViewNavEvents {
       });
       return !!found;
     });
-    if (found) return true;
+    if (found) 
+      return true;
   }
 
   /**
@@ -634,7 +639,6 @@ export class HomePage implements OnInit, IViewNavEvents {
         }
 
         const commitFrom = (this.parent as IRestMarker)._rest_action ? [this.parent] : this._mgSub.value();
-
         const committed = await RestyTrnHelper.commitFromRoot( this.dataService, commitFrom);
         await this.reload(committed);
         console.warn("HomePage: COMMIT complete", committed);  

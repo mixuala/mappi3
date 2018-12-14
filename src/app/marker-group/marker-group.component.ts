@@ -278,21 +278,21 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     }
     const options:IChoosePhotoOptions = {except, moments, bounds, provider};
     return this.photoService.choosePhoto(mg.markerItemIds.length, options)
-    .then( photo=>{
+    .then( async (photo)=>{
       console.log( "### MarkerGroup.choosePhoto, photo=",photo, AppCache.for('Cameraroll').get(photo.camerarollId))
 
       this.childComponentsChange({data:photo, action:'add'});
       if (MappiMarker.hasLoc(photo)) 
         return photo;
 
-      // no IPhoto returned, get a placeholder
-      return GoogleMapsHostComponent.getCurrentPosition()
-      .then( (latlng:google.maps.LatLng)=>{
-        const position = latlng.toJSON();
-        console.warn("create Photo with default position", position);
-        RestyTrnHelper.setLocToDefault(photo, position);
-        return photo;
-      });
+      // add default position
+      let latlng = AppConfig.map && AppConfig.map.getCenter();
+      if (!latlng) 
+        latlng = await GoogleMapsHostComponent.getCurrentPosition();
+      const position = latlng.toJSON();
+      console.warn("create Photo with default position", position);
+      RestyTrnHelper.setLocToDefault(photo, position);
+      return photo;
     })    
     .then( photo=>{
       setTimeout(()=>this.cd.detectChanges(),10)
