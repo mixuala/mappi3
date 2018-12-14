@@ -131,6 +131,15 @@
     }
   }
 
+  ion-modal.geocode-modal {
+    top: var(--google-map-bottom);
+    height: calc( 100vh - var(--google-map-bottom) );
+    @at-root.plt-mobile ion-modal {
+      top: 0px;
+      height: 100vh;
+    }
+  }
+
 
   /**
   * google map reference points

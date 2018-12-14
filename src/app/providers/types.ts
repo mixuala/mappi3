@@ -4,6 +4,7 @@
 
 
 export interface IMarker {
+  className?: string;
   uuid: string,
   loc: [number,number],
   locOffset: [number,number], 
@@ -36,7 +37,6 @@ export interface IMarkerLink extends IMarker {
 
 
 export interface IRestMarker extends IMarker {
-  className?: string;
   _rest_action?: string;
   _commit_child_items?: IMarker[];
   _loc_was_map_center?: boolean;

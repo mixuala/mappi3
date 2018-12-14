@@ -19,7 +19,7 @@ import { PhotoService } from '../providers/photo/photo.service';
 import { CamerarollPage } from '../cameraroll/cameraroll.page';
 import { PhotoswipeComponent } from '../photoswipe/photoswipe.component';
 import { GoogleMapsHostComponent } from '../google-maps/google-maps-host.component';
-import { ScreenDim, AppConfig, } from '../providers/helpers';
+import { ScreenDim, AppConfig, Humanize } from '../providers/helpers';
 import { Hacks} from '../providers/hacks';
 import { AppCache } from '../providers/appcache';
 
@@ -253,10 +253,14 @@ export class HomePage implements OnInit, IViewNavEvents {
 
   /**
    * create a new MarkerGroup from CamerarollPage Modal
+   *   ios) uses cameraroll via PhotoService.scan_moments_PhotoLibrary_Cordova()
+   *   web) uses PhotoService.mockCamerarollAsMoments(options);
+   * 
    * @param selected IPhoto[], expecting IPhoto._moment: IMoment
    */
   async createMarkerGroup_fromCameraroll(selected:IPhoto[]){
     // TODO: refactor, add parent.uuid to params
+    // TODO: refactor add MarkerGroupComponent.createMarkerGroup():IMarkerGroup
     return CamerarollPage.createMarkerGroup_from_Cameraroll(selected, this._mgSub)
     .then( mg=>{ 
       AppCache.for('Key').set(mg, mg.uuid);
@@ -265,24 +269,60 @@ export class HomePage implements OnInit, IViewNavEvents {
 
 
   /**
-   * create a new MarkerGroup from:
-   *     1) a map click/location or 
-   *     2) from the create button,
-   *  specifying either a selected image or mapCenter as the marker location
-   * @param data IMarker properties, specifically [loc | seq]
-   * @param ev click event
+   * called by 
+   *    1) HomePage.mappiMarkerChange(mm:IMappiMarker)
+   *    2) app-marker-add[(markerChange)="createMarkerGroup_fromMarker($event)"]
    * 
+   * NOTE: markerItemIds==[]
+   * @param marker 
    */
-  async createMarkerGroup(ev:any={}, data:any={}, provider?:string):Promise<IMarkerGroup>{
+  createMarkerGroup_fromMarker(change:{data:IMarker, action:string} ):IMarkerGroup{
+    const marker = change.data;
+    let mg:IMarkerGroup;
+    switch(marker.className) {
+      case 'MarkerLink':
+        mg = Hacks.patch_MarkerLink_as_MarkerGroup(marker as any as IMarkerLink);
+        break;
+      case 'MarkerGroup': 
+        break;
+      case 'MappiMarker': // from map click
+        marker['label'] = `Dropped Marker`;
+        const position = MappiMarker.position(marker);
+        marker['description'] = `created at ${Humanize.position(position)}`;
+        // TODO: reverse geo-code for address?
+      case 'PlaceResultMarker':
+      case 'GeocodeResultMarker':
+      default:
+        delete marker.className;
+        mg = RestyTrnHelper.getPlaceholder('MarkerGroup', marker);
+        // this.mgCollection$.subscribe( items=>console.log("XXX> MG observer count=", items.length))
+        break;
+    }
+    // console.log("0> about to create MarkerGroup=",mg);
+    switch(change.action) {
+      case 'add': 
+        // add to Parent.FK, add _rest_action='post'
+        this.childComponentsChange({data:mg, action:'add'}); 
+        this.publishMarkerGroupItems(mg);
+        console.log("2> done ",mg);
+        return mg;    
+    }
+  }
+
+  /**
+   * called by ev:MouseEvent
+   * uses PhotoService.choosePhoto(, provider)
+   * @param ev click event 
+   * @param provider [Bounds, Moments, RandomCameraRoll, Camera]
+   */
+  async createMarkerGroup_fromPhotoLibrary(ev:any={}, provider?:string){
     const target = ev.target && ev.target.tagName;
     const mgSubj = MockDataService.getSubjByParentUuid(this.parent.uuid);
-    data = data || {};
-
-    let mgParent:IMarkerGroup;
     let child:IPhoto;
     if (target=='ION-BUTTON' || provider){
       const mgs = mgSubj.value() as IMarkerGroup[];
       if (mgs.length==0 || provider) {
+        // markerList._rest_action='post', add first MarkerGroup
         child = await this.photoService.choosePhoto(0, {provider});
         console.log( "### 0) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
       } else {
@@ -304,24 +344,26 @@ export class HomePage implements OnInit, IViewNavEvents {
         console.log( "### 1+) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
       }
     } else if (AppConfig.device.platform=='ios'){
-      // DEMO only
+      // DEMO only, use cordova.plugin.camera
       child = await this.photoService.choosePhoto(0, {provider:"Camera"});
       console.log( "### 0) HomePage.choosePhoto, photo=",child, AppCache.for('Cameraroll').get(child.camerarollId))
+    }
+    this.createMarkerGroupFromChild(child);
+  }
 
-    } else if (data.className == 'Photo'){
-      // create markerGroup using photo as location
-      child = data;
-    }
-    
-    if (child){
-      mgParent = RestyTrnHelper.getPlaceholder('MarkerGroup');
-    } 
-    else {
-      // create parent from map click with location data
-      mgParent = RestyTrnHelper.getPlaceholder('MarkerGroup', data);
-    }
+  /**
+   // TODO: make static method of MarkerGroupComponent.createMarkerGroupFromChild()
+   * create MarkerGroup from MarkerItem (IPhoto, IMarkerLink)
+   *  - set loc from MarkerItem, if available
+   *  - fallback map.getCenter()
+   * 
+   * NOTE: additional MarkerItems added using MarkerGroupComponent.childComponentsChange({data:photo, action:'add'});
+   * @param child should be result of RestyTrnHelper.getPlaceholder('Photo', data)
+   */
+  async createMarkerGroupFromChild(child:IPhoto):Promise<IMarkerGroup>{
+
+    let mgParent:IMarkerGroup = RestyTrnHelper.getPlaceholder('MarkerGroup');
     mgParent.label = `Marker created ${mgParent.created.toISOString()}`;
-    mgParent.seq = data.seq || this._mgSub.value().length;
 
     return Promise.resolve(true)
     .then ( async ()=>{
@@ -338,16 +380,12 @@ export class HomePage implements OnInit, IViewNavEvents {
       if (err=='continue') {
         // no IPhoto returned, get a placeholder
         return Promise.resolve(true)
-        .then( ()=>{
-          let position = AppConfig.map.getCenter();
-          if (position) 
-            return position;
-          else
-            return GoogleMapsHostComponent.getCurrentPosition();
-        })
-        .then( (latlng:google.maps.LatLng)=>{
+        .then( async ()=>{
+          // get default position for MarkerList
+          let latlng = AppConfig.map && AppConfig.map.getCenter();
+          if (!latlng) 
+            latlng = await GoogleMapsHostComponent.getCurrentPosition();
           const position = latlng.toJSON();
-          console.warn("createMarkerGroup, default position", position);
           RestyTrnHelper.setLocToDefault(mgParent, position);
           return mgParent;
         });
@@ -357,6 +395,7 @@ export class HomePage implements OnInit, IViewNavEvents {
     .then( ()=>{
       // add markerGroup to subject
       this.childComponentsChange({data:mgParent, action:'add'});
+
       this.publishMarkerGroupItems(mgParent);
       return mgParent;
     })    
@@ -403,15 +442,12 @@ export class HomePage implements OnInit, IViewNavEvents {
   }
 
   async mappiMarkerChange(change:{data:IMarker, action:string}){
-    const mm = change.data;
     // mm could be either IMarkerGroup or IPhoto
     if (!this.mgFocus) {
-      // handle IMarkerGroup
-      const items = RestyTrnHelper.getCachedMarkers(this._mgSub.value() );
       switch (change.action) {
         case 'add':   // NOTE: ADD IMarkerGroup by clicking on map in layout=edit
           // create MarkerGroup at IMarker location
-          await this.createMarkerGroup(undefined, mm)
+          await this.createMarkerGroup_fromMarker(change)
           // manually trigger ChangeDetection when click from google.maps
           break;
         case 'update':    // NOTE: can update IMarkerGroup or IPhoto
@@ -533,11 +569,6 @@ export class HomePage implements OnInit, IViewNavEvents {
         // BUG: ion-item-sliding
         // see: https://github.com/ionic-team/ionic/issues/15486#issuecomment-419924318
         return this.slidingList.closeSlidingItems();
-      case 'markerLink':
-        // add markerLink to current marker
-        const mg = Hacks.patch_MarkerLink_as_MarkerGroup(change.data as any as IMarkerLink)
-        this.childComponentsChange( {data:mg, action:"add"});
-        break;
       case 'add':
         // update MarkerList FKs (Parent)
         parent.markerGroupIds = parent.markerGroupIds.slice(); // make a copy
@@ -599,7 +630,7 @@ export class HomePage implements OnInit, IViewNavEvents {
         if ( parent._rest_action ) {
           this.parent.markerGroupIds = mgSubjUuids;
           parent._rest_action = parent._rest_action || 'put';
-          parent._commit_child_items = this._mgSub.value();
+          parent._commit_child_items = this._mgSub.value(); // TODO: filter by ._rest_action
         }
 
         const commitFrom = (this.parent as IRestMarker)._rest_action ? [this.parent] : this._mgSub.value();

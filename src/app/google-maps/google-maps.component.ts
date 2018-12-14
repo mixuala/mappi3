@@ -157,6 +157,7 @@ export class GoogleMapsComponent implements OnInit {
   public setMapBoundsWithMinZoom(markers:IMarker[], defaultMinZoom=15){
 
     const skipBoundsChange = ():boolean=>{
+      if (this.mode['resetBounds']===true) return false;
       // if the marker className has not changed, do not change bounds
       // ListPage is listening to 'bounds_change' when activeView==true;
       // TODO: solved by checking for this.activeView in renderMarkers()????
@@ -293,15 +294,14 @@ export class GoogleMapsComponent implements OnInit {
     const self = this;
     const addMarkerOnClick:(e:any)=>void = (ev:any) => {
       const position:google.maps.LatLng = ev["latLng"];
-      const m:IMarkerGroup =  Object.assign(RestyTrnHelper.getPlaceholder(null, {
-        seq: this.items.length, 
+      const mm = {
+        className: 'MappiMarker',
         loc: [position.lat(), position.lng()],
-        markerItemIds: [],
-      }))
+      } as IMappiMarker;
 
       // add marker from HomeComponent using mgCollection$ Observable
-      // => HomePage.mappiMarkerChange()
-      this.itemChange.emit({data:m, action:'add'});
+      // => HomePage.mappiMarkerChange() => createMarkerGroup_fromMarker()
+      this.itemChange.emit({data:mm, action:'add'});
       console.log(Date.now(), 'addMarkerOnClick at', position.toJSON())
 
 

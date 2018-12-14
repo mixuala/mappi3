@@ -49,17 +49,16 @@
                 </ion-reorder-group>
                 <ion-list>
                     <!-- <ion-item class="add-marker-group wrap-btn-as-thumbnail" 
-                      (click)="createMarkerGroup($event)"
-                      (dblclick)="createMarkerGroup($event, null, 'Camera')">
+                      (click)="createMarkerGroup_fromPhotoLibrary($event)">
                         <ion-button  class="as-thumbnail" slot="start" expand="full" size="large">
                           <ion-icon slot="icon-only" name="add"></ion-icon>
                         </ion-button>
                       <ion-label color="primary"> Add photo/marker </ion-label>
                     </ion-item> -->
                     <app-marker-add 
-                      (camerarollSelected)="createMarkerGroup_fromCameraroll($event)"
                       [marker]="parent" 
-                      (markerChange)="childComponentsChange($event)">
+                      (camerarollSelected)="createMarkerGroup_fromCameraroll($event)"
+                      (markerChange)="createMarkerGroup_fromMarker($event)">
                       </app-marker-add>
                 </ion-list>                  
         </ion-col>

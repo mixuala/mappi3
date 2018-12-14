@@ -1,0 +1,80 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Search Google Maps</ion-title>
+    <ion-buttons slot="end">
+      <ion-button  color="secondary" fill="outline"  (click)="commit()">
+        <ion-icon name="checkmark" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button color="danger" fill="outline" (click)="close()">
+        <ion-icon name="close" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-header class="google-maps-wrap hide">
+  <app-google-maps #gmap *ngIf="markerCollection$ | async as items"
+  [items]="items"
+  [mode]="mapSettings" [activeView]="stash.activeView"
+  [selected]="selectedMarker"
+  (selectedChange)="handle_MapMarkerSelected($event)"
+  ></app-google-maps>
+</ion-header>
+
+<ion-content no-padding>
+  <ion-item>
+      <ion-searchbar animated class="geocode-searchbar"
+      [searchIcon]="search.searchIcon" 
+      [placeholder]="search.placeholder"
+      [type]="search.type"
+      [(ngModel)]="search.value"
+      [debounce]="500"
+      (ionInput)="searchBarInput($event)"
+      (ionBlur)="handle_addBySearchBar($event)"
+      (ionClear)="searchBarClear()"
+      ></ion-searchbar>
+      <ion-button  fill="outline"  color="primary">
+        <ion-icon name="search"></ion-icon> 
+      </ion-button>
+  </ion-item>
+
+  <ion-list    *ngIf="(geocoderResults$ | async) as results">
+
+    <ion-list-header color="primary" text-center>
+      <ion-label *ngIf="results.length > 1">
+        <h3>Search returned multiple results</h3>
+        <p><small>swipe right to choose</small></p>
+      </ion-label>
+    </ion-list-header>
+
+    <ion-item-sliding class="geocode-result"      *ngFor="let item of results; index as i">
+      <ion-item class="geocode-result wrap-btn-as-thumbnail" 
+      align-items-start
+      lines="full">
+      <ion-button class="marker-wrap" slot="start" size="large" >
+        <ion-chip class="marker" color="primary" fill="solid">
+          <ion-icon name="pin" slot="start"></ion-icon>
+          <ion-label>{{i+1}}</ion-label>
+        </ion-chip>
+      </ion-button>
+      <ion-label (click)="select(item)">
+        <p>{{item.formatted_address}}</p>
+        <!-- <p>{{item.place_id}}</p>
+          <p>{{item.geometry.location | json}}</p> -->
+          <p text-wrap>tags: {{item.types.join(", ") }}</p>
+        </ion-label>
+      </ion-item>
+      <ion-item-options (ionSwipe)="select(item)" side="start">
+      </ion-item-options>
+    </ion-item-sliding>
+
+    <!-- BUG: flashes no results while searching -->
+    <ion-item text-center *ngIf="stash.zeroResults">
+      <ion-label>
+        <h3>No places found.</h3>
+      </ion-label>
+    </ion-item>
+
+  </ion-list>
+
+</ion-content>

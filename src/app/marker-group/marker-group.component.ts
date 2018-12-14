@@ -366,7 +366,7 @@ export class MarkerGroupComponent implements OnInit , OnChanges {
     }
     // reload tree Photos < MarkerGroup
     const mItemSubj = MockDataService.getSubjByParentUuid(this.mg.uuid);
-    if (mItemSubj) waitFor.push(mItemSubj.reload(this.mg.markerItemIds, true));
+    if (mItemSubj) waitFor.push(mItemSubj.reload(this.mg.markerItemIds));
     await waitFor;
   }
   

@@ -7,7 +7,7 @@ import {
   IMarkerSubject,
 } from './types';
 import { quickUuid as _quickUuid, RestyService } from './resty.service';
-import { SubjectiveService } from './subjective.service';
+import { SubjectiveService, UnionSubjectiveService } from './subjective.service';
 import { MappiMarker, } from './mappi/mappi.service';
 import { AppCache  } from './appcache';
 import { AppConfig } from '../providers/helpers';

@@ -32,6 +32,7 @@ import { CamerarollPage } from './cameraroll/cameraroll.page';
 import { HelpComponent } from './providers/help/help.component';
 import { MarkerAddComponent } from './marker-add/marker-add.component';
 import { HttpClientModule } from '@angular/common/http';
+import { GeocodeComponent } from './geocode/geocode.component';
 
 
 
@@ -48,7 +49,7 @@ import { HttpClientModule } from '@angular/common/http';
     MarkerListComponent,
     MarkerGroupComponent, MarkerGroupFocusDirective,
     MarkerItemComponent, MarkerAddComponent,
-    GoogleMapsComponent, GoogleMapsHostComponent,
+    GoogleMapsComponent, GoogleMapsHostComponent, GeocodeComponent,
     PhotoswipeComponent,
     DataURLPipe,
     CamerarollPage,
@@ -57,12 +58,13 @@ import { HttpClientModule } from '@angular/common/http';
   entryComponents: [
     CamerarollPage,
     HelpComponent,
+    GeocodeComponent,
   ],
   exports: [
     MarkerListComponent,
     MarkerGroupComponent, MarkerGroupFocusDirective,
     MarkerItemComponent, MarkerAddComponent,
-    GoogleMapsComponent, GoogleMapsHostComponent,
+    GoogleMapsComponent, GoogleMapsHostComponent, GeocodeComponent,
     PhotoswipeComponent,  
     CamerarollPage,
     HelpComponent,

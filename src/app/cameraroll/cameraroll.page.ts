@@ -39,6 +39,7 @@ const USE_ION_VIRTUAL_SCROLL = true;
 export class CamerarollPage implements OnInit {
 
   /**
+   * currently UNUSED
    * ion-nav-push adds <app-cameraroll> as a child of <ion-nav>
    * - allows for a richer nav stack outside the router-outlet
    * - outside <ion-router-outlet>
@@ -482,6 +483,12 @@ export class CamerarollPage implements OnInit {
   }
 
 
+  /**
+   * create MarkerGroup from selected cameraroll photos
+   *  - uses photo(s) loc and moment title/locations to set MarkerGroup attrs
+   * @param selected 
+   * @param mgSub 
+   */
   public static async createMarkerGroup_from_Cameraroll(selected:IPhoto[], mgSub: SubjectiveService<IMarkerGroup>):Promise<IMarkerGroup>{
     
     const momentsById = {};         // back ref for moments
@@ -501,7 +508,7 @@ export class CamerarollPage implements OnInit {
     item.seq = count;
 
 
-    // create IPhoto < IMarkerGroup < IMarkerList
+    // create IPhoto < IMarkerGroup 
     let item_position;
     photos.forEach( async (p,i)=>{
       const moment = p['_moment'];
@@ -530,7 +537,7 @@ export class CamerarollPage implements OnInit {
     }
     RestyTrnHelper.setLocToDefault(item, item_position);
 
-    // finish up
+    // finish up, item:IMarkerGroup
     RestyTrnHelper.childComponentsChange({data:item, action:'add'}, mgSub);
     return Promise.resolve(item);
   
