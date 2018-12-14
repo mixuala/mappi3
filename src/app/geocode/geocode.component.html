@@ -30,13 +30,52 @@
       [(ngModel)]="search.value"
       [debounce]="500"
       (ionInput)="searchBarInput($event)"
-      (ionBlur)="handle_addBySearchBar($event)"
+      (ionBlur)="handle_addBySearchBar()"
       (ionClear)="searchBarClear()"
       ></ion-searchbar>
       <ion-button  fill="outline"  color="primary">
         <ion-icon name="search"></ion-icon> 
       </ion-button>
   </ion-item>
+
+  <ion-list    *ngIf="(placecoderResults$ | async) as results">
+
+      <ion-list-header color="success" text-center>
+        <ion-label *ngIf="results.length > 1">
+          <h3>Search returned multiple results</h3>
+          <p><small>swipe right to choose</small></p>
+        </ion-label>
+      </ion-list-header>
+  
+      <ion-item-sliding class="geocode-result"      *ngFor="let item of results; index as i">
+        <ion-item class="geocode-result wrap-btn-as-thumbnail" 
+          align-items-start
+          lines="full">
+          <ion-button class="marker-wrap" slot="start" size="large" >
+            <ion-chip class="marker" color="success" fill="solid">
+              <ion-icon name="pin" slot="start"></ion-icon>
+              <ion-label>{{i+1}}</ion-label>
+            </ion-chip>
+          </ion-button>
+          <ion-label (click)="select(item)">
+            <p>{{item.structured_formatting.main_text}}</p>
+            <p>{{item.structured_formatting.secondary_text}}</p>
+            <p>{{item.place_id}}</p>
+            <p text-wrap>tags: {{item.types.join(", ") }}</p>
+          </ion-label>
+        </ion-item>
+        <ion-item-options (ionSwipe)="select(item)" side="start">
+        </ion-item-options>
+      </ion-item-sliding>
+  
+      <!-- BUG: flashes no results while searching -->
+      <ion-item text-center *ngIf="stash.zeroResults">
+        <ion-label>
+          <h3>No places found.</h3>
+        </ion-label>
+      </ion-item>
+  
+    </ion-list>
 
   <ion-list    *ngIf="(geocoderResults$ | async) as results">
 
